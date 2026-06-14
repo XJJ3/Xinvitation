@@ -1,12 +1,24 @@
 import type { Metadata } from "next";
-import { Cormorant_Infant } from "next/font/google";
+import localFont from "next/font/local";
 import { siteConfig } from "@/config/site";
 import "./globals.css";
 
-const cormorant = Cormorant_Infant({
+// 本地自托管 Cormorant Infant（latin 子集），避免构建机访问 Google Fonts 失败
+const cormorant = localFont({
   variable: "--font-cormorant",
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
+  display: "swap",
+  src: [
+    {
+      path: "../../public/fonts/cormorant-infant-latin-400-normal.woff2",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "../../public/fonts/cormorant-infant-latin-400-italic.woff2",
+      weight: "400",
+      style: "italic",
+    },
+  ],
 });
 
 export const metadata: Metadata = {
