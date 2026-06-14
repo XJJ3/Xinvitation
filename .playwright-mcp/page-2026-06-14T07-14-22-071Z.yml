@@ -1,0 +1,223 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e24]:
+        - heading "【新郎姓名】 & 【新娘姓名】" [level=1] [ref=e25]
+        - paragraph [ref=e26]: SAVE THE DATE
+        - paragraph [ref=e27]: 2026年7月18日
+      - img [ref=e29] [cursor=pointer]
+    - generic [ref=e32]:
+      - heading "距离我们的幸福时刻" [level=2] [ref=e33]
+      - generic [ref=e34]:
+        - generic [ref=e35]:
+          - generic [ref=e37]: "34"
+          - generic [ref=e38]: 天
+        - generic [ref=e39]:
+          - generic [ref=e41]: "02"
+          - generic [ref=e42]: 时
+        - generic [ref=e43]:
+          - generic [ref=e45]: "45"
+          - generic [ref=e46]: 分
+        - generic [ref=e47]:
+          - generic [ref=e49]: "38"
+          - generic [ref=e50]: 秒
+      - paragraph [ref=e51]: 期待与您共同见证这份美好
+    - generic [ref=e53]:
+      - heading "我们的故事" [level=2] [ref=e54]
+      - generic [ref=e57]:
+        - generic [ref=e58]:
+          - generic [ref=e59]:
+            - generic [ref=e60]: 【年份/时间,如 2020 春】
+            - heading "【初见】" [level=3] [ref=e61]
+            - paragraph [ref=e62]: 【这里写下你们相遇的故事,一两句话即可。】
+          - generic [ref=e64]:
+            - img "【初见】" [ref=e66] [cursor=pointer]
+            - img [ref=e68]
+        - generic [ref=e70]:
+          - generic [ref=e71]:
+            - generic [ref=e72]: 【2021 夏】
+            - heading "【相恋】" [level=3] [ref=e73]
+            - paragraph [ref=e74]: 【确定关系的那一刻,值得纪念的瞬间。】
+          - generic [ref=e76]:
+            - img "【相恋】" [ref=e78] [cursor=pointer]
+            - img [ref=e80]
+        - generic [ref=e82]:
+          - generic [ref=e83]:
+            - generic [ref=e84]: 【2023 冬】
+            - heading "【求婚】" [level=3] [ref=e85]
+            - paragraph [ref=e86]: 【他单膝跪下的那一刻,你说了"我愿意"。】
+          - generic [ref=e88]:
+            - img "【求婚】" [ref=e90] [cursor=pointer]
+            - img [ref=e92]
+        - generic [ref=e94]:
+          - generic [ref=e95]:
+            - generic [ref=e96]: 【2026】
+            - heading "【订婚】" [level=3] [ref=e97]
+            - paragraph [ref=e98]: 【今天,我们诚邀你见证我们的幸福。】
+          - generic [ref=e100]:
+            - img "【订婚】" [ref=e102] [cursor=pointer]
+            - img [ref=e104]
+      - generic [ref=e106]:
+        - heading "美好回忆" [level=3] [ref=e107]
+        - generic [ref=e108]:
+          - img "美好回忆 1" [ref=e110] [cursor=pointer]
+          - img "美好回忆 2" [ref=e112] [cursor=pointer]
+          - img "美好回忆 3" [ref=e114] [cursor=pointer]
+          - img "美好回忆 4" [ref=e116] [cursor=pointer]
+    - generic [ref=e118]:
+      - heading "婚礼详情" [level=2] [ref=e119]
+      - generic [ref=e120]:
+        - generic [ref=e121]:
+          - generic [ref=e122]:
+            - img [ref=e124]
+            - generic [ref=e126]:
+              - heading "时间" [level=3] [ref=e127]
+              - paragraph [ref=e128]: 2026年7月18日星期六
+              - paragraph [ref=e129]: 【入席时间,如:晚 18:00 恭候】
+          - generic [ref=e130]:
+            - img [ref=e132]
+            - generic [ref=e135]:
+              - heading "地点" [level=3] [ref=e136]
+              - paragraph [ref=e137]: 【宴会酒店名称】
+              - paragraph [ref=e138]: 【详细地址,如:浙江省杭州市西湖区XX路XX号】
+          - generic [ref=e139]:
+            - img [ref=e141]
+            - generic [ref=e143]:
+              - heading "交通指引" [level=3] [ref=e144]
+              - list [ref=e145]:
+                - listitem [ref=e146]:
+                  - generic [ref=e147]: •
+                  - generic [ref=e148]: 地铁X号线至XX站,步行5分钟
+                - listitem [ref=e149]:
+                  - generic [ref=e150]: •
+                  - generic [ref=e151]: 公交XX路/XX路至XX站,步行3分钟
+                - listitem [ref=e152]:
+                  - generic [ref=e153]: •
+                  - generic [ref=e154]: 停车场位于酒店地下1-3层
+          - generic [ref=e155]:
+            - img [ref=e157]
+            - generic [ref=e159]:
+              - heading "联系我们" [level=3] [ref=e160]
+              - paragraph [ref=e161]: "新郎: 【新郎姓名】 【新郎电话】"
+              - paragraph [ref=e162]: "新娘: 【新娘姓名】 【新娘电话】"
+        - iframe [active] [ref=e165]:
+          - generic [ref=f1e1]:
+            - generic [ref=f1e3]:
+              - img [ref=f1e4] [cursor=pointer]
+              - text:  
+              - generic [ref=f1e5]:
+                - textbox "搜索位置、公交站、地铁站" [active] [ref=f1e6]
+                - generic [ref=f1e8]: 
+              - generic [ref=f1e9]:
+                - img [ref=f1e10] [cursor=pointer]
+                - text: 
+            - text: 
+            - generic [ref=f1e15]:         
+            - generic [ref=f1e17]:
+              - iframe [ref=f1e18]:
+                
+              - generic:
+                - img
+              - generic [ref=f1e29]: © 2026 AutoNavi - GS(2025)5996号
+            - img [ref=f1e37] [cursor=pointer]
+            - generic [ref=f1e47]:
+              - generic:
+                - link " 卫星" [ref=f1e48] [cursor=pointer]:
+                  - /url: javascript:void(0)
+                  - generic [ref=f1e50]: 
+                  - generic [ref=f1e51]: 卫星
+                - link " 路况" [ref=f1e52] [cursor=pointer]:
+                  - /url: javascript:void(0)
+                  - generic [ref=f1e54]: 
+                  - generic [ref=f1e55]: 路况
+                - link " 测距" [ref=f1e56] [cursor=pointer]:
+                  - /url: javascript:void(0)
+                  - generic [ref=f1e58]: 
+                  - generic [ref=f1e59]: 测距
+                - link " 地铁" [ref=f1e60] [cursor=pointer]:
+                  - /url: javascript:void(0)
+                  - generic [ref=f1e62]: 
+                  - generic [ref=f1e63]: 地铁
+                - link " 全屏" [ref=f1e64] [cursor=pointer]:
+                  - /url: javascript:void(0)
+                  - generic [ref=f1e66]: 
+                  - generic [ref=f1e67]: 全屏
+                - link " 更多" [ref=f1e68] [cursor=pointer]:
+                  - /url: javascript:void(0)
+                  - generic [ref=f1e70]: 
+                  - generic [ref=f1e71]: 更多
+            - generic [ref=f1e76] [cursor=pointer]: 反馈
+            - generic [ref=f1e77]:
+              - generic [ref=f1e85] [cursor=pointer]: 下载APP
+              - generic [ref=f1e88]:
+                - generic [ref=f1e90] [cursor=pointer]: 移动端
+                - generic [ref=f1e91]:
+                  - img [ref=f1e93]
+                  - generic [ref=f1e94]:
+                    - paragraph [ref=f1e95]: 扫码下载 高德地图
+                    - paragraph [ref=f1e96]: 高德地图 哪儿都熟
+            - generic [ref=f1e97]:
+              - generic [ref=f1e102] [cursor=pointer]:
+                - text: 北京
+                - generic [ref=f1e103]: 
+              - text:  
+            - generic [ref=f1e104]:
+              - generic [ref=f1e112] [cursor=pointer]: 体验新版
+              - generic [ref=f1e116]:
+                - generic [ref=f1e117]: 去体验新版吧～
+                - generic [ref=f1e118]: 全新界面，更快更流畅
+                - button "立即体验" [ref=f1e119] [cursor=pointer]
+    - generic [ref=e167]:
+      - heading "RSVP" [level=2] [ref=e168]
+      - generic [ref=e169]:
+        - generic [ref=e170]:
+          - generic [ref=e171]: 姓名 *
+          - textbox "姓名 * 姓名 *" [ref=e172]:
+            - /placeholder: 请输入您的姓名
+        - generic [ref=e173]:
+          - generic [ref=e174]: 邮箱(选填)
+          - textbox "邮箱(选填)" [ref=e175]:
+            - /placeholder: 请输入您的邮箱(可不填)
+        - generic [ref=e176]:
+          - generic [ref=e177]: 您能参加吗? *
+          - generic [ref=e178]:
+            - generic [ref=e179]:
+              - radio "能参加" [checked] [ref=e180]
+              - generic [ref=e181]: 能参加
+            - generic [ref=e182]:
+              - radio "无法参加" [ref=e183]
+              - generic [ref=e184]: 无法参加
+        - generic [ref=e185]:
+          - generic [ref=e186]: 参加人数 *
+          - combobox "参加人数 *" [ref=e187]:
+            - option "1 人" [selected]
+            - option "2 人"
+            - option "3 人"
+            - option "4 人"
+            - option "5 人"
+        - generic [ref=e188]:
+          - generic [ref=e189]: 留言
+          - textbox "留言 祝福语 *" [ref=e190]:
+            - /placeholder: 送上您的祝福或任何想说的话...
+        - button "提交 RSVP" [ref=e192]
+    - generic [ref=e194]:
+      - heading "留言祝福" [level=2] [ref=e195]
+      - generic [ref=e196]:
+        - generic [ref=e197]:
+          - heading "留下祝福" [level=3] [ref=e198]
+          - generic [ref=e199]:
+            - generic [ref=e200]:
+              - generic [ref=e201]: 姓名 *
+              - textbox "请输入您的姓名" [ref=e202]
+            - generic [ref=e203]:
+              - generic [ref=e204]: 祝福语 *
+              - textbox "送上您的祝福..." [ref=e205]
+            - button "提交祝福" [ref=e207]
+        - generic [ref=e208]:
+          - heading "祝福墙" [level=3] [ref=e209]
+          - paragraph [ref=e211]: 还没有祝福,快来留下您的祝福吧!
+    - contentinfo [ref=e212]:
+      - generic [ref=e213]:
+        - paragraph [ref=e214]: 我们将于 2026-07-18T18:00:00+08:00 迎接崭新的开始
+        - paragraph [ref=e215]: © 2026 【新郎姓名】 & 【新娘姓名】. 保留所有权利.
+  - alert [ref=e216]

@@ -1,0 +1,102 @@
+[     448ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:3100/photos/story-3.jpg:0
+[     449ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:3100/photos/story-2.jpg:0
+[     449ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:3100/photos/story-1.jpg:0
+[     458ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:3100/photos/gallery-2.jpg:0
+[     459ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:3100/photos/gallery-1.jpg:0
+[     460ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:3100/photos/story-4.jpg:0
+[     505ms] [LOG] Sun Jun 14 2026 15:18:17 GMT+0800 (中国标准时间) @ https://g.alicdn.com/AWSC/et/1.83.41/et_f.js:1
+[     506ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://fourier.taobao.com/rp?ext=51&data=jm_null&random=22037916223511111&href=https%3A%2F%2Fditu.amap.com%2F%3Fsrc%3Duriapi%26innersrc%3Duriapi&protocol=https:&callback=jsonpCallback:0
+[     510ms] [LOG] AES init done debug @ https://ditu.amap.com/?src=uriapi&innersrc=uriapi:198
+[     525ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://gm.mmstat.com/fsp.1.1:0
+[     530ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://log.mmstat.com/eg.js:0
+[     535ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://gm.mmstat.com/fsp.1.1:0
+[     542ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:3100/photos/gallery-4.jpg:0
+[     542ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:3100/photos/gallery-3.jpg:0
+[     551ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://log.mmstat.com/eg.js:0
+[     607ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:3100/_next/static/chunks/17io_next_dist_0f8n_yo._.js:2477
+[     613ms] [LOG] <AMap JSAPI> 使用 JSAPI 安全模式，代理服务请以_AMapService 作为一级路由 @ https://webapi.amap.com/maps?v=2.0&key=d1f15ad3fdf0c704434eaf23c7c18698&plugin=AMap.Adaptor:0
+[     639ms] [LOG] %c [APLUS] -- APLUS INIT SUCCESS background:#3B82FE; padding: 4px; padding-right: 8px; border-radius: 4px; color: #fff; @ :1
+[     657ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:3100/_next/webpack-hmr?id=ckfmsLDT2efQjRW1nF8vT' failed: Error during WebSocket handshake: net::ERR_INVALID_HTTP_RESPONSE @ http://127.0.0.1:3100/_next/static/chunks/17io_next_dist_client_1k_cn0j._.js:13422
+[     698ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://log.mmstat.com/eg.js:0
+[     717ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://d-gm.mmstat.com/aes.1.1:0
+[     717ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://w.cnzz.com/q_stat.php?id=1255626299&l=3:0
+[     721ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://gm.mmstat.com/fsp.1.1:0
+[     722ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://log.mmstat.com/eg.js:0
+[     752ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://d-gm.mmstat.com/aes.1.1:0
+[     786ms] [LOG] [SEO Config] Environment: production @ https://ditu.amap.com/build/lib.7c352c3546f33a4ca6c3.js:1
+[     786ms] [LOG] [SEO Config] Configuration: {DEBUG: false, TRACK_ENDPOINT: /service/seo/track, SESSION_TIMEOUT: 1800000, BATCH_ENABLED: true, BATCH_SIZE: 20} @ https://ditu.amap.com/build/lib.7c352c3546f33a4ca6c3.js:1
+[     786ms] [LOG] [SEO Config] Configuration applied successfully @ https://ditu.amap.com/build/lib.7c352c3546f33a4ca6c3.js:1
+[     806ms] [LOG] [Track] New session detected, reset from_page to 0 @ https://ditu.amap.com/build/main.7c352c3546f33a4ca6c3.js:0
+[     806ms] [LOG] [VersionControl] 请求接口: https://amap-pc-ssr.amap.com/ssr/api/getNewVersionRolloutConfig @ https://ditu.amap.com/build/main.7c352c3546f33a4ca6c3.js:67
+[     816ms] [LOG] [initLoc] @ https://ditu.amap.com/build/main.7c352c3546f33a4ca6c3.js:80
+[     817ms] [LOG] [remoteLoc] @ https://ditu.amap.com/build/main.7c352c3546f33a4ca6c3.js:80
+[     846ms] [LOG] [watch loc] @ https://ditu.amap.com/build/main.7c352c3546f33a4ca6c3.js:80
+[     851ms] [ERROR] Permissions policy violation: Geolocation access has been blocked because of a permissions policy applied to the current document. See https://crbug.com/414348233 for more details. @ https://ditu.amap.com/assets/lib/mapTracker.js:0
+[     880ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://log.mmstat.com/eg.js:0
+[     941ms] [ERROR] Permissions policy violation: accelerometer is not allowed in this document. @ https://g.alicdn.com/AWSC/fireyejs/1.231.67/fireyejs.js:0
+[     942ms] [WARNING] The deviceorientation events are blocked by permissions policy. See https://github.com/w3c/webappsec-permissions-policy/blob/master/features.md#sensor-features @ https://g.alicdn.com/AWSC/fireyejs/1.231.67/fireyejs.js:0
+[     944ms] [LOG] [VersionControl] 接口返回: 1 @ https://ditu.amap.com/build/main.7c352c3546f33a4ca6c3.js:67
+[     944ms] [LOG] [VersionControl] 改进的灰度计算 - 用户ID: 2d52899e-a822-4c0b-bc2c-4f8e08cd80d2 桶位置: 3902 阈值: 10000 灰度比例: 1 命中: true @ https://ditu.amap.com/build/main.7c352c3546f33a4ca6c3.js:67
+[     945ms] [LOG] [VersionControl] 灰度命中，设置Cookie @ https://ditu.amap.com/build/main.7c352c3546f33a4ca6c3.js:67
+[     945ms] [LOG] [VersionControl] 灰度命中，渲染新版按钮组件 @ https://ditu.amap.com/build/main.7c352c3546f33a4ca6c3.js:67
+[     948ms] [LOG] [Track] reportBiz success: PC_new_version_button_show @ https://ditu.amap.com/build/main.7c352c3546f33a4ca6c3.js:0
+[     948ms] [LOG] [VersionControl] 新版按钮组件已渲染并初始化 @ https://ditu.amap.com/build/main.7c352c3546f33a4ca6c3.js:67
+[     949ms] [ERROR] Permissions policy violation: Geolocation access has been blocked because of a permissions policy applied to the current document. See https://crbug.com/414348233 for more details. @ :0
+[     996ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://f02t8j.tdum.alibaba.com/dss.js:0
+[    1003ms] [LOG] [IPCityLoc] @ https://ditu.amap.com/build/main.7c352c3546f33a4ca6c3.js:80
+[    1006ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://log.mmstat.com/eg.js:0
+[    1035ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://d-gm.mmstat.com/amap.AI_PC_base.new_version_click_exp?gmkey=EXP&gokey=spm-url%3D%26spm-pre%3D%26spm-cnt%3D0.0.0.0.23201c4e6OyYJl%26_f_t%3Dfalse%26pid%3Dditu_amap_com%26source%3Dnew_version_panel%26cache%3D7305f1a%26jsver%3Daplus.js%26lver%3D1.13.27%26customSdkId%3D%26platformType%3Dpc%26device_model%3DMacintosh%26os%3DMac%20OS%20X%26os_version%3D10.15.7%26language%3Dzh-CN%26o%3Dmac%26w%3Dwebkit%26s%3D1920x1080%26scr%3D1920x1080%26m%3D360ee%26ism%3Dmac%26p%3D1%26b%3Dchrome149%26tag%3D0%26stag%3D-3%26lstag%3D-1%26_g_encode%3Dutf-8&cna=&spm-cnt=0.0.0.0.23201c4e6OyYJl&logtype=2&scr=1920x1080&_p_url=https%3A%2F%2Fditu.amap.com%2F%3Fsrc%3Duriapi%26innersrc%3Duriapi:0
+[    1035ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://gm.mmstat.com/fsp.1.1:0
+[    1036ms] [WARNING] [APLUS] -- 日志上报失败，注意，要切成动态网络啦! @ :2
+[    1038ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://d-gm.mmstat.com/Amap_PC.PC_page.PC_page_view?gmkey=EXP&gokey=spm-url%3D%26spm-pre%3D%26spm-cnt%3D0.0.0.0.23201c4e6OyYJl%26_f_t%3Dfalse%26pid%3Dditu_amap_com%26click%3DPC_new_version_button_show%26event%3DPC_new_version_button_show%26page_id%3Dhome%26page_name%3D%E9%A6%96%E9%A1%B5%26session_id%3Ds_1781421497542_0pc9j9idv%26visitor_id%3Dv_1781421261505_nm92989yv%26from_page%3D0%26landing_page%3Dhttps%3A%2F%2Fditu.amap.com%2F%3Fsrc%3Duriapi%26innersrc%3Duriapi%26referrer%3Dhttp%3A%2F%2F127.0.0.1%3A3100%2F%26timestamp%3D2026-06-14T07%3A18%3A17.704Z%26uuid%3D2d52899e-a822-4c0b-bc2c-4f8e08cd80d2%26user_id%3D%26is_login%3Dfalse%26visit_type%3Dbiz_navigate%26screen_width%3D1920%26screen_height%3D1080%26user_agent%3DMozilla%2F5.0%20(Macintosh%3B%20Intel%20Mac%20OS%20X%2010_15_7)%20AppleWebKit%2F537.36%20(KHTML%2C%20like%20Gecko)%20Chrome%2F149.0.0.0%20Safari%2F537.36%26page_title%3D%E9%AB%98%E5%BE%B7%E5%9C%B0%E5%9B%BE%26source%3D127.0.0.1%26source_name%3D127.0.0.1%26landing_path%3D%2F%26page_url%3Dhttps%3A%2F%2Fditu.amap.com%2F%3Fsrc%3Duriapi%26innersrc%3Duriapi%26url_src%3Duriapi%26cache%3Dcb39c1f%26jsver%3Daplus.js%26lver%3D1.13.27%26customSdkId%3D%26platformType%3Dpc%26device_model%3DMacintosh%26os%3DMac%20OS%20X%26os_version%3D10.15.7%26language%3Dzh-CN%26o%3Dmac%26w%3Dwebkit%26s%3D1920x1080%26scr%3D1920x1080%26m%3D360ee%26ism%3Dmac%26p%3D1%26b%3Dchrome149%26tag%3D0%26stag%3D-3%26lstag%3D-1%26_g_encode%3Dutf-8&cna=&spm-cnt=0.0.0.0.23201c4e6OyYJl&logtype=2&scr=1920x1080&_p_url=https%3A%2F%2Fditu.amap.com%2F%3Fsrc%3Duriapi%26innersrc%3Duriapi:0
+[    1038ms] [WARNING] [APLUS] -- 日志上报失败，注意，要切成动态网络啦! @ :2
+[    1038ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://d-gm.mmstat.com/aes.1.1:0
+[    1049ms] [LOG] status: no_data @ https://ditu.amap.com/build/main.7c352c3546f33a4ca6c3.js:80
+[    1049ms] [LOG] result: {} @ https://ditu.amap.com/build/main.7c352c3546f33a4ca6c3.js:80
+[    1074ms] [WARNING] CardDataManager: No card data found @ https://ditu.amap.com/build/main.7c352c3546f33a4ca6c3.js:70
+[    1074ms] [LOG] App download content updated with card data: {title: 扫码下载 高德地图, content: 高德地图 哪儿都熟, picUrl: , schema: } @ https://ditu.amap.com/build/main.7c352c3546f33a4ca6c3.js:66
+[    1083ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://log.mmstat.com/eg.js:0
+[    1113ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://d-gm.mmstat.com/aes.1.1:0
+[    1194ms] [LOG] [watch loc] @ https://ditu.amap.com/build/main.7c352c3546f33a4ca6c3.js:80
+[    1391ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://fourier.alibaba.com/ts?url=https%3A%2F%2Ffourier.taobao.com%2Frp%3Fext%3D51%26data%3Djm_null%26random%3D7992775707274454%26href%3Dhttps%253A%252F%252Fditu.amap.com%252F%253Fsrc%253Duriapi%2526innersrc%253Duriapi%26protocol%3Dhttps%3A%26callback%3DjsonpCallback&token=gCXjNSMigNBPUOZYWqrrAyQY8Gp6GuyefctOxGHqXKpvfRshACEc0SjONNQkgEB1jAtOXNqD7oVPmivMByzFCJScmHW0jAayBlIJQhtKughcmiviqsIGeyS01U1IvnpOWLLJYHJ9DnHYV4KHyxKtHh38VhYJBxKvB8pJjHHvWhQO2utMyFp9MNp8VhYJWdpt6GnBfSTcclvK0WW4qFjvPAHOeRAXRihZBABWcI6ODUir4TtXGedwIWCfdMIAKh6gvfT1xsQ2qNwQPLBfltdWCRMk3M1RlQ1b5YOlwMX9N_4ItMjAl6ddH8ZJNtjeHU6gjAYAgGBw1tUKbEBcuTOhIqay76SPHQ_LzY_M1sCpHOaQeg-sLeO8xfiWtAKW8uZSsf2E20QkMx8aQIKkcQr7VqCi-AHEgOrS60Avq3kYVuGHI&cna=undefined&ext=61:0
+[    1391ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://fourier.taobao.com/rp?ext=51&data=jm_null&random=7992775707274454&href=https%3A%2F%2Fditu.amap.com%2F%3Fsrc%3Duriapi%26innersrc%3Duriapi&protocol=https:&callback=jsonpCallback:0
+[    1448ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://gm.mmstat.com/fsp.1.1:0
+[    1486ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://log.mmstat.com/eg.js:0
+[    1517ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://d-gm.mmstat.com/aes.1.1:0
+[    1665ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:3100/_next/webpack-hmr?id=ckfmsLDT2efQjRW1nF8vT' failed: Error during WebSocket handshake: net::ERR_INVALID_HTTP_RESPONSE @ http://127.0.0.1:3100/_next/static/chunks/17io_next_dist_client_1k_cn0j._.js:13422
+[    1683ms] [LOG] [Track] reportBiz success: biz_page_view @ https://ditu.amap.com/build/main.7c352c3546f33a4ca6c3.js:0
+[    1684ms] [LOG] [Route] Enter page: home , from_page: 0 @ https://ditu.amap.com/build/main.7c352c3546f33a4ca6c3.js:80
+[    1766ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://log.mmstat.com/eg.js:0
+[    1831ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://d-gm.mmstat.com/Amap_PC.PC_page.PC_page_view?gmkey=EXP&gokey=spm-url%3D%26spm-pre%3D%26spm-cnt%3D0.0.0.0.23201c4e6OyYJl%26_f_t%3Dfalse%26pid%3Dditu_amap_com%26page%3DPC_map_front%26cache%3Db7f952e%26jsver%3Daplus.js%26lver%3D1.13.27%26customSdkId%3D%26platformType%3Dpc%26device_model%3DMacintosh%26os%3DMac%20OS%20X%26os_version%3D10.15.7%26language%3Dzh-CN%26o%3Dmac%26w%3Dwebkit%26s%3D1920x1080%26scr%3D1920x1080%26m%3D360ee%26ism%3Dmac%26p%3D1%26b%3Dchrome149%26tag%3D0%26stag%3D-3%26lstag%3D-1%26_g_encode%3Dutf-8&cna=&spm-cnt=0.0.0.0.23201c4e6OyYJl&logtype=2&scr=1920x1080&_p_url=https%3A%2F%2Fditu.amap.com%2F%3Fsrc%3Duriapi%26innersrc%3Duriapi:0
+[    1831ms] [WARNING] [APLUS] -- 日志上报失败，注意，要切成动态网络啦! @ :2
+[    1833ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://log.mmstat.com/eg.js:0
+[    1840ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://d-gm.mmstat.com/Amap_PC.PC_page.PC_page_view?gmkey=EXP&gokey=spm-url%3D%26spm-pre%3D%26spm-cnt%3D0.0.0.0.23201c4e6OyYJl%26_f_t%3Dfalse%26pid%3Dditu_amap_com%26click%3Dbiz_page_view%26event%3Dbiz_page_view%26page_id%3Dhome%26page_name%3D%E9%A6%96%E9%A1%B5%26session_id%3Ds_1781421497542_0pc9j9idv%26visitor_id%3Dv_1781421261505_nm92989yv%26from_page%3D0%26landing_page%3Dhttps%3A%2F%2Fditu.amap.com%2F%3Fsrc%3Duriapi%26innersrc%3Duriapi%26referrer%3Dhttp%3A%2F%2F127.0.0.1%3A3100%2F%26timestamp%3D2026-06-14T07%3A18%3A18.440Z%26uuid%3D2d52899e-a822-4c0b-bc2c-4f8e08cd80d2%26user_id%3D%26is_login%3Dfalse%26visit_type%3Dbiz_navigate%26screen_width%3D1920%26screen_height%3D1080%26user_agent%3DMozilla%2F5.0%20(Macintosh%3B%20Intel%20Mac%20OS%20X%2010_15_7)%20AppleWebKit%2F537.36%20(KHTML%2C%20like%20Gecko)%20Chrome%2F149.0.0.0%20Safari%2F537.36%26page_title%3D%E9%AB%98%E5%BE%B7%E5%9C%B0%E5%9B%BE%26source%3D127.0.0.1%26source_name%3D127.0.0.1%26landing_path%3D%2F%26page_url%3Dhttps%3A%2F%2Fditu.amap.com%2F%3Fsrc%3Duriapi%26innersrc%3Duriapi%26current_city%3D110000%26url_src%3Duriapi%26cache%3D6a1f61d%26jsver%3Daplus.js%26lver%3D1.13.27%26customSdkId%3D%26platformType%3Dpc%26device_model%3DMacintosh%26os%3DMac%20OS%20X%26os_version%3D10.15.7%26language%3Dzh-CN%26o%3Dmac%26w%3Dwebkit%26s%3D1920x1080%26scr%3D1920x1080%26m%3D360ee%26ism%3Dmac%26p%3D1%26b%3Dchrome149%26tag%3D0%26stag%3D-3%26lstag%3D-1%26_g_encode%3Dutf-8&cna=&spm-cnt=0.0.0.0.23201c4e6OyYJl&logtype=2&scr=1920x1080&_p_url=https%3A%2F%2Fditu.amap.com%2F%3Fsrc%3Duriapi%26innersrc%3Duriapi:0
+[    1840ms] [WARNING] [APLUS] -- 日志上报失败，注意，要切成动态网络啦! @ :2
+[    1852ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://log.mmstat.com/eg.js:0
+[    1862ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://d-gm.mmstat.com/aes.1.1:0
+[    1864ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://d-gm.mmstat.com/aes.1.1:0
+[    1873ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://log.mmstat.com/eg.js:0
+[    1879ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://d-gm.mmstat.com/aes.1.1:0
+[    1901ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://d-gm.mmstat.com/aes.1.1:0
+[    1988ms] [COUNT] %c%d: 1 @ https://g.alicdn.com/captcha-frontend/FeiLin/1.4.2/feilin075.68af296cbc35722d15cd14c2dac0f758da3f95c51a20bc6c910ed2d66999cd54.js:0
+[    1988ms] [DIR] %c%d font-size:0;color:transparent Error @ https://g.alicdn.com/captcha-frontend/FeiLin/1.4.2/feilin075.68af296cbc35722d15cd14c2dac0f758da3f95c51a20bc6c910ed2d66999cd54.js:0
+[    1988ms] [DIRXML] %c%d font-size:0;color:transparent Error @ https://g.alicdn.com/captcha-frontend/FeiLin/1.4.2/feilin075.68af296cbc35722d15cd14c2dac0f758da3f95c51a20bc6c910ed2d66999cd54.js:0
+[    1988ms] [INFO] %c%d font-size:0;color:transparent NaN @ https://g.alicdn.com/captcha-frontend/FeiLin/1.4.2/feilin075.68af296cbc35722d15cd14c2dac0f758da3f95c51a20bc6c910ed2d66999cd54.js:0
+[    1989ms] [INFO] %c%d font-size:0;color:transparent NaN @ https://g.alicdn.com/captcha-frontend/FeiLin/1.4.2/feilin075.68af296cbc35722d15cd14c2dac0f758da3f95c51a20bc6c910ed2d66999cd54.js:0
+[    1989ms] [LOG] %c%d font-size:0;color:transparent NaN @ https://g.alicdn.com/captcha-frontend/FeiLin/1.4.2/feilin075.68af296cbc35722d15cd14c2dac0f758da3f95c51a20bc6c910ed2d66999cd54.js:0
+[    1989ms] [TABLE] %c%d font-size:0;color:transparent Error @ https://g.alicdn.com/captcha-frontend/FeiLin/1.4.2/feilin075.68af296cbc35722d15cd14c2dac0f758da3f95c51a20bc6c910ed2d66999cd54.js:0
+[    1989ms] [INFO] %c%d font-size:0;color:transparent NaN @ https://g.alicdn.com/captcha-frontend/FeiLin/1.4.2/feilin075.68af296cbc35722d15cd14c2dac0f758da3f95c51a20bc6c910ed2d66999cd54.js:0
+[    2668ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:3100/_next/webpack-hmr?id=ckfmsLDT2efQjRW1nF8vT' failed: Error during WebSocket handshake: net::ERR_INVALID_HTTP_RESPONSE @ http://127.0.0.1:3100/_next/static/chunks/17io_next_dist_client_1k_cn0j._.js:13422
+[    2917ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://log.mmstat.com/eg.js:0
+[    2929ms] [WARNING] Canvas2D: Multiple readback operations using getImageData are faster with the willReadFrequently attribute set to true. See: https://html.spec.whatwg.org/multipage/canvas.html#concept-canvas-will-read-frequently @ https://webapi.amap.com/maps?v=2.0&key=d1f15ad3fdf0c704434eaf23c7c18698&plugin=AMap.Adaptor:0
+[    2954ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://d-gm.mmstat.com/aes.1.1:0
+[    3670ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:3100/_next/webpack-hmr?id=ckfmsLDT2efQjRW1nF8vT' failed: Error during WebSocket handshake: net::ERR_INVALID_HTTP_RESPONSE @ http://127.0.0.1:3100/_next/static/chunks/17io_next_dist_client_1k_cn0j._.js:13422
+[    4674ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:3100/_next/webpack-hmr?id=ckfmsLDT2efQjRW1nF8vT' failed: Error during WebSocket handshake: net::ERR_INVALID_HTTP_RESPONSE @ http://127.0.0.1:3100/_next/static/chunks/17io_next_dist_client_1k_cn0j._.js:13422
+[    5680ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:3100/_next/webpack-hmr?id=ckfmsLDT2efQjRW1nF8vT' failed: Error during WebSocket handshake: net::ERR_INVALID_HTTP_RESPONSE @ http://127.0.0.1:3100/_next/static/chunks/17io_next_dist_client_1k_cn0j._.js:13422
+[   10691ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:3100/_next/webpack-hmr?id=ckfmsLDT2efQjRW1nF8vT' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:3100/_next/static/chunks/17io_next_dist_client_1k_cn0j._.js:13422
+[   15703ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:3100/_next/webpack-hmr?id=ckfmsLDT2efQjRW1nF8vT' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:3100/_next/static/chunks/17io_next_dist_client_1k_cn0j._.js:13422
+[   20745ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:3100/_next/webpack-hmr?id=ckfmsLDT2efQjRW1nF8vT' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:3100/_next/static/chunks/17io_next_dist_client_1k_cn0j._.js:13422
+[   25803ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:3100/_next/webpack-hmr?id=ckfmsLDT2efQjRW1nF8vT' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:3100/_next/static/chunks/17io_next_dist_client_1k_cn0j._.js:13422
+[   30845ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:3100/_next/webpack-hmr?id=ckfmsLDT2efQjRW1nF8vT' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:3100/_next/static/chunks/17io_next_dist_client_1k_cn0j._.js:13422
+[   35849ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:3100/_next/webpack-hmr?id=ckfmsLDT2efQjRW1nF8vT' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:3100/_next/static/chunks/17io_next_dist_client_1k_cn0j._.js:13422
+[   40852ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:3100/_next/webpack-hmr?id=ckfmsLDT2efQjRW1nF8vT' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:3100/_next/static/chunks/17io_next_dist_client_1k_cn0j._.js:13422

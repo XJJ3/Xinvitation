@@ -1,0 +1,266 @@
+[    5716ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3003/photos/gallery-2.jpg:0
+[    5718ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3003/photos/gallery-1.jpg:0
+[    5719ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3003/photos/story-4.jpg:0
+[    5720ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3003/photos/story-3.jpg:0
+[    5721ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3003/photos/story-1.jpg:0
+[    5722ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3003/photos/story-2.jpg:0
+[    5797ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3003/photos/gallery-4.jpg:0
+[    5798ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3003/photos/gallery-3.jpg:0
+[    5867ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://fourier.taobao.com/rp?ext=51&data=jm_null&random=7546428467264183&href=https%3A%2F%2Fditu.amap.com%2F%3Fsrc%3Duriapi%26innersrc%3Duriapi&protocol=https:&callback=jsonpCallback:0
+[    5875ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3003/_next/static/chunks/17io_next_dist_0f8n_yo._.js:2477
+[    5875ms] [LOG] AES init done debug @ https://ditu.amap.com/?src=uriapi&innersrc=uriapi:198
+[    5922ms] [LOG] [HMR] connected @ http://localhost:3003/_next/static/chunks/17io_next_dist_0f8n_yo._.js:2477
+[    5940ms] [LOG] <AMap JSAPI> 使用 JSAPI 安全模式，代理服务请以_AMapService 作为一级路由 @ https://webapi.amap.com/maps?v=2.0&key=d1f15ad3fdf0c704434eaf23c7c18698&plugin=AMap.Adaptor:0
+[    5979ms] [ERROR] A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+%s%s https://react.dev/link/hydration-mismatch 
+
+  ...
+    <LoadingBoundary name="/" loading={null}>
+      <HTTPAccessFallbackBoundary notFound={{...}} forbidden={undefined} unauthorized={undefined}>
+        <HTTPAccessFallbackErrorBoundary pathname="/" notFound={{...}} forbidden={undefined} unauthorized={undefined} ...>
+          <RedirectBoundary>
+            <RedirectErrorBoundary router={{...}}>
+              <InnerLayoutRouter url="/" tree={[...]} params={{}} cacheNode={{rsc:{...}, ...}} segmentPath={[...]} ...>
+                <SegmentViewNode type="page" pagePath="page.tsx">
+                  <SegmentTrieNode>
+                  <Home>
+                    <div className="min-h-scre...">
+                      <Hero>
+                        <section className="jsx-8de691...">
+                          <div>
+                          <div className="jsx-8de691...">
+                            <motion.div className="absolute w..." initial={{x:"15.4783...", ...}} ...>
+                              <div
+                                className="absolute w-2 h-2 bg-romantic-pink-soft rounded-full opacity-70"
+                                style={{
++                                 transform: "translateX(15.478342358142495%) translateY(-20px) rotate(180.00957621236..."
+-                                 transform: "translateX(84.886%) translateY(-20px) rotate(140.753deg)"
+                                }}
+                                ref={function useMotionRef.useCallback}
+                              >
+                            <motion.div className="absolute w..." initial={{x:"98.2615...", ...}} ...>
+                              <div
+                                className="absolute w-2 h-2 bg-romantic-pink-soft rounded-full opacity-70"
+                                style={{
++                                 transform: "translateX(98.26156692439064%) translateY(-20px) rotate(161.170848434751..."
+-                                 transform: "translateX(60.3444%) translateY(-20px) rotate(26.2285deg)"
+                                }}
+                                ref={function useMotionRef.useCallback}
+                              >
+                            <motion.div className="absolute w..." initial={{x:"29.2543...", ...}} ...>
+                              <div
+                                className="absolute w-2 h-2 bg-romantic-pink-soft rounded-full opacity-70"
+                                style={{
++                                 transform: "translateX(29.254364413611388%) translateY(-20px) rotate(323.96401456452..."
+-                                 transform: "translateX(86.7504%) translateY(-20px) rotate(357.319deg)"
+                                }}
+                                ref={function useMotionRef.useCallback}
+                              >
+                            <motion.div className="absolute w..." initial={{x:"50.2871...", ...}} ...>
+                              <div
+                                className="absolute w-2 h-2 bg-romantic-pink-soft rounded-full opacity-70"
+                                style={{
++                                 transform: "translateX(50.287105601152085%) translateY(-20px) rotate(317.31688372362..."
+-                                 transform: "translateX(60.9417%) translateY(-20px) rotate(276.431deg)"
+                                }}
+                                ref={function useMotionRef.useCallback}
+                              >
+                            <motion.div className="absolute w..." initial={{x:"42.4223...", ...}} ...>
+                              <div
+                                className="absolute w-2 h-2 bg-romantic-pink-soft rounded-full opacity-70"
+                                style={{
++                                 transform: "translateX(42.42239560952097%) translateY(-20px) rotate(25.1819174429763..."
+-                                 transform: "translateX(16.0502%) translateY(-20px) rotate(323.678deg)"
+                                }}
+                                ref={function useMotionRef.useCallback}
+                              >
+                            <motion.div className="absolute w..." initial={{x:"92.5533...", ...}} ...>
+                              <div
+                                className="absolute w-2 h-2 bg-romantic-pink-soft rounded-full opacity-70"
+                                style={{
++                                 transform: "translateX(92.55330017000387%) translateY(-20px) rotate(60.1601455156065..."
+-                                 transform: "translateX(82.76%) translateY(-20px) rotate(222.639deg)"
+                                }}
+                                ref={function useMotionRef.useCallback}
+                              >
+                            <motion.div className="absolute w..." initial={{x:"21.9476...", ...}} ...>
+                              <div
+                                className="absolute w-2 h-2 bg-romantic-pink-soft rounded-full opacity-70"
+                                style={{
++                                 transform: "translateX(21.94765402834049%) translateY(-20px) rotate(120.173149692760..."
+-                                 transform: "translateX(52.7944%) translateY(-20px) rotate(169.45deg)"
+                                }}
+                                ref={function useMotionRef.useCallback}
+                              >
+                            <motion.div className="absolute w..." initial={{x:"23.5953...", ...}} ...>
+                              <div
+                                className="absolute w-2 h-2 bg-romantic-pink-soft rounded-full opacity-70"
+                                style={{
++                                 transform: "translateX(23.59538149683269%) translateY(-20px) rotate(176.456887852886..."
+-                                 transform: "translateX(0.440389%) translateY(-20px) rotate(114.317deg)"
+                                }}
+                                ref={function useMotionRef.useCallback}
+                              >
+                            <motion.div className="absolute w..." initial={{x:"43.1757...", ...}} ...>
+                              <div
+                                className="absolute w-2 h-2 bg-romantic-pink-soft rounded-full opacity-70"
+                                style={{
++                                 transform: "translateX(43.1757259265905%) translateY(-20px) rotate(191.8003981908457..."
+-                                 transform: "translateX(64.6031%) translateY(-20px) rotate(32.5319deg)"
+                                }}
+                                ref={function useMotionRef.useCallback}
+                              >
+                            <motion.div className="absolute w..." initial={{x:"75.1170...", ...}} ...>
+                              <div
+                                className="absolute w-2 h-2 bg-romantic-pink-soft rounded-full opacity-70"
+                                style={{
++                                 transform: "translateX(75.11702039533726%) translateY(-20px) rotate(192.475727404784..."
+-                                 transform: "translateX(86.7232%) translateY(-20px) rotate(35.6142deg)"
+                                }}
+                                ref={function useMotionRef.useCallback}
+                              >
+                            <motion.div className="absolute w..." initial={{x:"34.1326...", ...}} ...>
+                              <div
+                                className="absolute w-2 h-2 bg-romantic-pink-soft rounded-full opacity-70"
+                                style={{
++                                 transform: "translateX(34.13269073898011%) translateY(-20px) rotate(303.161519742966..."
+-                                 transform: "translateX(2.23168%) translateY(-20px) rotate(48.4202deg)"
+                                }}
+                                ref={function useMotionRef.useCallback}
+                              >
+                            <motion.div className="absolute w..." initial={{x:"20.9047...", ...}} ...>
+                              <div
+                                className="absolute w-2 h-2 bg-romantic-pink-soft rounded-full opacity-70"
+                                style={{
++                                 transform: "translateX(20.90475570112892%) translateY(-20px) rotate(196.340808516184..."
+-                                 transform: "translateX(14.3284%) translateY(-20px) rotate(154.159deg)"
+                                }}
+                                ref={function useMotionRef.useCallback}
+                              >
+                            <motion.div className="absolute w..." initial={{x:"11.4755...", ...}} ...>
+                              <div
+                                className="absolute w-2 h-2 bg-romantic-pink-soft rounded-full opacity-70"
+                                style={{
++                                 transform: "translateX(11.475520124340832%) translateY(-20px) rotate(183.78766003423..."
+-                                 transform: "translateX(4.66952%) translateY(-20px) rotate(318.948deg)"
+                                }}
+                                ref={function useMotionRef.useCallback}
+                              >
+                            <motion.div className="absolute w..." initial={{x:"27.8977...", ...}} ...>
+                              <div
+                                className="absolute w-2 h-2 bg-romantic-pink-soft rounded-full opacity-70"
+                                style={{
++                                 transform: "translateX(27.897721457714564%) translateY(-20px) rotate(68.602629679335..."
+-                                 transform: "translateX(43.919%) translateY(-20px) rotate(338.489deg)"
+                                }}
+                                ref={function useMotionRef.useCallback}
+                              >
+                            <motion.div className="absolute w..." initial={{x:"22.1106...", ...}} ...>
+                              <div
+                                className="absolute w-2 h-2 bg-romantic-pink-soft rounded-full opacity-70"
+                                style={{
++                                 transform: "translateX(22.110613489423557%) translateY(-20px) rotate(292.81820450036..."
+-                                 transform: "translateX(21.5318%) translateY(-20px) rotate(342.737deg)"
+                                }}
+                                ref={function useMotionRef.useCallback}
+                              >
+                          ...
+                      ...
+                ...
+              ...
+ @ http://localhost:3003/_next/static/chunks/17io_next_dist_0f8n_yo._.js:3318
+[    6108ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3003/_next/static/chunks/17io_next_dist_0f8n_yo._.js:2477
+[    6365ms] [LOG] [Fast Refresh] done in 358ms @ http://localhost:3003/_next/static/chunks/17io_next_dist_0f8n_yo._.js:2477
+[    6430ms] [LOG] Sun Jun 14 2026 15:14:20 GMT+0800 (中国标准时间) @ https://g.alicdn.com/AWSC/et/1.83.41/et_f.js:1
+[    6465ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://fourier.alibaba.com/ts?url=http%3A%2F%2Flocalhost%3A3003%2F&token=gbUq1xZLTV25RqX3TW0NYyp5oiux5VWBbPMss5ViGxDcBoGMSYyZcs3_sAyaFYeZXsHsIAy_so15RwNYMV3gQ9_CRtjHny4qIdgik4fa90AARwNYiV3Gd9_QfulWyvkiSmmGr4D-6f0imVfrEflpjK2iS_5ref0iIR0Ga4D-sVDgIVfr1QV0sUlIms1kAQnQvjoqKSDkGIaogpM3iY8MS1Gq0mNmUFYgzjoqKSDFzLD7sWEi4P7WyVF7YRrgE1YiQucULXwfrEugq8zEx7BekxruHPujvNRZakPu3rPP13yaEWEKorX9lxEgZPD7o1TZKkNKzbU1eEDaql4jDVpc3bz4TPrN4qptZgbzWoJMjmc-av1Pa5oH0WGrd_5yXhnoJbkCGjtMjdL95nz_VhKtDhlrdsuV.&cna=undefined&ext=1:0
+[    6465ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://gm.mmstat.com/fsp.1.1:0
+[    6662ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://w.cnzz.com/q_stat.php?id=1255626299&l=3:0
+[    6663ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://log.mmstat.com/eg.js:0
+[    6688ms] [LOG] %c [APLUS] -- APLUS INIT SUCCESS background:#3B82FE; padding: 4px; padding-right: 8px; border-radius: 4px; color: #fff; @ :1
+[    6699ms] [LOG] [SEO Config] Environment: production @ https://ditu.amap.com/build/lib.7c352c3546f33a4ca6c3.js:1
+[    6699ms] [LOG] [SEO Config] Configuration: {DEBUG: false, TRACK_ENDPOINT: /service/seo/track, SESSION_TIMEOUT: 1800000, BATCH_ENABLED: true, BATCH_SIZE: 20} @ https://ditu.amap.com/build/lib.7c352c3546f33a4ca6c3.js:1
+[    6699ms] [LOG] [SEO Config] Configuration applied successfully @ https://ditu.amap.com/build/lib.7c352c3546f33a4ca6c3.js:1
+[    6720ms] [LOG] [Track] New session detected, reset from_page to 0 @ https://ditu.amap.com/build/main.7c352c3546f33a4ca6c3.js:0
+[    6720ms] [LOG] [VersionControl] 请求接口: https://amap-pc-ssr.amap.com/ssr/api/getNewVersionRolloutConfig @ https://ditu.amap.com/build/main.7c352c3546f33a4ca6c3.js:67
+[    6731ms] [LOG] [initLoc] @ https://ditu.amap.com/build/main.7c352c3546f33a4ca6c3.js:80
+[    6732ms] [LOG] [remoteLoc] @ https://ditu.amap.com/build/main.7c352c3546f33a4ca6c3.js:80
+[    6759ms] [LOG] [watch loc] @ https://ditu.amap.com/build/main.7c352c3546f33a4ca6c3.js:80
+[    6764ms] [ERROR] Permissions policy violation: Geolocation access has been blocked because of a permissions policy applied to the current document. See https://crbug.com/414348233 for more details. @ https://ditu.amap.com/assets/lib/mapTracker.js:0
+[    6768ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://log.mmstat.com/eg.js:0
+[    6768ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://gm.mmstat.com/fsp.1.1:0
+[    6781ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3003/_next/static/chunks/17io_next_dist_0f8n_yo._.js:2477
+[    6799ms] [LOG] [VersionControl] 接口返回: 1 @ https://ditu.amap.com/build/main.7c352c3546f33a4ca6c3.js:67
+[    6799ms] [LOG] [VersionControl] 改进的灰度计算 - 用户ID: 2d52899e-a822-4c0b-bc2c-4f8e08cd80d2 桶位置: 3902 阈值: 10000 灰度比例: 1 命中: true @ https://ditu.amap.com/build/main.7c352c3546f33a4ca6c3.js:67
+[    6799ms] [LOG] [VersionControl] 灰度命中，设置Cookie @ https://ditu.amap.com/build/main.7c352c3546f33a4ca6c3.js:67
+[    6799ms] [LOG] [VersionControl] 灰度命中，渲染新版按钮组件 @ https://ditu.amap.com/build/main.7c352c3546f33a4ca6c3.js:67
+[    6802ms] [LOG] [Track] reportBiz success: PC_new_version_button_show @ https://ditu.amap.com/build/main.7c352c3546f33a4ca6c3.js:0
+[    6802ms] [LOG] [VersionControl] 新版按钮组件已渲染并初始化 @ https://ditu.amap.com/build/main.7c352c3546f33a4ca6c3.js:67
+[    6848ms] [LOG] [Fast Refresh] done in 168ms @ http://localhost:3003/_next/static/chunks/17io_next_dist_0f8n_yo._.js:2477
+[    6887ms] [ERROR] Permissions policy violation: accelerometer is not allowed in this document. @ https://g.alicdn.com/AWSC/fireyejs/1.231.67/fireyejs.js:0
+[    6887ms] [WARNING] The deviceorientation events are blocked by permissions policy. See https://github.com/w3c/webappsec-permissions-policy/blob/master/features.md#sensor-features @ https://g.alicdn.com/AWSC/fireyejs/1.231.67/fireyejs.js:0
+[    6941ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://log.mmstat.com/eg.js:0
+[    6941ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://gm.mmstat.com/fsp.1.1:0
+[    6942ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://d-gm.mmstat.com/aes.1.1:0
+[    6955ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://ecywsh.tdum.alibaba.com/dss.js:0
+[    6964ms] [LOG] [watch loc] @ https://ditu.amap.com/build/main.7c352c3546f33a4ca6c3.js:80
+[    7057ms] [WARNING] CardDataManager: No card data found @ https://ditu.amap.com/build/main.7c352c3546f33a4ca6c3.js:70
+[    7057ms] [LOG] App download content updated with card data: {title: 扫码下载 高德地图, content: 高德地图 哪儿都熟, picUrl: , schema: } @ https://ditu.amap.com/build/main.7c352c3546f33a4ca6c3.js:66
+[    7064ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://d-gm.mmstat.com/amap.AI_PC_base.new_version_click_exp?gmkey=EXP&gokey=spm-url%3D%26spm-pre%3D%26spm-cnt%3D0.0.0.0.23201c4eyBdFka%26_f_t%3Dfalse%26pid%3Dditu_amap_com%26source%3Dnew_version_panel%26cache%3Dbf7beaa%26jsver%3Daplus.js%26lver%3D1.13.27%26customSdkId%3D%26platformType%3Dpc%26device_model%3DMacintosh%26os%3DMac%20OS%20X%26os_version%3D10.15.7%26language%3Dzh-CN%26o%3Dmac%26w%3Dwebkit%26s%3D1920x1080%26scr%3D1920x1080%26m%3D360ee%26ism%3Dmac%26p%3D1%26b%3Dchrome149%26tag%3D0%26stag%3D-3%26lstag%3D-1%26_g_encode%3Dutf-8&cna=&spm-cnt=0.0.0.0.23201c4eyBdFka&logtype=2&scr=1920x1080&_p_url=https%3A%2F%2Fditu.amap.com%2F%3Fsrc%3Duriapi%26innersrc%3Duriapi:0
+[    7064ms] [WARNING] [APLUS] -- 日志上报失败，注意，要切成动态网络啦! @ :2
+[    7071ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://d-gm.mmstat.com/Amap_PC.PC_page.PC_page_view?gmkey=EXP&gokey=spm-url%3D%26spm-pre%3D%26spm-cnt%3D0.0.0.0.23201c4eyBdFka%26_f_t%3Dfalse%26pid%3Dditu_amap_com%26click%3DPC_new_version_button_show%26event%3DPC_new_version_button_show%26page_id%3Dhome%26page_name%3D%E9%A6%96%E9%A1%B5%26session_id%3Ds_1781421261505_h8iu96uo5%26visitor_id%3Dv_1781421261505_nm92989yv%26from_page%3D0%26landing_page%3Dhttps%3A%2F%2Fditu.amap.com%2F%3Fsrc%3Duriapi%26innersrc%3Duriapi%26referrer%3Dhttp%3A%2F%2Flocalhost%3A3003%2F%26timestamp%3D2026-06-14T07%3A14%3A21.608Z%26uuid%3D2d52899e-a822-4c0b-bc2c-4f8e08cd80d2%26user_id%3D%26is_login%3Dfalse%26visit_type%3Dbiz_navigate%26screen_width%3D1920%26screen_height%3D1080%26user_agent%3DMozilla%2F5.0%20(Macintosh%3B%20Intel%20Mac%20OS%20X%2010_15_7)%20AppleWebKit%2F537.36%20(KHTML%2C%20like%20Gecko)%20Chrome%2F149.0.0.0%20Safari%2F537.36%26page_title%3D%E9%AB%98%E5%BE%B7%E5%9C%B0%E5%9B%BE%26source%3Dlocalhost%26source_name%3Dlocalhost%26landing_path%3D%2F%26page_url%3Dhttps%3A%2F%2Fditu.amap.com%2F%3Fsrc%3Duriapi%26innersrc%3Duriapi%26url_src%3Duriapi%26cache%3D3d461ea%26jsver%3Daplus.js%26lver%3D1.13.27%26customSdkId%3D%26platformType%3Dpc%26device_model%3DMacintosh%26os%3DMac%20OS%20X%26os_version%3D10.15.7%26language%3Dzh-CN%26o%3Dmac%26w%3Dwebkit%26s%3D1920x1080%26scr%3D1920x1080%26m%3D360ee%26ism%3Dmac%26p%3D1%26b%3Dchrome149%26tag%3D0%26stag%3D-3%26lstag%3D-1%26_g_encode%3Dutf-8&cna=&spm-cnt=0.0.0.0.23201c4eyBdFka&logtype=2&scr=1920x1080&_p_url=https%3A%2F%2Fditu.amap.com%2F%3Fsrc%3Duriapi%26innersrc%3Duriapi:0
+[    7071ms] [WARNING] [APLUS] -- 日志上报失败，注意，要切成动态网络啦! @ :2
+[    7078ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://log.mmstat.com/eg.js:0
+[    7083ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://gm.mmstat.com/fsp.1.1:0
+[    7095ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://d-gm.mmstat.com/aes.1.1:0
+[    7095ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://d-gm.mmstat.com/aes.1.1:0
+[    7107ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://d-gm.mmstat.com/aes.1.1:0
+[    7108ms] [ERROR] Permissions policy violation: Geolocation access has been blocked because of a permissions policy applied to the current document. See https://crbug.com/414348233 for more details. @ :0
+[    7108ms] [LOG] [IPCityLoc] @ https://ditu.amap.com/build/main.7c352c3546f33a4ca6c3.js:80
+[    7156ms] [LOG] status: no_data @ https://ditu.amap.com/build/main.7c352c3546f33a4ca6c3.js:80
+[    7156ms] [LOG] result: {} @ https://ditu.amap.com/build/main.7c352c3546f33a4ca6c3.js:80
+[    7308ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://fourier.taobao.com/rp?ext=51&data=jm_null&random=6160627109330465&href=https%3A%2F%2Fditu.amap.com%2F%3Fsrc%3Duriapi%26innersrc%3Duriapi&protocol=https:&callback=jsonpCallback:0
+[    7309ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://fourier.alibaba.com/ts?url=https%3A%2F%2Ffourier.taobao.com%2Frp%3Fext%3D51%26data%3Djm_null%26random%3D6160627109330465%26href%3Dhttps%253A%252F%252Fditu.amap.com%252F%253Fsrc%253Duriapi%2526innersrc%253Duriapi%26protocol%3Dhttps%3A%26callback%3DjsonpCallback&token=goWngextUFgfKggan4JQsxyT81FTAp9WMaHJyLLz_F81eMLJv1vlWaYJay9dENvCB6HJJy9l4ZpukreYHMsBdLzYkjh4xh9y48Lz6BRqzPC3kreYBAV_uKzA2g85GG-W7Hkez3rMQnKXU4JPzFRw0n3eUL7zjC-p2H-yUeRw_FtyUU7yUlvw53vyzaJzjGltUY8cUO6alfc1hx7OuOxHtES3GYklIxdHuM8iUrWMxETVYFDrUEOfI2jPzzDJ3s_GEI77EA9dm1Jwx1qr_eRcTwK1r-De8OjFLeBUWvLFdG5AeNrrUUfNgIYF1PwWTs_dgCXT-ATV_GjJs1ZS9UCX4aOferMB8gSfhsp0E0xGiGJG4vcZgkVqFhrRIbGWThtMkUgywyEiSVRbjlcbOB-6vrB8jflslYkJvlqigYAefHVA.&cna=undefined&ext=61:0
+[    7317ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://gm.mmstat.com/fsp.1.1:0
+[    8511ms] [LOG] [Track] reportBiz success: biz_page_view @ https://ditu.amap.com/build/main.7c352c3546f33a4ca6c3.js:0
+[    8511ms] [LOG] [Route] Enter page: home , from_page: 0 @ https://ditu.amap.com/build/main.7c352c3546f33a4ca6c3.js:80
+[    9172ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://log.mmstat.com/eg.js:0
+[    9237ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://d-gm.mmstat.com/Amap_PC.PC_page.PC_page_view?gmkey=EXP&gokey=spm-url%3D%26spm-pre%3D%26spm-cnt%3D0.0.0.0.23201c4eyBdFka%26_f_t%3Dfalse%26pid%3Dditu_amap_com%26click%3Dbiz_page_view%26event%3Dbiz_page_view%26page_id%3Dhome%26page_name%3D%E9%A6%96%E9%A1%B5%26session_id%3Ds_1781421261505_h8iu96uo5%26visitor_id%3Dv_1781421261505_nm92989yv%26from_page%3D0%26landing_page%3Dhttps%3A%2F%2Fditu.amap.com%2F%3Fsrc%3Duriapi%26innersrc%3Duriapi%26referrer%3Dhttp%3A%2F%2Flocalhost%3A3003%2F%26timestamp%3D2026-06-14T07%3A14%3A23.317Z%26uuid%3D2d52899e-a822-4c0b-bc2c-4f8e08cd80d2%26user_id%3D%26is_login%3Dfalse%26visit_type%3Dbiz_navigate%26screen_width%3D1920%26screen_height%3D1080%26user_agent%3DMozilla%2F5.0%20(Macintosh%3B%20Intel%20Mac%20OS%20X%2010_15_7)%20AppleWebKit%2F537.36%20(KHTML%2C%20like%20Gecko)%20Chrome%2F149.0.0.0%20Safari%2F537.36%26page_title%3D%E9%AB%98%E5%BE%B7%E5%9C%B0%E5%9B%BE%26source%3Dlocalhost%26source_name%3Dlocalhost%26landing_path%3D%2F%26page_url%3Dhttps%3A%2F%2Fditu.amap.com%2F%3Fsrc%3Duriapi%26innersrc%3Duriapi%26current_city%3D110000%26url_src%3Duriapi%26cache%3Dcc4d1e6%26jsver%3Daplus.js%26lver%3D1.13.27%26customSdkId%3D%26platformType%3Dpc%26device_model%3DMacintosh%26os%3DMac%20OS%20X%26os_version%3D10.15.7%26language%3Dzh-CN%26o%3Dmac%26w%3Dwebkit%26s%3D1920x1080%26scr%3D1920x1080%26m%3D360ee%26ism%3Dmac%26p%3D1%26b%3Dchrome149%26tag%3D0%26stag%3D-2%26lstag%3D-1%26_g_encode%3Dutf-8&cna=&spm-cnt=0.0.0.0.23201c4eyBdFka&logtype=2&scr=1920x1080&_p_url=https%3A%2F%2Fditu.amap.com%2F%3Fsrc%3Duriapi%26innersrc%3Duriapi:0
+[    9238ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://d-gm.mmstat.com/Amap_PC.PC_page.PC_page_view?gmkey=EXP&gokey=spm-url%3D%26spm-pre%3D%26spm-cnt%3D0.0.0.0.23201c4eyBdFka%26_f_t%3Dfalse%26pid%3Dditu_amap_com%26page%3DPC_map_front%26cache%3D42c119a%26jsver%3Daplus.js%26lver%3D1.13.27%26customSdkId%3D%26platformType%3Dpc%26device_model%3DMacintosh%26os%3DMac%20OS%20X%26os_version%3D10.15.7%26language%3Dzh-CN%26o%3Dmac%26w%3Dwebkit%26s%3D1920x1080%26scr%3D1920x1080%26m%3D360ee%26ism%3Dmac%26p%3D1%26b%3Dchrome149%26tag%3D0%26stag%3D-2%26lstag%3D-1%26_g_encode%3Dutf-8&cna=&spm-cnt=0.0.0.0.23201c4eyBdFka&logtype=2&scr=1920x1080&_p_url=https%3A%2F%2Fditu.amap.com%2F%3Fsrc%3Duriapi%26innersrc%3Duriapi:0
+[    9240ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://gm.mmstat.com/fsp.1.1:0
+[    9315ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "current-password"): (More info: https://goo.gl/9p2vKq) %o @ https://ditu.amap.com/?src=uriapi&innersrc=uriapi:0
+[    9315ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "username"): (More info: https://goo.gl/9p2vKq) %o @ https://ditu.amap.com/?src=uriapi&innersrc=uriapi:0
+[    9338ms] [WARNING] [APLUS] -- 日志上报失败，注意，要切成动态网络啦! @ :2
+[    9338ms] [WARNING] [APLUS] -- 日志上报失败，注意，要切成动态网络啦! @ :2
+[    9411ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://d-gm.mmstat.com/Amap_PC.login_popup.login_popup_show?gmkey=EXP&gokey=spm-url%3D%26spm-pre%3D%26spm-cnt%3D0.0.0.0.23201c4eyBdFka%26_f_t%3Dfalse%26pid%3Dditu_amap_com%26path%3D%252F%26cache%3Dbdad9e4%26jsver%3Daplus.js%26lver%3D1.13.27%26customSdkId%3D%26platformType%3Dpc%26device_model%3DMacintosh%26os%3DMac%20OS%20X%26os_version%3D10.15.7%26language%3Dzh-CN%26o%3Dmac%26w%3Dwebkit%26s%3D1920x1080%26scr%3D1920x1080%26m%3D360ee%26ism%3Dmac%26p%3D1%26b%3Dchrome149%26tag%3D0%26stag%3D-3%26lstag%3D-1%26_g_encode%3Dutf-8&cna=&spm-cnt=0.0.0.0.23201c4eyBdFka&logtype=2&scr=1920x1080&_p_url=https%3A%2F%2Fditu.amap.com%2F%3Fsrc%3Duriapi%26innersrc%3Duriapi:0
+[    9411ms] [WARNING] [APLUS] -- 日志上报失败，注意，要切成动态网络啦! @ :2
+[    9441ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://log.mmstat.com/eg.js:0
+[    9445ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://d-gm.mmstat.com/aes.1.1:0
+[    9458ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://log.mmstat.com/eg.js:0
+[    9469ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://d-gm.mmstat.com/aes.1.1:0
+[    9492ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://d-gm.mmstat.com/aes.1.1:0
+[    9537ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3003/_next/static/chunks/17io_next_dist_0f8n_yo._.js:2477
+[    9538ms] [LOG] [Fast Refresh] done in 101ms @ http://localhost:3003/_next/static/chunks/17io_next_dist_0f8n_yo._.js:2477
+[    9635ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://log.mmstat.com/eg.js:0
+[    9666ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://d-gm.mmstat.com/aes.1.1:0
+[    9859ms] [COUNT] %c%d: 1 @ https://g.alicdn.com/captcha-frontend/FeiLin/1.4.2/feilin075.68af296cbc35722d15cd14c2dac0f758da3f95c51a20bc6c910ed2d66999cd54.js:0
+[    9860ms] [DIR] %c%d font-size:0;color:transparent Error @ https://g.alicdn.com/captcha-frontend/FeiLin/1.4.2/feilin075.68af296cbc35722d15cd14c2dac0f758da3f95c51a20bc6c910ed2d66999cd54.js:0
+[    9860ms] [DIRXML] %c%d font-size:0;color:transparent Error @ https://g.alicdn.com/captcha-frontend/FeiLin/1.4.2/feilin075.68af296cbc35722d15cd14c2dac0f758da3f95c51a20bc6c910ed2d66999cd54.js:0
+[    9860ms] [INFO] %c%d font-size:0;color:transparent NaN @ https://g.alicdn.com/captcha-frontend/FeiLin/1.4.2/feilin075.68af296cbc35722d15cd14c2dac0f758da3f95c51a20bc6c910ed2d66999cd54.js:0
+[    9860ms] [INFO] %c%d font-size:0;color:transparent NaN @ https://g.alicdn.com/captcha-frontend/FeiLin/1.4.2/feilin075.68af296cbc35722d15cd14c2dac0f758da3f95c51a20bc6c910ed2d66999cd54.js:0
+[    9860ms] [LOG] %c%d font-size:0;color:transparent NaN @ https://g.alicdn.com/captcha-frontend/FeiLin/1.4.2/feilin075.68af296cbc35722d15cd14c2dac0f758da3f95c51a20bc6c910ed2d66999cd54.js:0
+[    9860ms] [TABLE] %c%d font-size:0;color:transparent Error @ https://g.alicdn.com/captcha-frontend/FeiLin/1.4.2/feilin075.68af296cbc35722d15cd14c2dac0f758da3f95c51a20bc6c910ed2d66999cd54.js:0
+[    9860ms] [INFO] %c%d font-size:0;color:transparent NaN @ https://g.alicdn.com/captcha-frontend/FeiLin/1.4.2/feilin075.68af296cbc35722d15cd14c2dac0f758da3f95c51a20bc6c910ed2d66999cd54.js:0
+[   10748ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://log.mmstat.com/eg.js:0
+[   10789ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://d-gm.mmstat.com/aes.1.1:0
+[   25749ms] [WARNING] Canvas2D: Multiple readback operations using getImageData are faster with the willReadFrequently attribute set to true. See: https://html.spec.whatwg.org/multipage/canvas.html#concept-canvas-will-read-frequently @ https://webapi.amap.com/maps?v=2.0&key=d1f15ad3fdf0c704434eaf23c7c18698&plugin=AMap.Adaptor:0
+[   25869ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://log.mmstat.com/eg.js:0
+[   25917ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://d-gm.mmstat.com/aes.1.1:0

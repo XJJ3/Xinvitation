@@ -1,0 +1,15 @@
+
+> engagement-invitation@0.1.0 dev /Users/xjj/Documents/Project/Xinvitation
+> next dev
+
+▲ Next.js 16.2.9 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.2.102:3000
+✓ Ready in 232ms
+
+ HEAD /api/guestbook 200 in 228ms (next.js: 216ms, application-code: 12ms)
+ GET /api/guestbook 200 in 7ms (next.js: 2ms, application-code: 5ms)
+ POST /api/guestbook 200 in 7ms (next.js: 1348µs, application-code: 5ms)
+ GET /api/guestbook 200 in 4ms (next.js: 1353µs, application-code: 3ms)
+ HEAD /api/rsvp 405 in 63ms (next.js: 60ms, application-code: 3ms)
+ POST /api/rsvp 200 in 7ms (next.js: 1666µs, application-code: 5ms)

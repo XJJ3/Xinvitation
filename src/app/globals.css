@@ -1,26 +1,49 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --romantic-pink: #db2777;
+  --romantic-pink-soft: #f472b6;
+  --romantic-pink-dark: #be185d;
+  --romantic-gold: #ca8a04;
+  --romantic-bg: #fdf2f8;
+  --romantic-bg-soft: #fce7f3;
+  --romantic-text: #831843;
+  --romantic-text-soft: #9d4f6c;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-romantic-pink: var(--romantic-pink);
+  --color-romantic-pink-soft: var(--romantic-pink-soft);
+  --color-romantic-pink-dark: var(--romantic-pink-dark);
+  --color-romantic-gold: var(--romantic-gold);
+  --color-romantic-bg: var(--romantic-bg);
+  --color-romantic-bg-soft: var(--romantic-bg-soft);
+  --color-romantic-text: var(--romantic-text);
+  --color-romantic-text-soft: var(--romantic-text-soft);
+  --font-script: var(--font-great-vibes);
+  --font-serif: var(--font-cormorant);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--romantic-bg);
+  color: var(--romantic-text);
+  font-family: var(--font-cormorant), Georgia, serif;
+  overflow-x: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

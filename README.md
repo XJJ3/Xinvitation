@@ -1,36 +1,139 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 电子订婚请帖 · 使用与部署指南
 
-## Getting Started
+一个浪漫梦幻、点缀炫酷的电子订婚请帖单页网站。支持微信分享卡片、倒计时、爱情故事、地图导航、RSVP 出席回执、留言祝福墙。
 
-First, run the development server:
+技术栈:Next.js 16 + React 19 + TypeScript + Tailwind CSS v4 + Framer Motion。
+
+---
+
+## 一、本地预览
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install      # 安装依赖(已安装可跳过)
+pnpm dev          # 启动开发服务器
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+打开 http://localhost:3000 预览。
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+> 注意:如果本机 3000 端口被其他程序占用(例如显示成别的登录页),用其他端口启动:
+> ```bash
+> PORT=3100 pnpm dev
+> ```
+> 然后访问 http://127.0.0.1:3100
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+---
 
-## Learn More
+## 二、修改请帖内容(零代码)
 
-To learn more about Next.js, take a look at the following resources:
+所有文案、日期、地点、照片、爱情故事都集中在一个文件:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+**`src/config/site.ts`**
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+打开它,把所有用【】标注的占位内容替换成你的真实信息即可,无需改动任何代码:
 
-## Deploy on Vercel
+- 双方姓名 / 昵称 / 联系电话
+- 订婚日期时间(改 `eventDate`,倒计时会自动以此为目标)
+- 宴会酒店名称 / 地址 / 入席时间
+- 爱情故事时间线
+- 微信分享卡片的标题和描述
+- 部署后的正式域名(`url`)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### 替换照片
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+把你的照片放进 `public/photos/` 目录,然后在 `site.ts` 的 `gallery` 里填写文件名,例如:
+
+```ts
+gallery: [
+  { src: "/photos/我们1.jpg", alt: "照片 1" },
+  { src: "/photos/我们2.jpg", alt: "照片 2" },
+]
+```
+
+---
+
+## 三、微信分享卡片(核心需求)说明
+
+你的目标:发链接给微信好友时显示成「卡片」(带图+标题+描述),而不是裸链接。
+
+### 实现机制:OG Meta 标签
+本项目已在 `src/app/layout.tsx` 配置好 Open Graph 标签,微信会自动抓取它们生成卡片:
+- 标题、描述:取自 `site.ts` 的 `share.title` / `share.description`
+- 卡片缩略图:由 `src/app/opengraph-image.tsx` **自动生成**(无需你手动做图),显示双方名字 + 祝福语
+
+### 让微信卡片生效的两个硬性前提
+1. **必须是已备案的自有域名**(不能用 `*.vercel.app`,见下文部署章节)
+2. **必须 HTTPS**(Vercel 自动提供)
+
+满足后,微信抓取到链接即可显示卡片。
+
+> 备注:OG 标签方案不需要公众号、不需要后端签名,成本最低。
+> 极少数情况下微信可能不出卡片(微信抓取本身偶有不稳定),若遇到再考虑接入微信 JS-SDK(需认证服务号 ¥300/年),目前不必。
+
+---
+
+## 四、Vercel 部署
+
+### ⚠️ 重要前置问题:数据存储
+
+当前的 RSVP 回执和留言祝福用**本地 JSON 文件**(`data/` 目录)存储,这只适合本地开发。
+**Vercel 是无状态 Serverless 环境,运行时写入的文件会在请求结束后丢失** —— 也就是说部署到 Vercel 后,RSVP 和留言**无法持久保存**。
+
+**部署前必须二选一:**
+
+- **方案 A(推荐,免费):** 接入 Vercel Postgres 或 Supabase 数据库,把 `src/lib/storage.ts` 的文件读写改成数据库读写。需要我后续帮你改。
+- **方案 B(临时):** 如果暂时不需要收集 RSVP/留言,可先去掉这两个板块,纯展示型请帖,直接部署。
+
+> 静态展示部分(开场、倒计时、故事、地图、微信卡片)在 Vercel 上完全正常,只有「数据收集」功能受这个限制影响。
+
+### 部署步骤
+
+1. **把代码推到 GitHub**
+   ```bash
+   git add .
+   git commit -m "feat: 电子订婚请帖"
+   git remote add origin <你的GitHub仓库地址>
+   git push -u origin main
+   ```
+
+2. **在 Vercel 导入项目**
+   - 登录 https://vercel.com → New Project → 选择你的 GitHub 仓库
+   - Framework 自动识别为 Next.js,直接 Deploy
+
+3. **绑定自有备案域名(关键,微信卡片必需)**
+   - **先买域名并完成 ICP 备案**(阿里云/腾讯云,¥30-70/年,备案约 1-2 周,需身份证+人脸核验)
+   - Vercel 项目 → Settings → Domains → 添加你的域名
+   - 在域名服务商处添加 CNAME 解析。Vercel 提供中国大陆优化线路:
+     ```
+     CNAME  →  cname-china.vercel-dns.com
+     ```
+   - 等待 DNS 生效
+
+4. **更新配置里的域名**
+   - 把 `src/config/site.ts` 里的 `url` 改成你的正式域名(如 `https://wedding.example.com`)
+   - 重新部署(push 代码会自动触发)
+
+> 为什么不能用 Vercel 免费域名 `xxx.vercel.app`?
+> 因为 `*.vercel.app` 在中国大陆已被 DNS 污染/屏蔽,微信里打不开。必须用自有备案域名。
+
+---
+
+## 五、上线前检查清单
+
+- [ ] `src/config/site.ts` 所有【】占位内容已替换为真实信息
+- [ ] 照片已放入 `public/photos/` 并在 `gallery` 配置
+- [ ] `site.ts` 的 `url` 已改成正式域名
+- [ ] 域名已购买并完成 ICP 备案
+- [ ] 域名已绑定到 Vercel 并解析生效
+- [ ] RSVP/留言已接入数据库(若需要此功能)
+- [ ] 在微信里实测:粘贴链接确认显示成卡片
+- [ ] 手机微信打开实测各板块和动画
+
+---
+
+## 六、时间线建议
+
+下个月订婚,**备案是唯一卡时间的环节(1-2 周)**:
+
+1. **今天**:买域名,立即提交 ICP 备案
+2. **备案期间**:替换内容、放照片、(如需)接数据库,用本地预览调整
+3. **备案下来后**:绑定域名 → 部署 → 微信实测卡片 → 发给亲友
