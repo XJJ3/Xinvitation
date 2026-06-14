@@ -1,38 +1,49 @@
 @import "tailwindcss";
 
 :root {
-  --romantic-pink: #db2777;
-  --romantic-pink-soft: #f472b6;
-  --romantic-pink-dark: #be185d;
-  --romantic-gold: #ca8a04;
-  --romantic-bg: #fdf2f8;
-  --romantic-bg-soft: #fce7f3;
-  --romantic-text: #831843;
-  --romantic-text-soft: #9d4f6c;
+  /* 中式红金主题 —— 取自参考图 */
+  --china-red: #9e1318;          /* 主背景深绛红 */
+  --china-red-deep: #7a0f13;     /* 更深的红，用于渐变底 */
+  --china-red-bright: #c1272d;   /* 照片屏的亮一点的红 */
+  /* 第二屏（照片版）专用：参考图2 偏暗哑光的酒绛红，压暗成枣红调 */
+  --china-red-photo: #75100f;    /* 照片屏主背景，暗哑酒枣红 */
+  --china-red-photo-deep: #560b0c; /* 照片屏底部，更沉 */
+  --china-gold: #c9a86a;         /* 古金色，标题/装饰 */
+  --china-gold-bright: #e3c88a;  /* 高光金 */
+  --china-cream: #f3e8d6;        /* 米白文字 */
+  --china-text: #f5ece0;         /* 正文米白 */
+  --china-text-soft: #e8d9c4;    /* 次要文字 */
 }
 
 @theme inline {
-  --color-romantic-pink: var(--romantic-pink);
-  --color-romantic-pink-soft: var(--romantic-pink-soft);
-  --color-romantic-pink-dark: var(--romantic-pink-dark);
-  --color-romantic-gold: var(--romantic-gold);
-  --color-romantic-bg: var(--romantic-bg);
-  --color-romantic-bg-soft: var(--romantic-bg-soft);
-  --color-romantic-text: var(--romantic-text);
-  --color-romantic-text-soft: var(--romantic-text-soft);
-  --font-script: var(--font-great-vibes);
+  --color-china-red: var(--china-red);
+  --color-china-red-deep: var(--china-red-deep);
+  --color-china-red-bright: var(--china-red-bright);
+  --color-china-red-photo: var(--china-red-photo);
+  --color-china-red-photo-deep: var(--china-red-photo-deep);
+  --color-china-gold: var(--china-gold);
+  --color-china-gold-bright: var(--china-gold-bright);
+  --color-china-cream: var(--china-cream);
+  --color-china-text: var(--china-text);
+  --color-china-text-soft: var(--china-text-soft);
   --font-serif: var(--font-cormorant);
 }
 
 html {
   scroll-behavior: smooth;
+  overflow-x: clip;
 }
 
 body {
-  background: var(--romantic-bg);
-  color: var(--romantic-text);
-  font-family: var(--font-cormorant), Georgia, serif;
-  overflow-x: hidden;
+  background: var(--china-red);
+  color: var(--china-text);
+  font-family: "Songti SC", "STSong", "SimSun", Georgia, serif;
+  overflow-x: clip;
+}
+
+/* 楷体/书法感标题类（中文用，回退到系统楷体） */
+.font-kai {
+  font-family: "Kaiti SC", "STKaiti", "KaiTi", "Songti SC", serif;
 }
 
 @media (prefers-reduced-motion: reduce) {

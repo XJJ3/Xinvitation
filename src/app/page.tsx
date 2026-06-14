@@ -1,21 +1,13 @@
-import { Hero } from "@/components/Hero";
-import { Countdown } from "@/components/Countdown";
-import { Story } from "@/components/Story";
-import { Venue } from "@/components/Venue";
-import { Rsvp } from "@/components/Rsvp";
-import { Guestbook } from "@/components/Guestbook";
-import { Footer } from "@/components/Footer";
+import { InviteCard } from "@/components/InviteCard";
+import { PhotoCard } from "@/components/PhotoCard";
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-romantic-pink-soft">
-      <Hero />
-      <Countdown />
-      <Story />
-      <Venue />
-      <Rsvp />
-      <Guestbook />
-      <Footer />
-    </div>
+    <main>
+      {/* 第一屏：纯文字红金请柬 */}
+      <InviteCard />
+      {/* 第二屏：带新人合影的邀请函 */}
+      <PhotoCard />
+    </main>
   );
 }

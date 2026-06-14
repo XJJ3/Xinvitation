@@ -42,3 +42,10 @@ next-env.d.ts
 
 # data directory
 /data
+
+# 调试产物（截图/快照/playwright 日志），但保留 public 下的图片资源
+.playwright-mcp/
+/*.png
+*-snapshot.md
+page-375px.md
+dev.log
