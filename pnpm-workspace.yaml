@@ -1,3 +1,7 @@
-onlyBuiltDependencies:
+# sharp 是 next 的 optionalDependency，仅用于服务端图片优化。
+# 本站为纯静态前端（next.config.ts 已设 images.unoptimized），无需 sharp，
+# 故直接忽略它——既不进 lockfile，也就不会触发 EdgeOne 安装阶段的原生构建脚本报错。
+ignoredOptionalDependencies:
   - sharp
+onlyBuiltDependencies:
   - unrs-resolver
