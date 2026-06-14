@@ -20,10 +20,5 @@
     "@types/react-dom": "^19",
     "tailwindcss": "^4",
     "typescript": "^5"
-  },
-  "pnpm": {
-    "overrides": {
-      "@csstools/css-color-parser": "4.1.2"
-    }
   }
 }

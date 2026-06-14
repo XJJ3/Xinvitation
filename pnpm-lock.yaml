@@ -4,9 +4,6 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
-overrides:
-  '@csstools/css-color-parser': 4.1.2
-
 importers:
 
   .:
