@@ -5,7 +5,7 @@ import Image from "next/image";
 import { motion } from "framer-motion";
 import { siteConfig } from "@/config/site";
 import { CornerOrnament, HappinessSeal } from "./Ornaments";
-import { ExportButton } from "./ExportButton";
+// import { ExportButton } from "./ExportButton"; // 保存图片按钮暂时隐藏
 
 // 第二屏：带新人合影的邀请函（对应参考图2）
 export function PhotoCard() {
@@ -173,8 +173,8 @@ export function PhotoCard() {
         </motion.p>
       </div>
 
-      {/* 导出按钮（截图时自身隐藏） */}
-      <ExportButton targetRef={cardRef} fileName="订婚请帖-合影卡" />
+      {/* 导出按钮（截图时自身隐藏）—— 暂时隐藏 */}
+      {/* <ExportButton targetRef={cardRef} fileName="订婚请帖-合影卡" /> */}
     </section>
   );
 }

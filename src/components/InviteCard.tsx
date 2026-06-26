@@ -4,7 +4,7 @@ import { useRef } from "react";
 import { motion } from "framer-motion";
 import { siteConfig } from "@/config/site";
 import { CornerOrnament, DoubleHappiness } from "./Ornaments";
-import { ExportButton } from "./ExportButton";
+// import { ExportButton } from "./ExportButton"; // 保存图片按钮暂时隐藏
 
 // 第一屏：纯文字红金请柬（对应参考图1）
 export function InviteCard() {
@@ -169,8 +169,8 @@ export function InviteCard() {
         </motion.div>
       </div>
 
-      {/* 导出按钮（截图时自身隐藏） */}
-      <ExportButton targetRef={cardRef} fileName="订婚请帖-邀请卡" />
+      {/* 导出按钮（截图时自身隐藏）—— 暂时隐藏 */}
+      {/* <ExportButton targetRef={cardRef} fileName="订婚请帖-邀请卡" /> */}
     </section>
   );
 }
