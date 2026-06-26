@@ -13,13 +13,23 @@ export const siteConfig = {
   },
 
   event: {
-    // 标准日期时间（农历等无法自动推算的信息单独列出）
-    date: "2026-05-20T12:00:00+08:00",
-    weekday: "星期三",
-    lunar: "丙午年 农历四月初四",
-    timeLabel: "午宴 12:00",
-    venue: "青岛涵碧楼大酒店一号宴会厅",
-    venueShort: "钻石大酒店A栋9F幸福宴会厅",
+    // 2026年7月21日 星期二，丙午年农历六月初八（已用 lunardate 双向校验）
+    date: "2026-07-21T11:00:00+08:00",
+    weekday: "星期二",
+    lunar: "丙午年 农历六月初八",
+    // 同一天两场宴席：午宴 + 晚宴，各自地址与时间
+    banquets: [
+      {
+        label: "午宴",
+        time: "11:00",
+        venue: "台州市黄岩区院桥镇 晨阳大酒店四楼牡丹厅",
+      },
+      {
+        label: "晚宴",
+        time: "18:30",
+        venue: "温州市永嘉县上塘镇 裕景大酒店千禧厅",
+      },
+    ],
   },
 
   // 第一屏纯文字版文案
@@ -46,8 +56,8 @@ export const siteConfig = {
   // 微信/社交分享卡片文案。缩略图由 src/app/opengraph-image.tsx 构建时自动生成，
   // 无需在此配置图片路径（Next 会自动注入 og:image 指向 /opengraph-image）。
   share: {
-    title: "诚邀您见证我们的订婚之约",
-    description: "我们要订婚啦,期待您的到来",
+    title: "我们订婚啦🎆🎇🎆",
+    description: "诚邀您参加我们的订婚宴！",
   },
 
   // ⚠️ 部署前必须改成你「已备案的真实域名」（含 https://，结尾不要带 /）。

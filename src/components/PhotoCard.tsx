@@ -143,9 +143,7 @@ export function PhotoCard() {
             })}{" "}
             {event.weekday}
           </p>
-          <p>
-            {event.lunar.replace(/^.*农历/, "农历")} {event.timeLabel.replace(/[^\d:]/g, "")}
-          </p>
+          <p>{event.lunar.replace(/^.*农历/, "农历")}</p>
         </motion.div>
 
         {/* 敬语 */}
@@ -161,16 +159,23 @@ export function PhotoCard() {
           ))}
         </motion.div>
 
-        {/* 地址 */}
-        <motion.p
+        {/* 两场宴席地址与时间 */}
+        <motion.div
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6, delay: 0.55 }}
-          className="font-kai text-china-text-soft text-base md:text-lg mt-10"
+          className="font-kai text-china-text-soft mt-10 space-y-4 text-base md:text-lg"
         >
-          {event.venueShort}
-        </motion.p>
+          {event.banquets.map((b) => (
+            <div key={b.label} className="space-y-1">
+              <p className="text-china-gold-bright tracking-wide">
+                {b.label} · {b.time}
+              </p>
+              <p>{b.venue}</p>
+            </div>
+          ))}
+        </motion.div>
       </div>
 
       {/* 导出按钮（截图时自身隐藏）—— 暂时隐藏 */}

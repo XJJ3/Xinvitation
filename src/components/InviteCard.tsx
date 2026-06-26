@@ -97,16 +97,16 @@ export function InviteCard() {
           </p>
         </motion.div>
 
-        {/* 地址与日期 */}
+        {/* 日期 + 双场次（午宴 / 晚宴）地址与时间 */}
         <motion.div
           custom={4}
           variants={fade}
           initial="hidden"
           animate="show"
-          className="font-kai text-china-text-soft mt-12 space-y-3 text-base md:text-lg leading-relaxed wrap-break-word"
+          className="font-kai text-china-text-soft mt-12 space-y-4 text-base md:text-lg leading-relaxed wrap-break-word"
         >
-          <p>地址：{event.venue}</p>
-          <p>
+          {/* 日期 */}
+          <p className="text-china-text">
             {new Date(event.date).toLocaleDateString("zh-CN", {
               year: "numeric",
               month: "long",
@@ -115,7 +115,18 @@ export function InviteCard() {
             {event.weekday}
           </p>
           <p>{event.lunar}</p>
-          <p>{event.timeLabel}</p>
+
+          {/* 两场宴席 */}
+          <div className="space-y-4 pt-2">
+            {event.banquets.map((b) => (
+              <div key={b.label} className="space-y-1">
+                <p className="text-china-gold-bright tracking-wide">
+                  {b.label} · {b.time}
+                </p>
+                <p className="text-sm md:text-base">{b.venue}</p>
+              </div>
+            ))}
+          </div>
         </motion.div>
 
         {/* 藏头诗 */}
