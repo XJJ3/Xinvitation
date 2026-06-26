@@ -1,13 +1,16 @@
 "use client";
 
+import { useRef } from "react";
 import { motion } from "framer-motion";
 import { siteConfig } from "@/config/site";
 import { CornerOrnament, DoubleHappiness } from "./Ornaments";
+import { ExportButton } from "./ExportButton";
 
 // 第一屏：纯文字红金请柬（对应参考图1）
 export function InviteCard() {
   const { groom, bride } = siteConfig.couple;
   const { event, hero } = siteConfig;
+  const cardRef = useRef<HTMLElement>(null);
 
   // 入场动画：自上而下逐段淡入
   const fade = {
@@ -20,7 +23,23 @@ export function InviteCard() {
   };
 
   return (
-    <section className="relative min-h-screen w-full bg-gradient-to-b from-china-red to-china-red-deep flex items-center justify-center px-8 py-12 overflow-x-clip">
+    <section ref={cardRef} className="relative min-h-screen w-full bg-gradient-to-b from-china-red to-china-red-deep flex items-center justify-center px-8 py-12 overflow-x-clip">
+      {/* 背景隐约「囍」字水印（与第二屏一致），错落散布、极低透明度 */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 z-0 overflow-hidden select-none"
+      >
+        <span className="font-kai absolute -left-10 top-[28%] text-[16rem] leading-none text-china-gold/4">
+          囍
+        </span>
+        <span className="font-kai absolute -right-12 top-[55%] text-[18rem] leading-none text-china-gold/4">
+          囍
+        </span>
+        <span className="font-kai absolute left-1/3 bottom-[3%] text-[14rem] leading-none text-china-gold/3">
+          囍
+        </span>
+      </div>
+
       {/* 金色双层边框 */}
       <div className="pointer-events-none absolute inset-4 border border-china-gold/70" />
       <div className="pointer-events-none absolute inset-5 border border-china-gold/30" />
@@ -68,13 +87,13 @@ export function InviteCard() {
           className="mt-10 space-y-3"
         >
           <p className="font-kai text-china-text text-3xl md:text-4xl font-semibold">
-            {bride.name}
+            {groom.name}
           </p>
           <p className="font-serif text-china-text-soft tracking-[0.3em] text-sm">
             AND
           </p>
           <p className="font-kai text-china-text text-3xl md:text-4xl font-semibold">
-            {groom.name}
+            {bride.name}
           </p>
         </motion.div>
 
@@ -105,7 +124,7 @@ export function InviteCard() {
           variants={fade}
           initial="hidden"
           animate="show"
-          className="font-kai text-china-gold-bright mt-12 space-y-2 text-lg md:text-xl"
+          className="font-mincho text-china-gold-bright mt-12 space-y-2 text-lg md:text-xl"
         >
           {hero.poem.map((line) => (
             <p key={line}>{line}</p>
@@ -140,6 +159,7 @@ export function InviteCard() {
 
         {/* 下滑提示 */}
         <motion.div
+          data-export-hide
           initial={{ opacity: 0 }}
           animate={{ opacity: [0, 1, 1, 0.3, 1] }}
           transition={{ delay: 1.8, duration: 2, repeat: Infinity }}
@@ -148,6 +168,9 @@ export function InviteCard() {
           下滑查看更多 ⌄
         </motion.div>
       </div>
+
+      {/* 导出按钮（截图时自身隐藏） */}
+      <ExportButton targetRef={cardRef} fileName="订婚请帖-邀请卡" />
     </section>
   );
 }

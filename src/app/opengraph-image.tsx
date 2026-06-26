@@ -1,13 +1,22 @@
 import { ImageResponse } from "next/og";
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { siteConfig } from "@/config/site";
 
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 export const alt = siteConfig.share.title;
 
-// 微信分享卡片：中式红金风
-export default function OpengraphImage() {
+// 微信/社交分享卡片缩略图：中式红金风，构建时静态生成为 PNG。
+// 字体用本地子集化的霞鹜文楷（含「囍」「徐俊杰」「鲍阳阳」等所有用到的字），
+// 不依赖 Google Fonts / gstatic，国内构建环境也能正常渲染。
+export default async function OpengraphImage() {
   const { groom, bride, separator } = siteConfig.couple;
+
+  // process.cwd() 是项目根目录；OG 专用 woff 子集已提交进仓库
+  const fontData = await readFile(
+    join(process.cwd(), "public/fonts/og-lxgw-subset.woff")
+  );
 
   return new ImageResponse(
     (
@@ -20,7 +29,7 @@ export default function OpengraphImage() {
           alignItems: "center",
           justifyContent: "center",
           background: "linear-gradient(160deg, #9e1318 0%, #7a0f13 100%)",
-          fontFamily: "serif",
+          fontFamily: "LXGW WenKai",
           position: "relative",
         }}
       >
@@ -53,6 +62,7 @@ export default function OpengraphImage() {
         >
           WELCOME TO OUR ENGAGEMENT PARTY
         </div>
+        {/* 新人姓名：男方在前（与页面两屏一致） */}
         <div
           style={{
             display: "flex",
@@ -63,9 +73,9 @@ export default function OpengraphImage() {
             fontWeight: 600,
           }}
         >
-          <span>{bride.name}</span>
-          <span style={{ color: "#c9a86a", margin: "0 30px" }}>{separator}</span>
           <span>{groom.name}</span>
+          <span style={{ color: "#c9a86a", margin: "0 30px" }}>{separator}</span>
+          <span>{bride.name}</span>
         </div>
         <div
           style={{
@@ -79,6 +89,16 @@ export default function OpengraphImage() {
         </div>
       </div>
     ),
-    { ...size }
+    {
+      ...size,
+      fonts: [
+        {
+          name: "LXGW WenKai",
+          data: fontData,
+          style: "normal",
+          weight: 400,
+        },
+      ],
+    }
   );
 }

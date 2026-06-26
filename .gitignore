@@ -49,3 +49,6 @@ next-env.d.ts
 *-snapshot.md
 page-375px.md
 dev.log
+
+# 字体源文件（巨大的原始 ttf，仅用于本地子集化；子集产物在 public/fonts/）
+.fonts-src/

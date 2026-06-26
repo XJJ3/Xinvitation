@@ -1,5 +1,6 @@
 import { InviteCard } from "@/components/InviteCard";
 import { PhotoCard } from "@/components/PhotoCard";
+import { WxShare } from "@/components/WxShare";
 
 export default function Home() {
   return (
@@ -8,6 +9,8 @@ export default function Home() {
       <InviteCard />
       {/* 第二屏：带新人合影的邀请函 */}
       <PhotoCard />
+      {/* 微信分享配置（仅微信内生效）+ 分享提示按钮 */}
+      <WxShare />
     </main>
   );
 }

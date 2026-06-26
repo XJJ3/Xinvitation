@@ -2,11 +2,11 @@ export const siteConfig = {
   couple: {
     // 注意：参考图里两屏对新郎/新娘的排序不同，这里以「角色」为准，组件按需取用
     groom: {
-      name: "满小满",
+      name: "徐俊杰",
       role: "GROOM",
     },
     bride: {
-      name: "美小美",
+      name: "鲍阳阳",
       role: "BRIDE",
     },
     separator: "&",
@@ -43,13 +43,16 @@ export const siteConfig = {
     blessings: ["敬备喜酌", "恭候光临"],
   },
 
+  // 微信/社交分享卡片文案。缩略图由 src/app/opengraph-image.tsx 构建时自动生成，
+  // 无需在此配置图片路径（Next 会自动注入 og:image 指向 /opengraph-image）。
   share: {
     title: "诚邀您见证我们的订婚之约",
     description: "我们要订婚啦,期待您的到来",
-    image: "/share-card.png",
   },
 
-  url: "https://your-domain.com",
+  // ⚠️ 部署前必须改成你「已备案的真实域名」（含 https://，结尾不要带 /）。
+  // 微信分享卡片要求 og:image / og:url 为绝对地址，靠的就是这个 url。
+  url: "https://xjj-love-byy.cloud",
 } as const;
 
 export type SiteConfig = typeof siteConfig;

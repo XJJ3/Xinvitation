@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { siteConfig } from "@/config/site";
 import { CornerOrnament, HappinessSeal } from "./Ornaments";
+import { ExportButton } from "./ExportButton";
 
 // 第二屏：带新人合影的邀请函（对应参考图2）
 export function PhotoCard() {
@@ -12,9 +13,10 @@ export function PhotoCard() {
   const { event, photo } = siteConfig;
   // 真实照片缺失时回退到占位图
   const [imgSrc, setImgSrc] = useState(photo.src);
+  const cardRef = useRef<HTMLElement>(null);
 
   return (
-    <section className="relative min-h-screen w-full bg-gradient-to-b from-china-red-photo to-china-red-photo-deep flex flex-col items-center overflow-x-clip">
+    <section ref={cardRef} className="relative min-h-screen w-full bg-gradient-to-b from-china-red-photo to-china-red-photo-deep flex flex-col items-center overflow-x-clip">
       {/* 背景隐约「囍」字水印（参考图2 的纹理感），错落散布、极低透明度 */}
       <div
         aria-hidden="true"
@@ -170,6 +172,9 @@ export function PhotoCard() {
           {event.venueShort}
         </motion.p>
       </div>
+
+      {/* 导出按钮（截图时自身隐藏） */}
+      <ExportButton targetRef={cardRef} fileName="订婚请帖-合影卡" />
     </section>
   );
 }

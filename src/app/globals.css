@@ -26,7 +26,7 @@
   --color-china-cream: var(--china-cream);
   --color-china-text: var(--china-text);
   --color-china-text-soft: var(--china-text-soft);
-  --font-serif: var(--font-cormorant);
+  --font-serif: var(--font-serif-en);
 }
 
 html {
@@ -37,13 +37,24 @@ html {
 body {
   background: var(--china-red);
   color: var(--china-text);
-  font-family: "Songti SC", "STSong", "SimSun", Georgia, serif;
+  /* 正文默认汇文明朝体（古典宋体），回退到系统宋体 */
+  font-family: var(--font-mincho), "Songti SC", "STSong", "SimSun", Georgia, serif;
   overflow-x: clip;
 }
 
-/* 楷体/书法感标题类（中文用，回退到系统楷体） */
+/* 楷体/书法感类（中文标题、人名）：霞鹜文楷，回退到系统楷体 */
 .font-kai {
-  font-family: "Kaiti SC", "STKaiti", "KaiTi", "Songti SC", serif;
+  font-family: var(--font-kai), "Kaiti SC", "STKaiti", "KaiTi", "Songti SC", serif;
+}
+
+/* 明朝体类（中文古典标题、诗句）：汇文明朝体，回退到系统宋体 */
+.font-mincho {
+  font-family: var(--font-mincho), "Songti SC", "STSong", "SimSun", serif;
+}
+
+/* 导出图片期间，隐藏不应出现在成图里的元素（导出按钮、下滑提示等） */
+[data-exporting="true"] [data-export-hide] {
+  display: none !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
