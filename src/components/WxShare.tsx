@@ -6,6 +6,8 @@ import { siteConfig } from "@/config/site";
 // 微信 JS-SDK 类型（最小声明，避免引入额外依赖）
 declare global {
   interface Window {
+    // JS-SDK config 是否已就绪（wx.ready 成功后置 true，error 置 false）
+    __wxReady?: boolean;
     wx?: {
       config: (cfg: Record<string, unknown>) => void;
       ready: (cb: () => void) => void;
@@ -18,6 +20,8 @@ declare global {
         name?: string;
         address?: string;
         scale?: number;
+        fail?: (err: unknown) => void;
+        complete?: (res: unknown) => void;
       }) => void;
     };
   }
@@ -105,10 +109,13 @@ export function WxShare() {
             imgUrl: shareData.imgUrl,
           });
           setReady(true);
+          // 全局标记：JS-SDK 已就绪，openLocation 等接口此后可安全调用
+          window.__wxReady = true;
         });
 
         wx.error((err) => {
           console.error("wx.config 失败：", err);
+          window.__wxReady = false;
         });
       } catch (err) {
         console.error("微信分享初始化失败：", err);

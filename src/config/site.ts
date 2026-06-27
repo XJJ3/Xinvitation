@@ -18,25 +18,26 @@ export const siteConfig = {
     weekday: "星期二",
     lunar: "丙午年 农历六月初八",
     // 同一天两场宴席：午宴 + 晚宴，各自地址与时间
-    // ⚠️ lat/lng 为地图导航坐标，当前是占位值，必须替换成真实经纬度！
-    //    获取方法：高德/腾讯地图搜酒店 → 拾取坐标（注意用 GCJ-02 火星坐标，国内地图通用）。
-    //    腾讯坐标拾取器：https://lbs.qq.com/getPoint/
+    // lat/lng 为地图导航坐标，采用 GCJ-02（火星坐标，高德/腾讯标准）。
+    // 百度地图跳转时由 src/lib/openMap.ts 自动转 BD-09，无需在此另存百度坐标。
     banquets: [
       {
         label: "午宴",
         time: "11:00",
-        venue: "台州市黄岩区院桥镇 晨阳大酒店四楼牡丹厅",
-        mapName: "晨阳大酒店", // 地图气泡显示名
-        lat: 28.5639, // ⚠️ 占位坐标，待替换为晨阳大酒店真实纬度
-        lng: 121.2603, // ⚠️ 占位坐标，待替换为晨阳大酒店真实经度
+        venue: "台州市黄岩区院桥镇 辰阳大酒店四楼牡丹厅",
+        mapName: "辰阳大酒店", // 地图气泡显示名
+        mapImage: "/maps/address_1.png", // 真实地图截图（缺失则回退底纹）
+        lat: 28.55399, // 辰阳大酒店真实纬度（GCJ-02）
+        lng: 121.255902, // 辰阳大酒店真实经度（GCJ-02）
       },
       {
         label: "晚宴",
         time: "18:30",
-        venue: "温州市永嘉县上塘镇 裕景大酒店千禧厅",
-        mapName: "裕景大酒店", // 地图气泡显示名
-        lat: 28.1535, // ⚠️ 占位坐标，待替换为裕景大酒店真实纬度
-        lng: 120.6890, // ⚠️ 占位坐标，待替换为裕景大酒店真实经度
+        venue: "温州市永嘉县上塘镇 裕锦大酒店千禧厅",
+        mapName: "裕锦大酒店", // 地图气泡显示名
+        mapImage: "/maps/address_2.png", // 真实地图截图（缺失则回退底纹）
+        lat: 28.142787, // 裕锦大酒店真实纬度（GCJ-02）
+        lng: 120.677977, // 裕锦大酒店真实经度（GCJ-02）
       },
     ],
   },
@@ -44,7 +45,7 @@ export const siteConfig = {
   // 第一屏纯文字版文案
   hero: {
     welcomeEn: "WELCOME TO OUR ENGAGEMENT PARTY",
-    title: "诚邀您来参加我们的订婚典礼",
+    title: "诚邀您来参加我们的订婚宴",
     poem: ["红叶传情久，终觅佳人成佳偶", "佳人佳偶逢佳期，君至可添喜"],
     quoteEn: [
       "Even if the lover is across the mountain",
@@ -72,6 +73,10 @@ export const siteConfig = {
   // ⚠️ 部署前必须改成你「已备案的真实域名」（含 https://，结尾不要带 /）。
   // 微信分享卡片要求 og:image / og:url 为绝对地址，靠的就是这个 url。
   url: "https://xjj-love-byy.cloud",
+
+  // 工信部 ICP 备案号：网站底部须悬挂并链接至 beian.miit.gov.cn（合规要求）。
+  // 用带「-1」的网站备案号（主体备案号 浙ICP备2026046994号 是主体级，网站挂 -1 这条）。
+  icp: "浙ICP备2026046994号-1",
 } as const;
 
 export type SiteConfig = typeof siteConfig;

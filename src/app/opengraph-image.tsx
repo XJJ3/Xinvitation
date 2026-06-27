@@ -6,6 +6,8 @@ import { siteConfig } from "@/config/site";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 export const alt = siteConfig.share.title;
+// 静态导出（output: export）要求显式声明为静态：构建期生成一次 PNG。
+export const dynamic = "force-static";
 
 // 微信/社交分享卡片缩略图：中式红金风，构建时静态生成为 PNG。
 // 字体用本地子集化的霞鹜文楷（含「囍」「徐俊杰」「鲍阳阳」等所有用到的字），

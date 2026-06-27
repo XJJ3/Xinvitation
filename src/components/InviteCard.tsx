@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import type { RefObject } from "react";
 import { motion } from "framer-motion";
 import { siteConfig } from "@/config/site";
 import { CornerOrnament } from "./Ornaments";
@@ -11,7 +12,17 @@ import { HaloOrbit } from "./HaloOrbit";
 
 // 第一屏：纯文字红金请柬（对应参考图1）
 // start：开场序幕揭开后才置 true，触发逐段入场动画（避免序幕期间就演完）
-export function InviteCard({ start = true }: { start?: boolean }) {
+// nameRowRef：名字行容器 ref，供名字交融过场量取最终落点做无缝衔接（FLIP）。
+// nameRowHidden：过场尚未交棒时，名字行保持隐形（占位但不可见），交棒后显形。
+export function InviteCard({
+  start = true,
+  nameRowRef,
+  nameRowHidden = false,
+}: {
+  start?: boolean;
+  nameRowRef?: RefObject<HTMLDivElement | null>;
+  nameRowHidden?: boolean;
+}) {
   const { groom, bride } = siteConfig.couple;
   const { event, hero } = siteConfig;
   const cardRef = useRef<HTMLElement>(null);
@@ -105,23 +116,41 @@ export function InviteCard({ start = true }: { start?: boolean }) {
           {hero.title}
         </motion.h1>
 
-        {/* 新人姓名（竖排 AND 分隔） */}
+        {/* 新人姓名（横排并列，中间金色囍字）。
+            名字交融过场会把名字飞到这一行的最终位置后交棒，故这里挂 ref + data 标记供量坐标。 */}
         <motion.div
           custom={3}
           variants={fade}
           initial="hidden"
           animate={anim}
-          className="mt-10 space-y-3"
+          className="mt-10"
         >
-          <p className="font-kai text-china-text text-3xl md:text-4xl font-semibold">
-            <ShimmerName name={groom.name} delay={0} />
-          </p>
-          <p className="font-serif text-china-text-soft tracking-[0.3em] text-sm">
-            AND
-          </p>
-          <p className="font-kai text-china-text text-3xl md:text-4xl font-semibold">
-            <ShimmerName name={bride.name} delay={2.2} />
-          </p>
+          <div
+            ref={nameRowRef}
+            className={`flex items-center justify-center gap-3 transition-opacity duration-300 md:gap-4 ${
+              nameRowHidden ? "opacity-0" : "opacity-100"
+            }`}
+          >
+            <span
+              data-fusion-groom
+              className="font-kai text-china-text text-3xl md:text-4xl font-semibold"
+            >
+              <ShimmerName name={groom.name} delay={0} />
+            </span>
+            <span
+              data-fusion-mid
+              className="font-kai text-china-gold-bright text-2xl md:text-3xl font-semibold leading-none"
+              style={{ textShadow: "0 0 10px rgba(227,200,138,0.5)" }}
+            >
+              囍
+            </span>
+            <span
+              data-fusion-bride
+              className="font-kai text-china-text text-3xl md:text-4xl font-semibold"
+            >
+              <ShimmerName name={bride.name} delay={2.2} />
+            </span>
+          </div>
         </motion.div>
 
         {/* 日期 + 双场次（午宴 / 晚宴）地址与时间 */}

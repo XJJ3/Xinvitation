@@ -14,6 +14,15 @@ export function InteractiveDoubleHappiness({ className = "" }: { className?: str
   const handleTap = () => {
     setRipples((r) => [...r, (r[r.length - 1] ?? 0) + 1]);
     setBump((b) => b + 1);
+    // iOS 13+ 监听「摇一摇」需用户手势内申请动作权限——借首次点囍字悄悄申请一次，
+    // 不主动弹框打断体验。无此 API（Android/桌面）则忽略。
+    type MotionPerm = { requestPermission?: () => Promise<string> };
+    const DM = (typeof DeviceMotionEvent !== "undefined"
+      ? (DeviceMotionEvent as unknown as MotionPerm)
+      : undefined);
+    if (DM?.requestPermission) {
+      DM.requestPermission().catch(() => {});
+    }
   };
 
   return (
@@ -21,6 +30,7 @@ export function InteractiveDoubleHappiness({ className = "" }: { className?: str
       type="button"
       onClick={handleTap}
       aria-label="双喜"
+      data-happiness
       className="relative inline-flex cursor-pointer items-center justify-center bg-transparent"
     >
       {/* 点击波纹：一圈金色光环扩散淡出 */}

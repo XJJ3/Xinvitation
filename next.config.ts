@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // STATIC_EXPORT=1 时产出纯静态 out/ 目录（HTML/CSS/JS），供自建 nginx 服务器托管，无需 Node 运行时。
+  // 不设此变量时（如 EdgeOne 构建）保持原行为，避免影响既有部署与 node-functions 边缘函数。
+  ...(process.env.STATIC_EXPORT === "1" ? { output: "export" as const } : {}),
   turbopack: {
     root: __dirname,
   },
