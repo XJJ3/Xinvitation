@@ -12,6 +12,13 @@ declare global {
       error: (cb: (err: unknown) => void) => void;
       updateAppMessageShareData: (cfg: Record<string, unknown>) => void;
       updateTimelineShareData: (cfg: Record<string, unknown>) => void;
+      openLocation: (cfg: {
+        latitude: number;
+        longitude: number;
+        name?: string;
+        address?: string;
+        scale?: number;
+      }) => void;
     };
   }
 }
@@ -71,7 +78,11 @@ export function WxShare() {
           timestamp: data.timestamp,
           nonceStr: data.nonceStr,
           signature: data.signature,
-          jsApiList: ["updateAppMessageShareData", "updateTimelineShareData"],
+          jsApiList: [
+            "updateAppMessageShareData",
+            "updateTimelineShareData",
+            "openLocation",
+          ],
         });
 
         // 分享卡片内容
@@ -114,12 +125,13 @@ export function WxShare() {
 
   return (
     <>
-      {/* 「分享给好友」提示按钮：固定右下角，仅微信内显示 */}
+      {/* 「分享给好友」提示按钮：固定右下角，仅微信内显示。
+          常态轻微呼吸（CSS 动画），点击回弹，hover/active 金光增强。 */}
       <button
         type="button"
         onClick={() => setShowTip(true)}
         aria-label="分享给好友"
-        className="fixed bottom-5 left-5 z-[60] flex items-center gap-2 rounded-full border border-china-gold/70 bg-china-red-deep/80 px-4 py-2.5 font-kai text-sm text-china-gold-bright shadow-lg backdrop-blur-sm transition active:scale-95"
+        className="share-breathe fixed bottom-5 left-5 z-[60] flex items-center gap-2 rounded-full border border-china-gold/70 bg-china-red-deep/80 px-4 py-2.5 font-kai text-sm text-china-gold-bright shadow-lg backdrop-blur-sm transition hover:border-china-gold-bright hover:shadow-[0_0_16px_rgba(227,200,138,0.5)] active:scale-95"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"

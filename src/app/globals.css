@@ -57,6 +57,22 @@ body {
   display: none !important;
 }
 
+/* 「分享给好友」按钮的常态呼吸：金色光晕缓慢明暗，精致克制不抢戏 */
+@keyframes share-breathe {
+  0%,
+  100% {
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25),
+      0 0 4px rgba(227, 200, 138, 0.25);
+  }
+  50% {
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25),
+      0 0 14px rgba(227, 200, 138, 0.6);
+  }
+}
+.share-breathe {
+  animation: share-breathe 3.2s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;

@@ -3,14 +3,19 @@
 import { useRef } from "react";
 import { motion } from "framer-motion";
 import { siteConfig } from "@/config/site";
-import { CornerOrnament, DoubleHappiness } from "./Ornaments";
+import { CornerOrnament } from "./Ornaments";
+import { InteractiveDoubleHappiness } from "./InteractiveDoubleHappiness";
+import { ClickFireworks } from "./ClickFireworks";
+import { HaloOrbit } from "./HaloOrbit";
 // import { ExportButton } from "./ExportButton"; // 保存图片按钮暂时隐藏
 
 // 第一屏：纯文字红金请柬（对应参考图1）
-export function InviteCard() {
+// start：开场序幕揭开后才置 true，触发逐段入场动画（避免序幕期间就演完）
+export function InviteCard({ start = true }: { start?: boolean }) {
   const { groom, bride } = siteConfig.couple;
   const { event, hero } = siteConfig;
   const cardRef = useRef<HTMLElement>(null);
+  const anim = start ? "show" : "hidden";
 
   // 入场动画：自上而下逐段淡入
   const fade = {
@@ -43,6 +48,18 @@ export function InviteCard() {
       {/* 金色双层边框 */}
       <div className="pointer-events-none absolute inset-4 border border-china-gold/70" />
       <div className="pointer-events-none absolute inset-5 border border-china-gold/30" />
+      {/* 边框流光：一道极淡的金色高光沿对角缓缓扫过（只在边框描边上可见） */}
+      <motion.div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-4 border border-transparent"
+        style={{
+          // 只给边框上色：用 border-image 渐变 + 移动的背景位置模拟流光
+          borderImage:
+            "linear-gradient(120deg, transparent 30%, rgba(227,200,138,0.85) 50%, transparent 70%) 1",
+        }}
+        animate={{ opacity: [0, 0.9, 0] }}
+        transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", repeatDelay: 2 }}
+      />
 
       {/* 四角角花 */}
       <CornerOrnament className="pointer-events-none absolute top-3 left-3 w-14 h-14 text-china-gold" />
@@ -50,10 +67,20 @@ export function InviteCard() {
       <CornerOrnament className="pointer-events-none absolute bottom-3 left-3 w-14 h-14 text-china-gold -scale-y-100" />
       <CornerOrnament className="pointer-events-none absolute bottom-3 right-3 w-14 h-14 text-china-gold -scale-100" />
 
-      <div className="relative z-10 w-full max-w-sm mx-auto text-center flex flex-col items-center overflow-hidden">
-        {/* 大囍字 */}
-        <motion.div custom={0} variants={fade} initial="hidden" animate="show">
-          <DoubleHappiness className="text-china-gold text-8xl md:text-9xl drop-shadow-[0_2px_8px_rgba(0,0,0,0.3)]" />
+      {/* 点击绽放烟花层（点请柬任意处迸出金红烟花，按钮/链接除外） */}
+      <ClickFireworks />
+
+      <div className="relative z-10 w-full max-w-sm mx-auto text-center flex flex-col items-center">
+        {/* 大囍字（可点击：呼吸光晕 + 点击金色波纹）+ 环绕光轨 */}
+        <motion.div
+          custom={0}
+          variants={fade}
+          initial="hidden"
+          animate={anim}
+          className="relative"
+        >
+          <HaloOrbit size={210} />
+          <InteractiveDoubleHappiness className="text-china-gold text-8xl md:text-9xl" />
         </motion.div>
 
         {/* 英文欢迎语 */}
@@ -61,7 +88,7 @@ export function InviteCard() {
           custom={1}
           variants={fade}
           initial="hidden"
-          animate="show"
+          animate={anim}
           className="font-serif text-china-text-soft tracking-[0.12em] text-[0.7rem] md:text-sm mt-6 px-2 max-w-full wrap-break-word"
         >
           {hero.welcomeEn}
@@ -72,7 +99,7 @@ export function InviteCard() {
           custom={2}
           variants={fade}
           initial="hidden"
-          animate="show"
+          animate={anim}
           className="font-kai text-china-text text-2xl md:text-3xl font-semibold tracking-wide mt-5"
         >
           {hero.title}
@@ -83,17 +110,17 @@ export function InviteCard() {
           custom={3}
           variants={fade}
           initial="hidden"
-          animate="show"
+          animate={anim}
           className="mt-10 space-y-3"
         >
           <p className="font-kai text-china-text text-3xl md:text-4xl font-semibold">
-            {groom.name}
+            <ShimmerName name={groom.name} delay={0} />
           </p>
           <p className="font-serif text-china-text-soft tracking-[0.3em] text-sm">
             AND
           </p>
           <p className="font-kai text-china-text text-3xl md:text-4xl font-semibold">
-            {bride.name}
+            <ShimmerName name={bride.name} delay={2.2} />
           </p>
         </motion.div>
 
@@ -102,7 +129,7 @@ export function InviteCard() {
           custom={4}
           variants={fade}
           initial="hidden"
-          animate="show"
+          animate={anim}
           className="font-kai text-china-text-soft mt-12 space-y-4 text-base md:text-lg leading-relaxed wrap-break-word"
         >
           {/* 日期 */}
@@ -134,7 +161,7 @@ export function InviteCard() {
           custom={5}
           variants={fade}
           initial="hidden"
-          animate="show"
+          animate={anim}
           className="font-mincho text-china-gold-bright mt-12 space-y-2 text-lg md:text-xl"
         >
           {hero.poem.map((line) => (
@@ -147,7 +174,7 @@ export function InviteCard() {
           custom={6}
           variants={fade}
           initial="hidden"
-          animate="show"
+          animate={anim}
           className="font-serif italic text-china-text-soft mt-10 space-y-1 text-sm md:text-base leading-relaxed px-2 max-w-full wrap-break-word"
         >
           {hero.quoteEn.map((line) => (
@@ -160,7 +187,7 @@ export function InviteCard() {
           custom={7}
           variants={fade}
           initial="hidden"
-          animate="show"
+          animate={anim}
           className="font-serif text-china-gold tracking-[0.4em] text-sm mt-12 flex items-center gap-3"
         >
           <span className="w-6 h-px bg-china-gold/60" />
@@ -183,5 +210,32 @@ export function InviteCard() {
       {/* 导出按钮（截图时自身隐藏）—— 暂时隐藏 */}
       {/* <ExportButton targetRef={cardRef} fileName="订婚请帖-邀请卡" /> */}
     </section>
+  );
+}
+
+// 人名：底色为米白文字，一道金色高光每隔几秒缓缓掠过（精致克制，不常亮）。
+// 用 background-clip:text 把移动的高光渐变贴到文字上。
+function ShimmerName({ name, delay }: { name: string; delay: number }) {
+  return (
+    <motion.span
+      className="inline-block bg-clip-text"
+      style={{
+        backgroundImage:
+          "linear-gradient(110deg, var(--china-text) 0%, var(--china-text) 38%, var(--china-gold-bright) 50%, var(--china-text) 62%, var(--china-text) 100%)",
+        backgroundSize: "260% 100%",
+        WebkitTextFillColor: "transparent",
+        color: "transparent",
+      }}
+      animate={{ backgroundPosition: ["120% 0%", "-20% 0%"] }}
+      transition={{
+        duration: 1.6,
+        ease: "easeInOut",
+        repeat: Infinity,
+        repeatDelay: 4.5, // 掠过一次后停 4.5s，偶发不抢戏
+        delay,
+      }}
+    >
+      {name}
+    </motion.span>
   );
 }
