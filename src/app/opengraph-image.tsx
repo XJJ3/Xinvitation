@@ -87,7 +87,7 @@ export default async function OpengraphImage() {
             color: "#e3c88a",
           }}
         >
-          {siteConfig.share.description}
+          {siteConfig.share.ogDescription}
         </div>
       </div>
     ),

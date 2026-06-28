@@ -14,7 +14,7 @@ export const siteConfig = {
 
   event: {
     // 2026年7月21日 星期二，丙午年农历六月初八（已用 lunardate 双向校验）
-    date: "2026-07-21T11:00:00+08:00",
+    date: "2026-07-21T11:30:00+08:00",
     weekday: "星期二",
     lunar: "丙午年 农历六月初八",
     // 同一天两场宴席：午宴 + 晚宴，各自地址与时间
@@ -23,7 +23,7 @@ export const siteConfig = {
     banquets: [
       {
         label: "午宴",
-        time: "11:00",
+        time: "11:30",
         venue: "台州市黄岩区院桥镇 辰阳大酒店四楼牡丹厅",
         mapName: "辰阳大酒店", // 地图气泡显示名
         mapImage: "/maps/address_1.png", // 真实地图截图（缺失则回退底纹）
@@ -65,9 +65,13 @@ export const siteConfig = {
 
   // 微信/社交分享卡片文案。缩略图由 src/app/opengraph-image.tsx 构建时自动生成，
   // 无需在此配置图片路径（Next 会自动注入 og:image 指向 /opengraph-image）。
+  // title 同时用作浏览器标签页标题；现代温馨风、以新人姓名为主，不用花哨 emoji。
   share: {
-    title: "我们订婚啦🎆🎇🎆",
-    description: "诚邀您参加我们的订婚宴！",
+    title: "徐俊杰 ♡ 鲍阳阳 · 订婚请柬",
+    description: "我们要订婚啦，诚邀您来见证这份喜悦与幸福 ♡",
+    // 缩略图（og:image）专用文案：用 og 子集字体渲染，只能用已在子集里的字
+    // （们俊加参囍婚宴徐您我杰的订诚邀阳鲍），改字需同步重做 og 字体子集，否则缺字成豆腐块。
+    ogDescription: "诚邀您参加我们的订婚宴",
   },
 
   // ⚠️ 部署前必须改成你「已备案的真实域名」（含 https://，结尾不要带 /）。
@@ -77,6 +81,13 @@ export const siteConfig = {
   // 工信部 ICP 备案号：网站底部须悬挂并链接至 beian.miit.gov.cn（合规要求）。
   // 用带「-1」的网站备案号（主体备案号 浙ICP备2026046994号 是主体级，网站挂 -1 这条）。
   icp: "浙ICP备2026046994号-1",
+
+  // 背景音乐：文件放在 public/music/ 下（src 为站点根相对路径，勿用带 # / 空格的文件名）。
+  music: {
+    src: "/music/bgm.mp3",
+    title: "A Thousand Years",
+    artist: "Christina Perri",
+  },
 } as const;
 
 export type SiteConfig = typeof siteConfig;
