@@ -2,12 +2,14 @@
 
 import { useMemo } from "react";
 import { motion, useReducedMotion } from "framer-motion";
+import { useMounted } from "@/lib/useMounted";
 
 // 持续氛围：极淡的金色粉尘/光斑缓缓上浮飘动，增加高级质感与空间层次。
 // 全程低透明度、慢速循环，不抢戏。固定满屏、不挡交互。
 // 尊重 prefers-reduced-motion：关闭动画时不渲染任何颗粒。
 export function GoldDust({ count = 22 }: { count?: number }) {
   const reduce = useReducedMotion();
+  const mounted = useMounted();
 
   // 用确定性伪随机生成颗粒参数（避免 Math.random，保证 SSR/CSR 一致）
   const dust = useMemo(() => {
@@ -26,7 +28,8 @@ export function GoldDust({ count = 22 }: { count?: number }) {
     });
   }, [count]);
 
-  if (reduce) return null;
+  // 挂载前（含 SSR）统一返回 null，与客户端首渲一致，避免 useReducedMotion 引发 hydration 不匹配。
+  if (!mounted || reduce) return null;
 
   return (
     <div

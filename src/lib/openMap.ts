@@ -97,6 +97,16 @@ function buildWebUrl(provider: MapProvider, p: MapPoint): string {
   }
 }
 
+// 打开地图【H5 网页版标点页】（新开一层 webview）。
+// 用于微信内且 JS-SDK 未就绪（无认证服务号/无签名）的兜底：
+// 这些是 https 网页而非第三方 App scheme，微信内置浏览器可正常打开，
+// 落地的网页地图自带「到这里去 / 打开App」入口，宾客据此即可导航。
+// 坐标 GCJ-02（百度由 buildWebUrl 内部转 BD-09），无需在此处理。
+export function openWebMap(provider: MapProvider, p: MapPoint): void {
+  if (typeof window === "undefined") return;
+  window.open(buildWebUrl(provider, p), "_blank", "noopener,noreferrer");
+}
+
 // 可供选择的地图列表（UI 用）
 export const MAP_PROVIDERS: { key: MapProvider; label: string }[] = [
   { key: "amap", label: "高德地图" },
@@ -108,6 +118,46 @@ export const MAP_PROVIDERS: { key: MapProvider; label: string }[] = [
 export function isWeChat(): boolean {
   if (typeof navigator === "undefined") return false;
   return /micromessenger/i.test(navigator.userAgent);
+}
+
+// 微信内置地图 SDK 类型（与 WxShare.tsx 的全局声明保持一致的最小子集）
+type WxOpenLocationSDK = {
+  openLocation: (cfg: {
+    latitude: number;
+    longitude: number;
+    name?: string;
+    address?: string;
+    scale?: number;
+    fail?: (err: unknown) => void;
+  }) => void;
+};
+
+// 微信 JS-SDK 是否已 config 成功（openLocation 可用）。
+// 由 WxShare.tsx 在 wx.ready 后置 window.__wxReady = true。
+export function isWxSdkReady(): boolean {
+  if (typeof window === "undefined") return false;
+  const w = window as unknown as { wx?: WxOpenLocationSDK; __wxReady?: boolean };
+  return Boolean(w.wx && w.__wxReady);
+}
+
+// 微信内导航：调用 JS-SDK 的 openLocation 打开【微信内置地图】并标出目标点。
+// 用户在微信地图页可直接点「到这里去 / 导航」唤起手机里装的地图 App——
+// 这是微信内绕开「第三方 scheme 被拦截」的唯一官方路径。
+// 坐标用 GCJ-02（与 site.ts 一致），无需转换。
+// 返回 false = SDK 未就绪（多见于主域名静态导出，无签名接口），调用方应回退到「浏览器打开」提示。
+export function openInWeChat(p: MapPoint, onFail?: () => void): boolean {
+  if (typeof window === "undefined") return false;
+  const w = window as unknown as { wx?: WxOpenLocationSDK; __wxReady?: boolean };
+  if (!w.wx || !w.__wxReady) return false;
+  w.wx.openLocation({
+    latitude: p.lat,
+    longitude: p.lng,
+    name: p.name,
+    address: p.address,
+    scale: 16,
+    fail: () => onFail?.(),
+  });
+  return true;
 }
 
 // 跳转结果，交给 UI 决定后续提示：

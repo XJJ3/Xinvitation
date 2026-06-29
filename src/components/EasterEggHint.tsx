@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { useMounted } from "@/lib/useMounted";
 
 // 双击送祝福的引导：请柬入场后浮现一个金边药丸标签「双击屏幕，为新人送上祝福 ♡」，
 // 带轻轻的呼吸动效。一旦宾客首次双击（收到 guest-blessed 事件）即优雅隐去——
@@ -9,6 +10,7 @@ import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 // 尊重 prefers-reduced-motion：关闭动画时不渲染（彩蛋本身也已禁用）。
 export function EasterEggHint({ start = false }: { start?: boolean }) {
   const reduce = useReducedMotion();
+  const mounted = useMounted();
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -28,7 +30,8 @@ export function EasterEggHint({ start = false }: { start?: boolean }) {
     };
   }, [reduce, start]);
 
-  if (reduce) return null;
+  // 挂载前（含 SSR）统一返回 null，与客户端首渲一致，避免 useReducedMotion 引发 hydration 不匹配。
+  if (!mounted || reduce) return null;
 
   return (
     <AnimatePresence>

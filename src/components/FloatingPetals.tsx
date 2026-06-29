@@ -2,12 +2,14 @@
 
 import { useMemo } from "react";
 import { motion, useReducedMotion } from "framer-motion";
+import { useMounted } from "@/lib/useMounted";
 
 // 持续氛围（极克制）：少量金箔/花瓣自顶部缓缓飘落，左右轻摆 + 自转，
 // 与上浮的金粉（GoldDust）形成上下对流的空间层次。数量很少、透明度很低，不抢戏。
 // 尊重 prefers-reduced-motion：关闭动画时不渲染。
 export function FloatingPetals({ count = 10 }: { count?: number }) {
   const reduce = useReducedMotion();
+  const mounted = useMounted();
 
   // 确定性伪随机（避免 Math.random，保证 SSR/CSR 一致）
   const petals = useMemo(() => {
@@ -27,7 +29,8 @@ export function FloatingPetals({ count = 10 }: { count?: number }) {
     });
   }, [count]);
 
-  if (reduce) return null;
+  // 挂载前（含 SSR）统一返回 null，与客户端首渲一致，避免 useReducedMotion 引发 hydration 不匹配。
+  if (!mounted || reduce) return null;
 
   return (
     <div

@@ -167,6 +167,7 @@ export function InviteCard({
               year: "numeric",
               month: "long",
               day: "numeric",
+              timeZone: "Asia/Shanghai",
             })}{" "}
             {event.weekday}
           </p>

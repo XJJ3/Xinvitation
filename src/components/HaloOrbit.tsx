@@ -1,12 +1,15 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
+import { useMounted } from "@/lib/useMounted";
 
 // 囍字环绕光轨：一圈金色光粒绕中心缓慢公转，像光环围绕。
 // 作为绝对定位层叠在囍字背后。尊重 prefers-reduced-motion：关闭时不渲染。
 export function HaloOrbit({ size = 200 }: { size?: number }) {
   const reduce = useReducedMotion();
-  if (reduce) return null;
+  const mounted = useMounted();
+  // 挂载前（含 SSR）统一返回 null，与客户端首渲一致，避免 useReducedMotion 引发 hydration 不匹配。
+  if (!mounted || reduce) return null;
 
   // 8 颗光粒均匀分布在圆周上，整体旋转
   const dots = Array.from({ length: 8 }, (_, i) => {

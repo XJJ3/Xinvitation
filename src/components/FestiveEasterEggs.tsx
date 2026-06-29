@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { useMounted } from "@/lib/useMounted";
 
 // 喜庆互动彩蛋（藏起来的趣味，配优雅提示）：
 //   · 双击页面任意处 → 随机送出一件祝福礼物（红灯笼 / 囍气球 / 礼盒 / 爱心）自下升空，
@@ -56,6 +57,7 @@ const RAIN = Array.from({ length: 60 }, (_, i) => {
 
 export function FestiveEasterEggs() {
   const reduce = useReducedMotion();
+  const mounted = useMounted();
 
   const [raining, setRaining] = useState(false); // 金粉雨
   const [gifts, setGifts] = useState<Gift[]>([]); // 双击升空的祝福礼物
@@ -171,7 +173,8 @@ export function FestiveEasterEggs() {
     return () => window.removeEventListener("devicemotion", onMotion);
   }, [reduce, spawnPetals]);
 
-  if (reduce) return null;
+  // 挂载前（含 SSR）统一返回 null，与客户端首渲一致，避免 useReducedMotion 引发 hydration 不匹配。
+  if (!mounted || reduce) return null;
 
   return (
     <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-[70] select-none overflow-hidden">

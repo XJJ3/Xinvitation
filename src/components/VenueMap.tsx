@@ -1,11 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { siteConfig } from "@/config/site";
 import {
-  jumpToMap,
   isWeChat,
+  openInWeChat,
+  openWebMap,
+  jumpToMap,
+  isWxSdkReady,
   MAP_PROVIDERS,
   type MapPoint,
 } from "@/lib/openMap";
@@ -92,6 +95,14 @@ export function VenueMap() {
   const [copied, setCopied] = useState(false);
   // 点击地图后的临时提示文案（唤起 App / 微信引导 / 未唤起），null = 不显示
   const [hint, setHint] = useState<string | null>(null);
+  // 微信内 JS-SDK 是否就绪（决定走「内置地图 openLocation」还是「H5 标点页」兜底）
+  const [wxReady, setWxReady] = useState(false);
+
+  // 每次打开导航弹层时，在微信内检测一次 JS-SDK 是否就绪：
+  // 就绪 → 用 wx.openLocation 打开内置地图；未就绪（无认证服务号/无签名）→ 跳地图 H5 标点页。
+  useEffect(() => {
+    if (active && isWeChat()) setWxReady(isWxSdkReady());
+  }, [active]);
 
   const copyAddress = async () => {
     if (!active) return;
@@ -104,22 +115,35 @@ export function VenueMap() {
     }
   };
 
-  // 点击某个地图：根据 jumpToMap 返回值给出对应提示，当前页不跳走。
-  const handlePick = (key: Parameters<typeof jumpToMap>[0]) => {
+  // 微信内导航：调微信内置地图（openLocation）打开标点页，用户在那里点「到这里去」即可唤起手机地图 App。
+  // SDK 未就绪（如主域名静态导出、签名接口缺失）则回退到「浏览器打开」提示。
+  const handleWeChatNav = () => {
     if (!active) return;
     setHint(null);
-    const result = jumpToMap(key, active, () => {
-      // 真实检测：2 秒后页面仍在前台 → 判定未安装该 App，此时才提示
-      setHint("未检测到该地图 App，可换一个地图，或点「复制地址」后手动搜索");
+    const ok = openInWeChat(active, () => {
+      setHint("微信地图打开失败，可点「复制地址」后在地图 App 里手动搜索");
     });
-    if (result === "wechat") {
-      // 微信内无法唤起第三方 App，引导用浏览器打开
-      setHint("微信内无法直接打开地图 App，请点右上角「···」→「在浏览器打开」后再试，或先「复制地址」");
-    } else if (result === "web-opened") {
-      // 桌面端：已用新标签打开网页版，直接收起菜单
-      setActive(null);
+    if (!ok) {
+      setHint("地图组件尚未就绪，请点右上角「···」→「在浏览器打开」后再试，或先「复制地址」");
     }
-    // app-attempted：已尝试唤起，成功则切到 App（无提示）；失败由上面回调提示
+  };
+
+  // 选地图后的跳转：按运行环境分流（此分支已排除「微信内+SDK就绪」的内置地图情形）。
+  // · 微信内（SDK 未就绪）：微信屏蔽第三方 App scheme，只能新开一层打开该地图的 H5 标点页；
+  // · 默认浏览器（系统浏览器/Safari/Chrome）：用 jumpToMap 直接唤起对应第三方地图 App，
+  //   唤不起（未安装）时由 onNotInstalled 回调兜底——jumpToMap 内部桌面端会自动改开网页版。
+  const handlePickWebMap = (key: Parameters<typeof openWebMap>[0]) => {
+    if (!active) return;
+    setHint(null);
+    if (isWeChat()) {
+      // 微信内：第三方 App scheme 会被拦截，直接跳 H5 网页版标点页
+      openWebMap(key, active);
+      return;
+    }
+    // 默认浏览器：唤起第三方地图 App（移动端 scheme 唤起；桌面端自动落网页版）
+    jumpToMap(key, active, () => {
+      setHint("未检测到该地图 App，可点「复制地址」后在地图里手动搜索");
+    });
   };
 
   return (
@@ -214,34 +238,66 @@ export function VenueMap() {
                 {active.address}
               </p>
 
-              {/* 微信内提示：建议用浏览器打开（仅微信内显示，常驻提醒） */}
-              {isWeChat() && (
-                <p className="mt-3 rounded-lg bg-china-gold/10 px-3 py-2 text-center font-kai text-[11px] leading-relaxed text-china-gold-bright">
-                  微信内无法直接唤起地图 App，请点右上角「···」→「在浏览器打开」后再导航
-                </p>
-              )}
-
-              {/* 地图选项 */}
-              <div className="mt-5 space-y-2.5">
-                {MAP_PROVIDERS.map((m) => (
+              {/* 导航路径：
+                  · 仅「微信内 + JS-SDK 就绪（有认证服务号）」→ wx.openLocation 打开内置地图，体验最佳；
+                  · 其余一律新开标签/新开一层打开该地图的 H5 标点页（https 网页，桌面与微信内都可打开）。 */}
+              {isWeChat() && wxReady ? (
+                <div className="mt-5 space-y-2.5">
                   <button
-                    key={m.key}
                     type="button"
-                    onClick={() => handlePick(m.key)}
-                    className="block w-full rounded-lg border border-china-gold/40 bg-china-red/40 py-3 font-kai text-china-text text-base transition active:scale-[0.98] active:bg-china-red/70"
+                    onClick={handleWeChatNav}
+                    className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-china-gold/60 bg-china-gold/15 py-3.5 font-kai text-china-gold-bright text-base transition active:scale-[0.98] active:bg-china-gold/25"
                   >
-                    {m.label}
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      className="h-4 w-4"
+                    >
+                      <path d="M12 21s-7-6.5-7-11a7 7 0 1 1 14 0c0 4.5-7 11-7 11Z" />
+                      <circle cx="12" cy="10" r="2.5" />
+                    </svg>
+                    在微信内打开地图
                   </button>
-                ))}
-                {/* 复制地址 */}
-                <button
-                  type="button"
-                  onClick={copyAddress}
-                  className="block w-full rounded-lg border border-china-gold/20 py-3 font-kai text-china-text-soft text-sm transition active:scale-[0.98]"
-                >
-                  {copied ? "已复制地址 ✓" : "复制地址"}
-                </button>
-              </div>
+                  <p className="px-1 text-center font-kai text-[11px] leading-relaxed text-china-text-soft">
+                    打开后点地图上的「到这里去」即可用手机里的地图 App 导航
+                  </p>
+                  {/* 复制地址 */}
+                  <button
+                    type="button"
+                    onClick={copyAddress}
+                    className="block w-full rounded-lg border border-china-gold/20 py-3 font-kai text-china-text-soft text-sm transition active:scale-[0.98]"
+                  >
+                    {copied ? "已复制地址 ✓" : "复制地址"}
+                  </button>
+                </div>
+              ) : (
+                <div className="mt-5 space-y-2.5">
+                  {MAP_PROVIDERS.map((m) => (
+                    <button
+                      key={m.key}
+                      type="button"
+                      onClick={() => handlePickWebMap(m.key)}
+                      className="block w-full rounded-lg border border-china-gold/40 bg-china-red/40 py-3 font-kai text-china-text text-base transition active:scale-[0.98] active:bg-china-red/70"
+                    >
+                      {m.label}
+                    </button>
+                  ))}
+                  <p className="px-1 text-center font-kai text-[11px] leading-relaxed text-china-text-soft">
+                    选地图后将唤起对应地图 App 导航；未安装则自动打开网页版并标出位置
+                  </p>
+                  {/* 复制地址 */}
+                  <button
+                    type="button"
+                    onClick={copyAddress}
+                    className="block w-full rounded-lg border border-china-gold/20 py-3 font-kai text-china-text-soft text-sm transition active:scale-[0.98]"
+                  >
+                    {copied ? "已复制地址 ✓" : "复制地址"}
+                  </button>
+                </div>
+              )}
 
               {/* 点击地图后的临时提示（唤起 App / 未安装等） */}
               {hint && (
