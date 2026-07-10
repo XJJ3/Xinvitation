@@ -52,3 +52,6 @@ dev.log
 
 # 字体源文件（巨大的原始 ttf，仅用于本地子集化；子集产物在 public/fonts/）
 .fonts-src/
+
+# 原始超大婚纱照（已压缩到 public/photos/，原图不入库不部署）
+.original-photos/

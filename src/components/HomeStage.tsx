@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { InviteCard } from "@/components/InviteCard";
-// import { PhotoCard } from "@/components/PhotoCard"; // 暂时隐藏第二屏
+import { PhotoCard } from "@/components/PhotoCard";
 import { OpeningCurtain } from "@/components/OpeningCurtain";
 import { NameFusion } from "@/components/NameFusion";
 import { FestiveEasterEggs } from "@/components/FestiveEasterEggs";
@@ -79,11 +79,11 @@ export function HomeStage() {
         nameRowHidden={!revealed}
       />
 
+      {/* 第二屏：带新人合影的邀请函（红金秀禾服主照 + 双图画廊，承接请柬情绪高潮） */}
+      <PhotoCard />
+
       {/* 地图模块：两场宴会地址卡片，点击导航拉起地图 */}
       <VenueMap />
-
-      {/* 第二屏：带新人合影的邀请函（暂时隐藏，待照片就绪后恢复） */}
-      {/* <PhotoCard /> */}
     </>
   );
 }

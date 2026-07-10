@@ -56,8 +56,25 @@ export const siteConfig = {
 
   // 第二屏照片版文案
   photo: {
-    // 新人合影：把真实照片放到 public/photos/couple.jpg，再把下面改成 "/photos/couple.jpg"
-    src: "/photos/couple-placeholder.svg",
+    // 顶部主照：红金秀禾服（与全站红金主题最契合）。
+    // 原始 8736×11648 大图已用 sips 压到 1400px 宽 JPEG（约 540KB），原图归档在 .original-photos/。
+    src: "/photos/hero-main.jpg",
+    // 主照的模糊占位（24px，约 5KB）：加载时先铺一层柔化底，避免白屏跳变。
+    blur: "/photos/hero-main-blur.jpg",
+    // 下方画廊双图：欧式宫殿白纱 + 灰调经典白纱，点击可放大查看。
+    // src 为缩略图（1000px，约 290KB）；large 为放大专用高清版（1600px，约 780KB，仅点开时加载）。
+    gallery: [
+      {
+        src: "/photos/gallery-palace.jpg",
+        large: "/photos/gallery-palace-large.jpg",
+        alt: "宫殿华灯下的婚纱合影",
+      },
+      {
+        src: "/photos/gallery-classic.jpg",
+        large: "/photos/gallery-classic-large.jpg",
+        alt: "纯净背景下的经典婚纱合影",
+      },
+    ],
     title: "订婚宴邀请函",
     subtitle: "诚邀你参加我们的订婚宴",
     blessings: ["敬备喜酌", "恭候光临"],
