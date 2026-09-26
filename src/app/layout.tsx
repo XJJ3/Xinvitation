@@ -1,40 +1,30 @@
 import type { Metadata } from "next";
-import localFont from "next/font/local";
+import { Ma_Shan_Zheng, Noto_Serif_SC, Lato } from "next/font/google";
 import { siteConfig } from "@/config/site";
 import "./globals.css";
 
-// 英文装饰字：EB Garamond（16 世纪人文主义衬线，古典优雅），本地自托管
-const ebGaramond = localFont({
-  variable: "--font-serif-en",
+// 中文书法标题字：马善政毛笔楷书（Google Fonts，构建时自托管）
+const brush = Ma_Shan_Zheng({
+  weight: "400",
+  variable: "--font-brush",
   display: "swap",
-  src: [
-    {
-      path: "../../public/fonts/ebgaramond-regular.woff2",
-      weight: "400",
-      style: "normal",
-    },
-    {
-      path: "../../public/fonts/ebgaramond-italic.woff2",
-      weight: "400",
-      style: "italic",
-    },
-  ],
+  preload: false,
 });
 
-// 中文标题/诗句字：汇文明朝体（CC0，古典明朝体衬线），已子集化为 woff2
-const huiwen = localFont({
-  variable: "--font-mincho",
+// 中文正文衬线：思源宋体（Google Fonts）
+const serif = Noto_Serif_SC({
+  weight: ["400", "600", "700"],
+  variable: "--font-serif",
   display: "swap",
-  src: "../../public/fonts/huiwen-mincho-subset.woff2",
-  weight: "400",
+  preload: false,
 });
 
-// 中文人名/正文字：霞鹜文楷（OFL，书法楷体半衬线），已子集化为 woff2
-const wenkai = localFont({
-  variable: "--font-kai",
+// 西文无衬线：Lato
+const sans = Lato({
+  weight: ["300", "400", "700"],
+  variable: "--font-sans",
   display: "swap",
-  src: "../../public/fonts/lxgw-wenkai-subset.woff2",
-  weight: "400",
+  subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
@@ -59,7 +49,7 @@ export default function RootLayout({
   return (
     <html
       lang="zh-CN"
-      className={`${ebGaramond.variable} ${huiwen.variable} ${wenkai.variable} h-full antialiased`}
+      className={`${brush.variable} ${serif.variable} ${sans.variable} h-full antialiased`}
     >
       <body className="min-h-full">{children}</body>
     </html>

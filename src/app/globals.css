@@ -1,18 +1,17 @@
 @import "tailwindcss";
 
+/* ══════════ 中式红金主题（保留：WxShare/SiteFooter/BgMusic 仍在引用 china-* token）══════════ */
 :root {
-  /* 中式红金主题 —— 取自参考图 */
-  --china-red: #9e1318;          /* 主背景深绛红 */
-  --china-red-deep: #7a0f13;     /* 更深的红，用于渐变底 */
-  --china-red-bright: #c1272d;   /* 照片屏的亮一点的红 */
-  /* 第二屏（照片版）专用：参考图2 偏暗哑光的酒绛红，压暗成枣红调 */
-  --china-red-photo: #75100f;    /* 照片屏主背景，暗哑酒枣红 */
-  --china-red-photo-deep: #560b0c; /* 照片屏底部，更沉 */
-  --china-gold: #c9a86a;         /* 古金色，标题/装饰 */
-  --china-gold-bright: #e3c88a;  /* 高光金 */
-  --china-cream: #f3e8d6;        /* 米白文字 */
-  --china-text: #f5ece0;         /* 正文米白 */
-  --china-text-soft: #e8d9c4;    /* 次要文字 */
+  --china-red: #9e1318;
+  --china-red-deep: #7a0f13;
+  --china-red-bright: #c1272d;
+  --china-red-photo: #75100f;
+  --china-red-photo-deep: #560b0c;
+  --china-gold: #c9a86a;
+  --china-gold-bright: #e3c88a;
+  --china-cream: #f3e8d6;
+  --china-text: #f5ece0;
+  --china-text-soft: #e8d9c4;
 }
 
 @theme inline {
@@ -26,38 +25,214 @@
   --color-china-cream: var(--china-cream);
   --color-china-text: var(--china-text);
   --color-china-text-soft: var(--china-text-soft);
-  --font-serif: var(--font-serif-en);
 }
 
+/* ══════════ 婚礼请帖新主题（源：设计稿 @theme，色板与设计稿一致）══════════ */
+@theme {
+  --color-w-red-deep: #3d1020;
+  --color-w-red: #7a2240;
+  --color-w-red-bright: #9b3358;
+  --color-w-red-light: #c47890;
+  --color-w-gold: #a87c3a;
+  --color-w-gold-light: #c9a050;
+  --color-w-gold-pale: #e8d098;
+  --color-w-ivory: #fdf7f0;
+  --color-w-cream: #f7ede0;
+  --color-w-dark: #1e0e14;
+  --color-w-muted: #6b4050;
+}
+
+:root {
+  --color-ivory: #fdf7f0;
+  --color-red-deep: #3d1020;
+  --color-red: #7a2240;
+  --color-gold: #a87c3a;
+  --color-gold-light: #c9a050;
+  --color-muted: #6b4050;
+}
+
+/* ══════════ 全局基础 ══════════ */
 html {
+  background: #1e0e14;
   scroll-behavior: smooth;
   overflow-x: clip;
 }
 
 body {
-  background: var(--china-red);
-  color: var(--china-text);
-  /* 正文默认汇文明朝体（古典宋体），回退到系统宋体 */
-  font-family: var(--font-mincho), "Songti SC", "STSong", "SimSun", Georgia, serif;
+  font-family: var(--font-sans);
+  background: var(--color-ivory);
+  color: var(--color-dark);
   overflow-x: clip;
 }
 
-/* 楷体/书法感类（中文标题、人名）：霞鹜文楷，回退到系统楷体 */
+/* 隐藏滚动条（设计稿惯例，移动端沉浸式） */
+::-webkit-scrollbar {
+  display: none;
+}
+* {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* ══════════ 保留组件（WxShare/SiteFooter）所需：楷体类 ══════════
+   （原霞鹜文楷 localFont 已随旧 UI 移除，回退系统楷体，样式不变） */
 .font-kai {
-  font-family: var(--font-kai), "Kaiti SC", "STKaiti", "KaiTi", "Songti SC", serif;
+  font-family: "Kaiti SC", "STKaiti", "KaiTi", "Songti SC", serif;
 }
 
-/* 明朝体类（中文古典标题、诗句）：汇文明朝体，回退到系统宋体 */
-.font-mincho {
-  font-family: var(--font-mincho), "Songti SC", "STSong", "SimSun", serif;
+/* ══════════ 动画（源：设计稿 index.css）══════════ */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(32px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50%      { transform: translateY(-10px) rotate(4deg); }
+}
+@keyframes sway {
+  0%, 100% { transform: rotate(-8deg); }
+  50%      { transform: rotate(8deg); }
+}
+@keyframes petalFall {
+  0%   { transform: translateY(-10px) rotate(0deg) translateX(0); opacity: 0; }
+  10%  { opacity: 1; }
+  50%  { transform: translateY(45vh) rotate(360deg) translateX(30px); }
+  100% { transform: translateY(100vh) rotate(720deg) translateX(-20px); opacity: 0; }
+}
+@keyframes glitter {
+  0%, 100% { opacity: 1; transform: scale(1) rotate(0deg); }
+  50%      { opacity: 0.4; transform: scale(0.6) rotate(180deg); }
+}
+@keyframes pulse-red {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(196, 30, 58, 0.4); }
+  50%      { box-shadow: 0 0 0 12px rgba(196, 30, 58, 0); }
+}
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@keyframes heartbeat {
+  0%, 100% { transform: scale(1); }
+  14%      { transform: scale(1.3); }
+  28%      { transform: scale(1); }
+  42%      { transform: scale(1.2); }
+  56%      { transform: scale(1); }
+}
+@keyframes lantern-swing {
+  0%, 100% { transform: rotate(-12deg); transform-origin: top center; }
+  50%      { transform: rotate(12deg); transform-origin: top center; }
 }
 
-/* 导出图片期间，隐藏不应出现在成图里的元素（导出按钮、下滑提示等） */
-[data-exporting="true"] [data-export-hide] {
-  display: none !important;
+.animate-fade-up   { animation: fadeUp 1s ease both; }
+.animate-fade-in   { animation: fadeIn 1s ease both; }
+.animate-float     { animation: float 4s ease-in-out infinite; }
+.animate-sway      { animation: sway 3s ease-in-out infinite; }
+.animate-heartbeat { animation: heartbeat 1.5s ease-in-out infinite; }
+.animate-lantern   { animation: lantern-swing 3s ease-in-out infinite; }
+.animate-spin-slow { animation: spin-slow 12s linear infinite; }
+
+.delay-100  { animation-delay: 0.1s; }
+.delay-200  { animation-delay: 0.2s; }
+.delay-300  { animation-delay: 0.3s; }
+.delay-400  { animation-delay: 0.4s; }
+.delay-600  { animation-delay: 0.6s; }
+.delay-800  { animation-delay: 0.8s; }
+.delay-1000 { animation-delay: 1s; }
+.delay-1200 { animation-delay: 1.2s; }
+
+/* Gold rule */
+.gold-rule {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--color-gold);
+}
+.gold-rule::before,
+.gold-rule::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--color-gold), transparent);
 }
 
-/* 「分享给好友」按钮的常态呼吸：金色光晕缓慢明暗，精致克制不抢戏 */
+/* Scroll reveal */
+.reveal {
+  opacity: 0;
+  transform: translateY(40px);
+  transition: opacity 0.8s ease, transform 0.8s ease;
+}
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Reveal variant that only fades (no translate) — safe for 3D children */
+.reveal-fade {
+  opacity: 0;
+  transition: opacity 0.8s ease;
+}
+.reveal-fade.visible {
+  opacity: 1;
+}
+
+/* Flip card */
+.flip-card {
+  perspective: 1200px;
+  cursor: pointer;
+  transform-style: preserve-3d;
+}
+.flip-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+.flip-inner.flipped {
+  transform: rotateY(180deg);
+}
+.flip-front,
+.flip-back {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform: translateZ(0);
+}
+.flip-back {
+  transform: rotateY(180deg) translateZ(0);
+}
+
+/* Red envelope */
+.envelope-btn {
+  animation: pulse-red 2s ease-in-out infinite;
+  cursor: pointer;
+}
+
+/* Falling petals */
+.petal-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 9999;
+  overflow: hidden;
+}
+.petal {
+  position: absolute;
+  top: -20px;
+  animation: petalFall linear infinite;
+}
+
+/* ══════════ 保留：WxShare 分享按钮呼吸动画 ══════════ */
 @keyframes share-breathe {
   0%,
   100% {
@@ -73,6 +248,7 @@ body {
   animation: share-breathe 3.2s ease-in-out infinite;
 }
 
+/* ══════════ 保留：全局降级（无障碍）══════════ */
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;

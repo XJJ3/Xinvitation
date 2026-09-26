@@ -138,7 +138,7 @@ export function WxShare() {
         type="button"
         onClick={() => setShowTip(true)}
         aria-label="分享给好友"
-        className="share-breathe fixed bottom-5 left-5 z-[60] flex items-center gap-2 rounded-full border border-china-gold/70 bg-china-red-deep/80 px-4 py-2.5 font-kai text-sm text-china-gold-bright shadow-lg backdrop-blur-sm transition hover:border-china-gold-bright hover:shadow-[0_0_16px_rgba(227,200,138,0.5)] active:scale-95"
+        className="share-breathe fixed bottom-5 left-5 z-[60] flex items-center gap-2 rounded-full border border-w-gold-pale/70 bg-w-red-deep/80 px-4 py-2.5 font-kai text-sm text-w-gold-pale shadow-lg backdrop-blur-sm transition hover:border-w-gold-pale hover:shadow-[0_0_16px_rgba(227,200,138,0.5)] active:scale-95"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -162,15 +162,15 @@ export function WxShare() {
           className="fixed inset-0 z-[70] flex items-start justify-end bg-black/60 p-4"
           onClick={() => setShowTip(false)}
         >
-          <div className="mt-2 mr-2 max-w-[16rem] rounded-xl bg-china-red-deep/95 p-5 text-china-text-soft shadow-2xl">
+          <div className="mt-2 mr-2 max-w-[16rem] rounded-xl bg-w-red-deep/95 p-5 text-w-cream shadow-2xl">
             <p className="font-kai text-base leading-relaxed">
-              点击右上角的 <span className="text-china-gold-bright">···</span>
+              点击右上角的 <span className="text-w-gold-pale">···</span>
               <br />
               选择「发送给朋友」或「分享到朋友圈」
               <br />
               即可分享这张精美请帖 🎉
             </p>
-            <div className="mt-3 text-right text-xs text-china-gold/70">
+            <div className="mt-3 text-right text-xs text-w-gold-light/80">
               {ready ? "（轻触任意处关闭）" : "（分享卡片加载中…轻触关闭）"}
             </div>
           </div>
