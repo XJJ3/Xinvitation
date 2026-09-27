@@ -25,8 +25,20 @@ export type GalleryPhoto = {
   readonly sub: string;
 };
 
+/** 随机分布到 3D 世界的照片：src 大图（墙面画框），small 小图（户外画架），w/h 为像素尺寸 */
+export type WorldPhoto = {
+  readonly src: string;
+  readonly small: string;
+  readonly w: number;
+  readonly h: number;
+};
+
 export type WeddingGalleryOptions = {
   photos: readonly GalleryPhoto[];
+  /** 后墙、侧墙、草坪/沙滩画架用的照片（按编号 1..n 引用），photos 只提供侧墙铭牌文字 */
+  worldPhotos?: readonly WorldPhoto[];
+  /** 画框位置 → 照片编号（从 1 开始），位置名见 photoForSlot；没写的位置按编号顺延补齐 */
+  photoLayout?: Readonly<Record<string, number>>;
   /** 标牌主标题，如「爱的画廊」 */
   title: string;
   /** 新人姓名，如「徐俊杰 ♡ 鲍阳阳」 */
@@ -161,6 +173,7 @@ float lawnLuma(vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
 /** 圆形碰撞体（柱子 / 基座） */
 type Circle = { x: number; z: number; r: number };
 
+
 /**
  * 过道装饰中批量实例化的花艺收集桶：构建期先把每朵花/叶的变换与颜色推进数组，
  * 最后一次性生成 3 个 InstancedMesh（玫瑰 / 绣球 / 叶），避免逐朵建 Mesh 的 draw call 爆炸。
@@ -291,6 +304,17 @@ export class WeddingGallery {
   private readonly velocity = new THREE.Vector3();
   private readonly moveInput = { x: 0, y: 0 };
   private readonly lookInput = { x: 0, y: 0 };
+  // 点哪走哪：可点击的照片、当前自动行走路径（xz 途经点）与到达后的朝向
+  private readonly photoTargets: { mesh: THREE.Mesh; w: number; h: number; zone: "hall" | "lawn" | "beach" }[] = [];
+  /** 布局里没写的画框按编号顺延取照片 */
+  private photoFallbackIdx = 0;
+  private autoPath: THREE.Vector2[] | null = null;
+  private autoFace: { yaw: number; pitch: number } | null = null;
+  private autoBestD = Infinity;
+  private autoStuckT = 0;
+  private tapMarker: THREE.Mesh | null = null;
+  private tapMarkerT = 1;
+  private readonly tapRay = new THREE.Raycaster();
   private readonly touchMode: boolean;
   private active = false;
   private bobTime = 0;
@@ -1388,7 +1412,9 @@ export class WeddingGallery {
       this.opts.photos[0]?.src ?? "",
       this.opts.photos[1]?.src ?? "",
     ];
-    const srcs = this.opts.wallPhotos ?? fallback;
+    const w0 = this.photoForSlot("后墙左");
+    const w1 = this.photoForSlot("后墙右");
+    const srcs = w0 && w1 ? [w0.src, w1.src] : (this.opts.wallPhotos ?? fallback);
     const loader = new THREE.TextureLoader();
     [-1, 1].forEach((sign, idx) => {
       const cx = sign * photoCX;
@@ -1398,8 +1424,9 @@ export class WeddingGallery {
       this.scene.add(mat);
 
       const src = srcs[idx];
+      this.slotTag(idx === 0 ? "后墙左" : "后墙右", new THREE.Vector3(cx, photoY + photoH / 2 + 0.4, EZ + 0.3), this.scene);
       if (src) {
-        const tex = loader.load(src);
+        const tex = loader.load(src, (t) => this.coverTexture(t, photoW / photoH));
         tex.colorSpace = THREE.SRGBColorSpace;
         tex.anisotropy = Math.min(8, this.renderer.capabilities.getMaxAnisotropy());
         this.reg(tex);
@@ -1416,6 +1443,7 @@ export class WeddingGallery {
         );
         photo.position.set(cx, photoY, EZ + 0.05);
         this.scene.add(photo);
+        this.photoTargets.push({ mesh: photo, w: photoW, h: photoH, zone: "hall" });
       }
 
       const hw = photoW / 2 + 0.11;
@@ -2541,10 +2569,10 @@ export class WeddingGallery {
     this.scene.add(base, vase);
   }
 
-  /** 花柱之间交替布置的 5 臂水晶烛台，每臂 + 中心各一烛 */
+  /** 花柱之间交替布置的 5 臂水晶烛台，每臂 + 中心各一烛（仪式台前那座已挪到后区，与 (-3.15, 4) 成对） */
   private buildAisleCandelabras(ctx: AisleCtx) {
     const POS: [number, number][] = [
-      [-3.15, -23.5],
+      [3.15, 4.0],
       [3.15, -16.25],
       [-3.15, -13.5],
       [3.15, -1.5],
@@ -3061,9 +3089,88 @@ export class WeddingGallery {
   }
 
   // ── 照片画框 ───────────────────────────────────────────────
+  /**
+   * 按位置名取照片（固定布局）。位置名：
+   * 后墙左 / 后墙右；舞台左 / 舞台右（台前红毯两侧金花瓮后的画架）；左墙1~8、右墙1~8（从门口往里数，左右以进门面朝仪式台为准）；
+   * 草坪1~10 小径画架（从门口往外、每对先左后右），草坪11~14 舞台前（左前、左后、右前、右后）；
+   * 沙滩1~10 木栈道画架、沙滩11~14 舞台两侧，规则同草坪（左右以出门面朝大海为准）。
+   */
+  private photoForSlot(id: string): WorldPhoto | null {
+    const all = this.opts.worldPhotos ?? [];
+    if (all.length === 0) return null;
+    const n = this.opts.photoLayout?.[id];
+    if (n !== undefined && n >= 1 && n <= all.length) return all[n - 1];
+    return all[this.photoFallbackIdx++ % all.length];
+  }
+
+  /** 户外画架的位置名：前 4 个是舞台画架，其后每两个一对（小径/栈道从门口往外） */
+  private easelSlotId(prefix: string, spots: { x: number; z: number }[], i: number): string {
+    const sp = spots[i];
+    // 出门面朝 +z 时 +x 在左手边
+    if (i < 4) {
+      const stage = spots.slice(0, 4);
+      const minZ = Math.min(...stage.map((e) => e.z));
+      return `${prefix}${11 + (sp.x > 0 ? 0 : 2) + (sp.z > minZ + 0.5 ? 1 : 0)}`;
+    }
+    const k = Math.floor((i - 4) / 2);
+    const partner = spots[i % 2 === 0 ? i + 1 : i - 1];
+    const left = partner ? sp.x > partner.x : sp.x > 0;
+    return `${prefix}${1 + k * 2 + (left ? 0 : 1)}`;
+  }
+
+  /**
+   * 户外画架画框随照片横竖变形：长边固定 0.94（横图放宽不压缩），画框每边比照片宽 0.1；
+   * 没有精修照片时退回竖版 0.7×0.94 并裁切铺满。
+   */
+  private easelFrameSize(wp: WorldPhoto | null) {
+    const LONG = 0.94;
+    const aspect = wp ? wp.w / wp.h : 0.7 / LONG;
+    const pw = aspect >= 1 ? LONG : LONG * aspect;
+    const ph = aspect >= 1 ? LONG / aspect : LONG;
+    return { pw, ph, fw: pw + 0.2, fh: ph + 0.22 };
+  }
+
+  /** 地址栏带 ?slots 时在每个画框上方显示位置名，方便对照布局表 */
+  private slotTag(id: string, pos: THREE.Vector3, parent: THREE.Object3D) {
+    if (typeof window === "undefined" || !new URLSearchParams(window.location.search).has("slots")) return;
+    const tex = this.reg(
+      this.makeCanvasTexture((ctx, w, h) => {
+        ctx.fillStyle = "rgba(122,34,64,0.88)";
+        ctx.fillRect(0, 0, w, h);
+        ctx.fillStyle = "#fff";
+        ctx.font = '700 72px "PingFang SC", sans-serif';
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(id, w / 2, h / 2 + 4);
+      }, 320, 110),
+    );
+    tex.colorSpace = THREE.SRGBColorSpace;
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false }));
+    sp.scale.set(0.9, 0.31, 1);
+    sp.position.copy(pos);
+    sp.renderOrder = 10;
+    parent.add(sp);
+  }
+
+  /** 纹理按画框比例居中裁切铺满（object-fit: cover） */
+  private coverTexture(t: THREE.Texture, planeAspect: number) {
+    const img = t.image as { width?: number; height?: number } | undefined;
+    if (!img?.width || !img?.height) return;
+    const imgAspect = img.width / img.height;
+    if (imgAspect > planeAspect) {
+      t.repeat.set(planeAspect / imgAspect, 1);
+      t.offset.set((1 - t.repeat.x) / 2, 0);
+    } else {
+      t.repeat.set(1, imgAspect / planeAspect);
+      t.offset.set(0, (1 - t.repeat.y) / 2);
+    }
+    t.needsUpdate = true;
+  }
+
   private loadPhotos() {
     const photos = this.opts.photos;
-    if (photos.length === 0) {
+    const worldCount = this.opts.worldPhotos?.length ?? 0;
+    if (photos.length === 0 && worldCount === 0) {
       this.fireReady();
       return;
     }
@@ -3071,7 +3178,12 @@ export class WeddingGallery {
     const wallX = this.W / 2;
     const fw = 2.3;
     const fh = 3.3;
-    const fy = 3.65;
+    // 实际画框：竖幅高 4.4m、横幅宽 4.6m。护墙板腰线顶在 1.66m，铭牌中心放 2.1m 露在腰线之上，
+    // 照片底边统一抬到 2.8m，给铭牌让位
+    const bigH = 4.4;
+    const bigW = 4.6;
+    const photoBottom = 2.8;
+    const plaqueY = 2.1;
     const fr = fh / 2.75;
     const perWall = 8;
     const total = perWall * 2;
@@ -3094,10 +3206,23 @@ export class WeddingGallery {
     });
     const matMat = new THREE.MeshStandardMaterial({ color: "#faf6f0", roughness: 0.95 });
 
-    // 同一张图只加载一次：16 张照片复用 6 份纹理，onReady 按唯一 URL 计数
+    // 每个画框先定好照片：有精修照片就随机抽，画框按照片比例定尺寸
+    // i < 8 为左墙（x < 0，进门面朝仪式台的左手边），zPos 从里往外，编号从门口往里数
+    const slotName = (i: number) => `${i < perWall ? "左墙" : "右墙"}${perWall - (i % perWall)}`;
+    const slots = Array.from({ length: total }, (_, i) => {
+      const wp = this.photoForSlot(slotName(i));
+      const meta = photos.length > 0 ? photos[i % photos.length] : null;
+      const src = wp?.src ?? meta?.src ?? "";
+      const a = wp ? wp.w / wp.h : fw / fh;
+      const w = a >= 1 ? bigW : bigH * a;
+      const h = a >= 1 ? bigW / a : bigH;
+      return { src, w, h, label: meta?.label ?? "", sub: meta?.sub ?? "" };
+    });
+
+    // 同一张图只加载一次，onReady 按唯一 URL 计数
     const cache = new Map<string, THREE.Texture>();
     const uniqueSrcs = new Set<string>();
-    for (let i = 0; i < total; i++) uniqueSrcs.add(photos[i % photos.length].src);
+    for (const sl of slots) uniqueSrcs.add(sl.src);
     let loaded = 0;
     const onOne = () => {
       loaded += 1;
@@ -3117,7 +3242,10 @@ export class WeddingGallery {
 
     for (let i = 0; i < total; i++) {
       const isLeft = i < perWall;
-      const photo = photos[i % photos.length];
+      const photo = slots[i];
+      const pw = photo.w;
+      const ph = photo.h;
+      const fy = photoBottom + ph / 2;
       const z = zPos[i % perWall];
       const sign = isLeft ? -1 : 1;
       const rotY = isLeft ? Math.PI / 2 : -Math.PI / 2;
@@ -3128,7 +3256,7 @@ export class WeddingGallery {
       const xPhoto = wallFace - sign * 0.16;
 
       const outer = new THREE.Mesh(
-        new THREE.BoxGeometry(fw + 0.38 * fr, fh + 0.38 * fr, 0.09),
+        new THREE.BoxGeometry(pw + 0.38 * fr, ph + 0.38 * fr, 0.09),
         outerMat,
       );
       outer.position.set(xOuter, fy, z);
@@ -3136,7 +3264,7 @@ export class WeddingGallery {
       this.scene.add(outer);
 
       const inner = new THREE.Mesh(
-        new THREE.BoxGeometry(fw + 0.18 * fr, fh + 0.18 * fr, 0.06),
+        new THREE.BoxGeometry(pw + 0.18 * fr, ph + 0.18 * fr, 0.06),
         innerMat,
       );
       inner.position.set(xInner, fy, z);
@@ -3144,7 +3272,7 @@ export class WeddingGallery {
       this.scene.add(inner);
 
       const mat = new THREE.Mesh(
-        new THREE.BoxGeometry(fw + 0.04 * fr, fh + 0.04 * fr, 0.03),
+        new THREE.BoxGeometry(pw + 0.04 * fr, ph + 0.04 * fr, 0.03),
         matMat,
       );
       mat.position.set(xMat, fy, z);
@@ -3153,7 +3281,7 @@ export class WeddingGallery {
 
       const tex = getTex(photo.src);
       const photoMesh = new THREE.Mesh(
-        new THREE.PlaneGeometry(fw, fh),
+        new THREE.PlaneGeometry(pw, ph),
         new THREE.MeshStandardMaterial({
           map: tex,
           emissiveMap: tex,
@@ -3165,29 +3293,17 @@ export class WeddingGallery {
       photoMesh.position.set(xPhoto, fy, z);
       photoMesh.rotation.y = rotY;
       this.scene.add(photoMesh);
+      this.slotTag(slotName(i), new THREE.Vector3(xPhoto - sign * 0.3, fy + ph / 2 + 0.55, z), this.scene);
+      this.photoTargets.push({ mesh: photoMesh, w: pw, h: ph, zone: "hall" });
+      if (!photo.label) {
+        this.addTrackLight(sign * (wallX - 2.2), this.H - 0.42, z, xPhoto, fy, z);
+        continue;
+      }
 
-      const labelTex = this.reg(
-        this.makeCanvasTexture((ctx, w, h) => {
-          ctx.clearRect(0, 0, w, h);
-          ctx.textAlign = "center";
-          ctx.textBaseline = "middle";
-          ctx.fillStyle = "#7a2240";
-          ctx.font = 'italic 54px Georgia, "Songti SC", "STSong", serif';
-          ctx.fillText(photo.label, w / 2, h * 0.36);
-          ctx.fillStyle = "#9b6a3a";
-          ctx.font = '30px "Songti SC", "STSong", Georgia, serif';
-          ctx.fillText(photo.sub, w / 2, h * 0.74);
-        }, 512, 140),
-      );
-      labelTex.colorSpace = THREE.SRGBColorSpace;
-      const labelH = 0.34;
-      const labelMesh = new THREE.Mesh(
-        new THREE.PlaneGeometry(fw * 0.95, labelH),
-        new THREE.MeshStandardMaterial({ map: labelTex, transparent: true, roughness: 0.9 }),
-      );
-      labelMesh.position.set(xPhoto, fy - fh / 2 - labelH / 2 - 0.01, z);
-      labelMesh.rotation.y = rotY;
-      this.scene.add(labelMesh);
+      const plaque = this.makePhotoPlaque(photo.label, photo.sub);
+      plaque.position.set(wallFace - sign * 0.04, plaqueY, z);
+      plaque.rotation.y = rotY;
+      this.scene.add(plaque);
 
       this.addTrackLight(sign * (wallX - 2.2), this.H - 0.42, z, xPhoto, fy, z);
     }
@@ -3202,11 +3318,11 @@ export class WeddingGallery {
       depthWrite: false,
       side: THREE.DoubleSide,
     });
-    const pools = new THREE.InstancedMesh(new THREE.PlaneGeometry(fw * 2.2, fh), poolMat, total);
+    const pools = new THREE.InstancedMesh(new THREE.PlaneGeometry(fw * 2.6, fh), poolMat, total);
     const dummy = new THREE.Object3D();
     for (let i = 0; i < total; i++) {
       const isLeft = i < perWall;
-      dummy.position.set((isLeft ? -1 : 1) * (wallX - 0.01), fy + fh / 2 + 0.45, zPos[i % perWall]);
+      dummy.position.set((isLeft ? -1 : 1) * (wallX - 0.01), photoBottom + slots[i].h + 0.45, zPos[i % perWall]);
       dummy.rotation.set(0, isLeft ? Math.PI / 2 : -Math.PI / 2, 0);
       dummy.scale.set(1, 1, 1);
       dummy.updateMatrix();
@@ -3214,6 +3330,200 @@ export class WeddingGallery {
     }
     pools.instanceMatrix.needsUpdate = true;
     this.scene.add(pools);
+  }
+
+  private readonly plaqueCache = new Map<string, THREE.MeshStandardMaterial>();
+  private plaqueFrame: { geo: THREE.BufferGeometry; face: THREE.BufferGeometry; mat: THREE.MeshStandardMaterial } | null = null;
+
+  /**
+   * 照片铭牌：金色倒角底座 + 象牙白面板，标题香槟金、副标题酒红，都做成浮雕。
+   * 文字轮廓模糊后当高度图，Sobel 求出法线贴图，射灯照上去才有真实的高光和阴影；
+   * 金字另给金属度/粗糙度贴图（G = 粗糙度，B = 金属度），与面板的哑光区分开。
+   */
+  private makePhotoPlaque(title: string, sub: string): THREE.Group {
+    const PW = 1.9;
+    const PH = 0.5;
+    if (!this.plaqueFrame) {
+      const r = 0.05;
+      const w = PW + 0.1;
+      const h = PH + 0.1;
+      const shape = new THREE.Shape();
+      shape.moveTo(-w / 2 + r, -h / 2);
+      shape.lineTo(w / 2 - r, -h / 2);
+      shape.quadraticCurveTo(w / 2, -h / 2, w / 2, -h / 2 + r);
+      shape.lineTo(w / 2, h / 2 - r);
+      shape.quadraticCurveTo(w / 2, h / 2, w / 2 - r, h / 2);
+      shape.lineTo(-w / 2 + r, h / 2);
+      shape.quadraticCurveTo(-w / 2, h / 2, -w / 2, h / 2 - r);
+      shape.lineTo(-w / 2, -h / 2 + r);
+      shape.quadraticCurveTo(-w / 2, -h / 2, -w / 2 + r, -h / 2);
+      const geo = new THREE.ExtrudeGeometry(shape, {
+        depth: 0.025,
+        bevelEnabled: true,
+        bevelThickness: 0.012,
+        bevelSize: 0.014,
+        bevelSegments: 3,
+        curveSegments: 6,
+      });
+      const mat = new THREE.MeshStandardMaterial({
+        color: "#d9b878",
+        metalness: 0.9,
+        roughness: 0.28,
+        envMapIntensity: 1.6,
+      });
+      this.plaqueFrame = { geo, face: new THREE.PlaneGeometry(PW, PH), mat };
+    }
+    const key = `${title}|${sub}`;
+    let faceMat = this.plaqueCache.get(key);
+    if (!faceMat) {
+      faceMat = this.makePlaqueFaceMaterial(title, sub);
+      this.plaqueCache.set(key, faceMat);
+    }
+    const g = new THREE.Group();
+    g.add(new THREE.Mesh(this.plaqueFrame.geo, this.plaqueFrame.mat));
+    const face = new THREE.Mesh(this.plaqueFrame.face, faceMat);
+    face.position.z = 0.025 + 0.012 + 0.002;
+    g.add(face);
+    return g;
+  }
+
+  private makePlaqueFaceMaterial(title: string, sub: string): THREE.MeshStandardMaterial {
+    const W = 1024;
+    const H = 270;
+    const mk = () => {
+      const c = document.createElement("canvas");
+      c.width = W;
+      c.height = H;
+      const ctx = c.getContext("2d");
+      if (!ctx) throw new Error("2D context unavailable");
+      return { c, ctx };
+    };
+    const titleFont = 'italic 600 104px Georgia, "Songti SC", "STSong", serif';
+    const subFont = '500 46px "Songti SC", "STSong", Georgia, serif';
+    const titleY = H * 0.4;
+    const subY = H * 0.8;
+    // 装饰线：标题下方左右两段细线 + 中间菱形
+    const ornament = (ctx: CanvasRenderingContext2D) => {
+      const y = H * 0.625;
+      ctx.fillRect(W * 0.2, y - 2, W * 0.25, 4);
+      ctx.fillRect(W * 0.55, y - 2, W * 0.25, 4);
+      ctx.beginPath();
+      ctx.moveTo(W / 2, y - 11);
+      ctx.lineTo(W / 2 + 11, y);
+      ctx.lineTo(W / 2, y + 11);
+      ctx.lineTo(W / 2 - 11, y);
+      ctx.closePath();
+      ctx.fill();
+    };
+    const drawText = (ctx: CanvasRenderingContext2D, titleStyle: string | CanvasGradient, subStyle: string, lineStyle: string) => {
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.font = titleFont;
+      ctx.fillStyle = titleStyle;
+      ctx.fillText(title, W / 2, titleY);
+      ctx.font = subFont;
+      ctx.fillStyle = subStyle;
+      ctx.fillText(sub, W / 2, subY);
+      ctx.fillStyle = lineStyle;
+      ornament(ctx);
+      // 面板内缘一圈细金线
+      ctx.strokeStyle = lineStyle;
+      ctx.lineWidth = 4;
+      ctx.strokeRect(18, 18, W - 36, H - 36);
+    };
+
+    // 颜色
+    const col = mk();
+    const bg = col.ctx.createLinearGradient(0, 0, 0, H);
+    bg.addColorStop(0, "#fffaf2");
+    bg.addColorStop(1, "#efe4d3");
+    col.ctx.fillStyle = bg;
+    col.ctx.fillRect(0, 0, W, H);
+    const goldGrad = col.ctx.createLinearGradient(0, titleY - 55, 0, titleY + 55);
+    goldGrad.addColorStop(0, "#f3dca0");
+    goldGrad.addColorStop(0.5, "#c89a4e");
+    goldGrad.addColorStop(1, "#a87a36");
+    drawText(col.ctx, goldGrad, "#7a2240", "#c9a15e");
+
+    // 高度：文字/线条为 1，背景为 0，模糊后形成圆润的斜面
+    const hm = mk();
+    hm.ctx.fillStyle = "#000";
+    hm.ctx.fillRect(0, 0, W, H);
+    drawText(hm.ctx, "#fff", "#fff", "#fff");
+    const src = hm.ctx.getImageData(0, 0, W, H).data;
+    let hgt = new Float32Array(W * H);
+    for (let i = 0; i < W * H; i++) hgt[i] = src[i * 4] / 255;
+    const blur = (a: Float32Array, rad: number) => {
+      const tmp = new Float32Array(W * H);
+      const out = new Float32Array(W * H);
+      const n = rad * 2 + 1;
+      for (let y = 0; y < H; y++) {
+        let acc = 0;
+        for (let x = -rad; x <= rad; x++) acc += a[y * W + clamp(x, 0, W - 1)];
+        for (let x = 0; x < W; x++) {
+          tmp[y * W + x] = acc / n;
+          acc += a[y * W + Math.min(x + rad + 1, W - 1)] - a[y * W + Math.max(x - rad, 0)];
+        }
+      }
+      for (let x = 0; x < W; x++) {
+        let acc = 0;
+        for (let y = -rad; y <= rad; y++) acc += tmp[clamp(y, 0, H - 1) * W + x];
+        for (let y = 0; y < H; y++) {
+          out[y * W + x] = acc / n;
+          acc += tmp[Math.min(y + rad + 1, H - 1) * W + x] - tmp[Math.max(y - rad, 0) * W + x];
+        }
+      }
+      return out;
+    };
+    hgt = blur(blur(hgt, 2), 2);
+
+    // 法线：n = normalize(-dh/du, -dh/dv, 1)；画布 y 向下而纹理 v 向上，所以 v 方向差分取反
+    const nm = mk();
+    const nImg = nm.ctx.createImageData(W, H);
+    const STRENGTH = 6;
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        const hx = hgt[y * W + Math.min(x + 1, W - 1)] - hgt[y * W + Math.max(x - 1, 0)];
+        const hy = hgt[Math.min(y + 1, H - 1) * W + x] - hgt[Math.max(y - 1, 0) * W + x];
+        let nx = -hx * STRENGTH;
+        let ny = hy * STRENGTH;
+        let nz = 1;
+        const l = Math.hypot(nx, ny, nz);
+        nx /= l;
+        ny /= l;
+        nz /= l;
+        const o = (y * W + x) * 4;
+        nImg.data[o] = (nx * 0.5 + 0.5) * 255;
+        nImg.data[o + 1] = (ny * 0.5 + 0.5) * 255;
+        nImg.data[o + 2] = (nz * 0.5 + 0.5) * 255;
+        nImg.data[o + 3] = 255;
+      }
+    }
+    nm.ctx.putImageData(nImg, 0, 0);
+
+    // 粗糙度（G）/ 金属度（B）：金字、金线金属亮面，酒红副标题半哑光，面板哑光
+    const rm = mk();
+    rm.ctx.fillStyle = "rgb(0,190,0)";
+    rm.ctx.fillRect(0, 0, W, H);
+    drawText(rm.ctx, "rgb(0,70,255)", "rgb(0,120,0)", "rgb(0,80,255)");
+
+    const tex = (c: HTMLCanvasElement, srgb: boolean) => {
+      const t = this.reg(new THREE.CanvasTexture(c));
+      t.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace;
+      t.anisotropy = Math.min(8, this.renderer.capabilities.getMaxAnisotropy());
+      return t;
+    };
+    const orm = tex(rm.c, false);
+    return new THREE.MeshStandardMaterial({
+      map: tex(col.c, true),
+      normalMap: tex(nm.c, false),
+      normalScale: new THREE.Vector2(1.4, 1.4),
+      roughnessMap: orm,
+      metalnessMap: orm,
+      roughness: 1,
+      metalness: 1,
+      envMapIntensity: 1.8,
+    });
   }
 
   // ── 吊灯 ───────────────────────────────────────────────────
@@ -4603,7 +4913,85 @@ export class WeddingGallery {
     );
 
     this.buildSigningTable();
+    this.buildHallStageEasels();
     this.buildHallStageFlorals();
+  }
+
+  /**
+   * 仪式台前红毯两侧各一座照片画架（与户外画架同款，略放大）：立在最靠台的一对金花瓮（x=±2.6, z=-20）后方 2.6m，
+   * 后支腿刚好落在最低一级台阶前沿（x=±2.9 处约 z=-23.4）之外；略往外偏 0.3m，免得从红毯看过去被花瓮挡住照片；微偏向红毯。位置名：舞台左 / 舞台右（进门面朝仪式台为准，左 = x < 0）。
+   * 须在 buildCeremonyChairs 之前调用，座椅会避让画架碰撞圆。
+   */
+  private buildHallStageEasels() {
+    const spots = [-1, 1].map((side) => ({ side, x: side * 2.9, z: -22.6 }));
+    const S = 1.5;
+    const FW = 1.0;
+    const FH = 1.3;
+    const PW = 0.8;
+    const PH = 1.08;
+    const easelMat = new THREE.MeshStandardMaterial({
+      color: "#e3c995",
+      metalness: 0.65,
+      roughness: 0.33,
+      envMapIntensity: 1.1,
+    });
+    const frameMat = new THREE.MeshStandardMaterial({
+      color: "#cfae72",
+      metalness: 0.75,
+      roughness: 0.3,
+      envMapIntensity: 1.2,
+    });
+    const boardMat = new THREE.MeshStandardMaterial({ color: "#f3ede4", roughness: 0.9 });
+    const easel = new THREE.InstancedMesh(this.makeEaselGeometry(), easelMat, spots.length);
+    const frame = new THREE.InstancedMesh(new THREE.BoxGeometry(FW, FH, 0.05), frameMat, spots.length);
+    const board = new THREE.InstancedMesh(new THREE.PlaneGeometry(FW - 0.08, FH - 0.08), boardMat, spots.length);
+    const loader = new THREE.TextureLoader();
+    const planeAspect = PW / PH;
+    const ledgeTop = (0.6 + 0.0175) * S;
+    const local = new THREE.Matrix4();
+    const tilt = new THREE.Matrix4().makeRotationX(-0.1);
+    const world = new THREE.Matrix4();
+
+    spots.forEach((sp, i) => {
+      const y = this.hallStageGroundY(sp.x, sp.z);
+      const ry = Math.atan2(-sp.side * 0.3, 0.95);
+      easel.setMatrixAt(i, this.makeColumn(sp.x, y, sp.z, ry, S));
+      const rootM = this.makeColumn(sp.x, y, sp.z, ry, 1);
+      const at = (lx: number, ly: number, lz: number) =>
+        world.copy(rootM).multiply(local.makeTranslation(lx, ly, lz)).multiply(tilt);
+      frame.setMatrixAt(i, at(0, ledgeTop + FH / 2, 0.06));
+      board.setMatrixAt(i, at(0, ledgeTop + FH / 2, 0.087));
+
+      const slotId = sp.side < 0 ? "舞台左" : "舞台右";
+      const wp = this.photoForSlot(slotId);
+      const fallback = this.opts.photos[i % Math.max(this.opts.photos.length, 1)]?.src ?? "";
+      const src = wp?.src ?? fallback;
+      const wa = wp ? wp.w / wp.h : planeAspect;
+      const pw = wa > planeAspect ? PW : PH * wa;
+      const ph = wa > planeAspect ? PW / wa : PH;
+      const photoMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0.95, 0.95, 0.95) });
+      if (src) {
+        const tex = loader.load(src, (t) => {
+          if (!wp) this.coverTexture(t, planeAspect);
+        });
+        tex.colorSpace = THREE.SRGBColorSpace;
+        tex.anisotropy = Math.min(8, this.renderer.capabilities.getMaxAnisotropy());
+        this.reg(tex);
+        photoMat.map = tex;
+      }
+      const photo = new THREE.Mesh(new THREE.PlaneGeometry(pw, ph), photoMat);
+      photo.matrixAutoUpdate = false;
+      photo.matrix.copy(at(0, ledgeTop + FH / 2, 0.09));
+      this.scene.add(photo);
+      this.photoTargets.push({ mesh: photo, w: pw, h: ph, zone: "hall" });
+      this.slotTag(slotId, new THREE.Vector3().setFromMatrixPosition(at(0, ledgeTop + FH + 0.35, 0.1)), this.scene);
+      this.circles.push({ x: sp.x, z: sp.z, r: 0.5 });
+    });
+    for (const mesh of [easel, frame, board]) {
+      mesh.frustumCulled = false;
+      mesh.instanceMatrix.needsUpdate = true;
+      this.scene.add(mesh);
+    }
   }
 
   /** 台体分层碰撞：两侧直边与后沿各一块矩形（台阶正面留着给人走上去） */
@@ -4616,7 +5004,6 @@ export class WeddingGallery {
     if (tier === 0) this.boxes.push({ x0: -w, x1: w, z0: back - 0.3, z1: back + 0.3 });
   }
 
-  /** 婚书贴图：米白厚纸 + 香槟金双边 + 竖排中式婚书 + 朱红印章（2048px，贴近可读） */
   /**
    * 婚书贴图：纯白厚纸 + 黑字竖排中式婚书 + 朱红印章。
    * 白纸黑字、字号大、与纸面高对比，保证站在台前能直接读到。
@@ -4653,18 +5040,23 @@ export class WeddingGallery {
         ctx.strokeRect(54, 54, w - 108, h - 108);
 
         // 竖排黑字：右侧标题，中部正文两列，左侧落款
-        const col = (text: string, cx: number, top: number, size: number, lh: number, color: string, weight = "700") => {
+        // 每列限定在 [top, bottom] 内：字多就自动缩小行距和字号，保证不出内框（内框在 y = 54 ~ h-54）
+        const col = (text: string, cx: number, top: number, bottom: number, maxSize: number, color: string, weight = "700") => {
+          const chars = [...text];
+          const lh = Math.min(maxSize * 1.18, (bottom - top) / chars.length);
+          const size = Math.min(maxSize, lh * 0.86);
           ctx.fillStyle = color;
           ctx.font = `${weight} ${size}px "Songti SC", "STSong", "SimSun", serif`;
           ctx.textAlign = "center";
           ctx.textBaseline = "top";
-          [...text].forEach((ch, i) => ctx.fillText(ch, cx, top + i * lh));
+          chars.forEach((ch, i) => ctx.fillText(ch, cx, top + i * lh + (lh - size) / 2));
         };
-        col("婚　书", w * 0.86, h * 0.16, 132, 156, "#141210");
-        col("两姓联姻一堂缔约", w * 0.7, h * 0.2, 104, 122, "#141210");
-        col("良缘永结匹配同称", w * 0.55, h * 0.2, 104, 122, "#141210");
-        col(namesLine.replace("♡", "·").replace(/\s+/g, ""), w * 0.4, h * 0.22, 92, 110, "#8c1c2a");
-        col("谨订此约白首同心", w * 0.26, h * 0.56, 72, 88, "#2a2622");
+        const bottom = h - 110;
+        col("婚　书", w * 0.86, h * 0.13, h * 0.62, 132, "#141210");
+        col("两姓联姻一堂缔约", w * 0.7, 120, bottom, 104, "#141210");
+        col("良缘永结匹配同称", w * 0.55, 120, bottom, 104, "#141210");
+        col(namesLine.replace("♡", "·").replace(/\s+/g, ""), w * 0.4, 150, bottom - 20, 92, "#8c1c2a");
+        col("谨订此约白首同心", w * 0.26, h * 0.34, bottom - 20, 72, "#2a2622");
 
         // 朱红印章（左下）
         const sx = w * 0.17;
@@ -4849,56 +5241,11 @@ export class WeddingGallery {
     sealMesh.rotation.y = 0.3;
     this.scene.add(sealMesh);
 
-    this.buildSigningTableDecor(topY, TW, TD, cz);
+    this.buildSigningTableDecor(topY, TD, cz);
   }
 
-  /**
-   * 签字台台面布置：两侧高脚烛台（杯座 + 蜡烛 + 玻璃罩 + 火焰）、婚书后方一瓶真实玫瑰花束、
-   * 桌旗与花瓣，均以台面 topY 为基准（不再从地板起算）。
-   */
-  private buildSigningTableDecor(topY: number, TW: number, TD: number, cz: number) {
-    const glassMat = this.vaseGlassMaterial("#fff4e4", 0.32);
-    const gold = new THREE.MeshStandardMaterial({ color: "#d8bb84", roughness: 0.26, metalness: 0.85 });
-    const candleMat = new THREE.MeshStandardMaterial({ color: "#fdf4e6", roughness: 0.55, metalness: 0 });
-    const holdParts: THREE.BufferGeometry[] = [];
-    const glassParts: THREE.BufferGeometry[] = [];
-    const candleParts: THREE.BufferGeometry[] = [];
-
-    // 两侧高脚烛台：底座 + 束腰柱 + 杯座 + 蜡烛 + 玻璃罩（收进桌面内侧，不压桌沿）
-    [-1, 1].forEach((sx) => {
-      const x = sx * (TW - 0.3);
-      const z = cz - 0.12;
-      const base = new THREE.CylinderGeometry(0.078, 0.086, 0.026, 16);
-      base.translate(x, topY + 0.013, z);
-      holdParts.push(base);
-      const stem = new THREE.CylinderGeometry(0.024, 0.052, 0.2, 16);
-      stem.translate(x, topY + 0.126, z);
-      holdParts.push(stem);
-      const knop = new THREE.SphereGeometry(0.042, 16, 10);
-      knop.translate(x, topY + 0.106, z);
-      holdParts.push(knop);
-      const cup = new THREE.CylinderGeometry(0.062, 0.046, 0.03, 16);
-      cup.translate(x, topY + 0.241, z);
-      holdParts.push(cup);
-      const candle = new THREE.CylinderGeometry(0.026, 0.028, 0.15, 14);
-      candle.translate(x, topY + 0.331, z);
-      candleParts.push(candle);
-      const glass = new THREE.CylinderGeometry(0.058, 0.052, 0.21, 16, 1, true);
-      glass.translate(x, topY + 0.37, z);
-      glassParts.push(glass);
-      this.aisleFlames.push({
-        x,
-        y: topY + 0.42,
-        z,
-        phase: Math.random() * Math.PI * 2,
-        scale: 0.85,
-      });
-    });
-
-    this.scene.add(new THREE.Mesh(this.mergeParts(holdParts, "signing candle stands"), gold));
-    this.scene.add(new THREE.Mesh(this.mergeParts(glassParts, "signing candle glass"), glassMat));
-    this.scene.add(new THREE.Mesh(this.mergeParts(candleParts, "signing candles"), candleMat));
-
+  /** 签字台台面布置：婚书后方一瓶真实玫瑰花束、桌旗，均以台面 topY 为基准（不再从地板起算） */
+  private buildSigningTableDecor(topY: number, TD: number, cz: number) {
     // 花：婚书后方一瓶真实玫瑰花束（rose-bouquet.glb，模型就绪后放置）
     this.signingBouquetSpot = new THREE.Vector3(0, topY + 0.004, cz - 0.25);
     this.buildSigningBouquet();
@@ -6108,21 +6455,17 @@ export class WeddingGallery {
     this.applyFakeSun(frameMat);
     const boardMat = new THREE.MeshBasicMaterial({ color: "#ebe5dc" });
 
-    const FW = 0.9;
-    const FH = 1.16;
-    const PW = 0.7;
-    const PH = 0.94;
     const easel = new THREE.InstancedMesh(this.makeEaselGeometry(), easelMat, spots.length);
-    const frame = new THREE.InstancedMesh(new THREE.BoxGeometry(FW, FH, 0.05), frameMat, spots.length);
-    const board = new THREE.InstancedMesh(new THREE.PlaneGeometry(FW - 0.08, FH - 0.08), boardMat, spots.length);
-    const photoGeo = new THREE.PlaneGeometry(PW, PH);
+    const frame = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 0.05), frameMat, spots.length);
+    const board = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), boardMat, spots.length);
     const loader = new THREE.TextureLoader();
-    const planeAspect = PW / PH;
 
     const ledgeTop = (0.6 + 0.0175) * S;
     const local = new THREE.Matrix4();
     const tilt = new THREE.Matrix4().makeRotationX(-0.1);
     const world = new THREE.Matrix4();
+    const scaled = new THREE.Matrix4();
+    const sz = new THREE.Matrix4();
     const p = new THREE.Vector3();
 
     spots.forEach((sp, i) => {
@@ -6134,33 +6477,31 @@ export class WeddingGallery {
 
       const at = (lx: number, ly: number, lz: number) =>
         world.copy(rootM).multiply(local.makeTranslation(lx, ly, lz)).multiply(tilt);
-      frame.setMatrixAt(i, at(0, ledgeTop + FH / 2, 0.06));
-      board.setMatrixAt(i, at(0, ledgeTop + FH / 2, 0.087));
+      const slotId = this.easelSlotId("草坪", spots, i);
+      const wp = this.photoForSlot(slotId);
+      const { pw, ph, fw, fh } = this.easelFrameSize(wp);
+      const cy = ledgeTop + fh / 2;
+      frame.setMatrixAt(i, scaled.copy(at(0, cy, 0.06)).multiply(sz.makeScale(fw, fh, 1)));
+      board.setMatrixAt(i, scaled.copy(at(0, cy, 0.087)).multiply(sz.makeScale(fw - 0.08, fh - 0.08, 1)));
 
       const photoMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0.94, 0.94, 0.94) });
-      if (photos.length > 0) {
-        const tex = loader.load(photos[i % photos.length].src, (t) => {
-          const img = t.image as { width?: number; height?: number } | undefined;
-          if (!img?.width || !img?.height) return;
-          const imgAspect = img.width / img.height;
-          if (imgAspect > planeAspect) {
-            t.repeat.set(planeAspect / imgAspect, 1);
-            t.offset.set((1 - t.repeat.x) / 2, 0);
-          } else {
-            t.repeat.set(1, imgAspect / planeAspect);
-            t.offset.set(0, (1 - t.repeat.y) / 2);
-          }
-          t.needsUpdate = true;
+      // 精修照片按原比例、画框跟着横竖变形；没有时回退到配置照片并裁切铺满
+      const src = wp?.small ?? (photos.length > 0 ? photos[i % photos.length].src : "");
+      if (src) {
+        const tex = loader.load(src, (t) => {
+          if (!wp) this.coverTexture(t, pw / ph);
         });
         tex.colorSpace = THREE.SRGBColorSpace;
         tex.anisotropy = Math.min(8, this.renderer.capabilities.getMaxAnisotropy());
         this.reg(tex);
         photoMat.map = tex;
       }
-      const photo = new THREE.Mesh(photoGeo, photoMat);
+      const photo = new THREE.Mesh(new THREE.PlaneGeometry(pw, ph), photoMat);
       photo.matrixAutoUpdate = false;
-      photo.matrix.copy(at(0, ledgeTop + FH / 2, 0.09));
+      photo.matrix.copy(at(0, cy, 0.09));
       this.lawnGroup.add(photo);
+      this.photoTargets.push({ mesh: photo, w: pw, h: ph, zone: "lawn" });
+      this.slotTag(slotId, new THREE.Vector3().setFromMatrixPosition(at(0, ledgeTop + fh + 0.35, 0.1)), this.lawnGroup);
 
       const footTones = ["#fdf8f3", "#f4c9d4", "#ef8fae"];
       for (let k = 0; k < 8; k++) {
@@ -7649,7 +7990,7 @@ export class WeddingGallery {
 
   /**
    * 仪式座席：过道两侧金色 Chiavari 椅，全部面朝 -Z（椅背朝 +Z）。
-   * 前区 z∈[-27,-12.8]、后区 z∈[-3.6,8.4]，各排每侧 10 把（最外把与墙边花瓶底座留出 ≥1m 人行间隙）；
+   * 前区 z∈[-27,-12.8]、后区 z∈[-3.6,8.4]，排距放宽到能从两排之间穿过，各排每侧 10 把（最外把与墙边花瓶底座留出 ≥1m 人行间隙）；
    * 逐把按已有碰撞圆避让，靠过道那把记录到 pewEnds 用于挂花饰。
    */
   private buildCeremonyChairs() {
@@ -7667,9 +8008,11 @@ export class WeddingGallery {
       });
     };
 
+    // 排距 1.75m：椅子碰撞半径 0.26 + 人 0.4，两排之间留出约 0.4m 可走的带子（寻路网格 0.25m 也一定能穿过）
+    const ROW = 1.75;
     const rows: number[] = [];
-    for (let z = -27; z <= -12.8 + 1e-6; z += 1.15) rows.push(z);
-    for (let z = -3.6; z <= 8.4 + 1e-6; z += 1.15) rows.push(z);
+    for (let z = -27; z <= -12.8 + 1e-6; z += ROW) rows.push(z);
+    for (let z = -3.6; z <= 8.4 + 1e-6; z += ROW) rows.push(z);
 
     const X0 = 3.9;
     const XCOUNT = 10;
@@ -7879,6 +8222,7 @@ export class WeddingGallery {
   /** 切换户外主题：草坪 / 沙滩 */
   setOutdoor(kind: "lawn" | "beach") {
     if (this.disposed || kind === this.outdoor) return;
+    if (this.camera.position.z >= this.ARCH_Z) this.cancelAutoWalk();
     this.activateOutdoor(kind, true);
   }
 
@@ -10182,21 +10526,17 @@ export class WeddingGallery {
     this.applyFakeSun(frameMat);
     const boardMat = new THREE.MeshBasicMaterial({ color: "#ebe5dc" });
 
-    const FW = 0.9;
-    const FH = 1.16;
-    const PW = 0.7;
-    const PH = 0.94;
     const easel = new THREE.InstancedMesh(this.makeEaselGeometry(), easelMat, spots.length);
-    const frame = new THREE.InstancedMesh(new THREE.BoxGeometry(FW, FH, 0.05), frameMat, spots.length);
-    const board = new THREE.InstancedMesh(new THREE.PlaneGeometry(FW - 0.08, FH - 0.08), boardMat, spots.length);
-    const photoGeo = new THREE.PlaneGeometry(PW, PH);
+    const frame = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 0.05), frameMat, spots.length);
+    const board = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), boardMat, spots.length);
     const loader = new THREE.TextureLoader();
-    const planeAspect = PW / PH;
 
     const ledgeTop = (0.6 + 0.0175) * S;
     const local = new THREE.Matrix4();
     const tilt = new THREE.Matrix4().makeRotationX(-0.1);
     const world = new THREE.Matrix4();
+    const scaled = new THREE.Matrix4();
+    const sz = new THREE.Matrix4();
     const p = new THREE.Vector3();
 
     spots.forEach((sp, i) => {
@@ -10209,35 +10549,33 @@ export class WeddingGallery {
 
       const at = (lx: number, ly: number, lz: number) =>
         world.copy(rootM).multiply(local.makeTranslation(lx, ly, lz)).multiply(tilt);
-      frame.setMatrixAt(i, at(0, ledgeTop + FH / 2, 0.06));
-      board.setMatrixAt(i, at(0, ledgeTop + FH / 2, 0.087));
+      const slotId = this.easelSlotId("沙滩", spots, i);
+      const wp = this.photoForSlot(slotId);
+      const { pw, ph, fw, fh } = this.easelFrameSize(wp);
+      const cy = ledgeTop + fh / 2;
+      frame.setMatrixAt(i, scaled.copy(at(0, cy, 0.06)).multiply(sz.makeScale(fw, fh, 1)));
+      board.setMatrixAt(i, scaled.copy(at(0, cy, 0.087)).multiply(sz.makeScale(fw - 0.08, fh - 0.08, 1)));
 
       const photoMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0.94, 0.94, 0.94) });
-      if (photos.length > 0) {
-        const tex = loader.load(photos[i % photos.length].src, (t) => {
-          const img = t.image as { width?: number; height?: number } | undefined;
-          if (!img?.width || !img?.height) return;
-          const imgAspect = img.width / img.height;
-          if (imgAspect > planeAspect) {
-            t.repeat.set(planeAspect / imgAspect, 1);
-            t.offset.set((1 - t.repeat.x) / 2, 0);
-          } else {
-            t.repeat.set(1, imgAspect / planeAspect);
-            t.offset.set(0, (1 - t.repeat.y) / 2);
-          }
-          t.needsUpdate = true;
+      // 精修照片按原比例、画框跟着横竖变形；没有时回退到配置照片并裁切铺满
+      const src = wp?.small ?? (photos.length > 0 ? photos[i % photos.length].src : "");
+      if (src) {
+        const tex = loader.load(src, (t) => {
+          if (!wp) this.coverTexture(t, pw / ph);
         });
         tex.colorSpace = THREE.SRGBColorSpace;
         tex.anisotropy = Math.min(8, this.renderer.capabilities.getMaxAnisotropy());
         this.reg(tex);
         photoMat.map = tex;
       }
-      const photo = new THREE.Mesh(photoGeo, photoMat);
+      const photo = new THREE.Mesh(new THREE.PlaneGeometry(pw, ph), photoMat);
       photo.matrixAutoUpdate = false;
-      photo.matrix.copy(at(0, ledgeTop + FH / 2, 0.09));
+      photo.matrix.copy(at(0, cy, 0.09));
       this.beachGroup.add(photo);
+      this.photoTargets.push({ mesh: photo, w: pw, h: ph, zone: "beach" });
+      this.slotTag(slotId, new THREE.Vector3().setFromMatrixPosition(at(0, ledgeTop + fh + 0.35, 0.1)), this.beachGroup);
 
-      p.set(-toAisle * (FW / 2 - 0.04), ledgeTop + FH - 0.04, 0.12).applyMatrix4(at(0, 0, 0));
+      p.set(-toAisle * (fw / 2 - 0.04), ledgeTop + fh - 0.04, 0.12).applyMatrix4(at(0, 0, 0));
       this.beachDecorFloralSpots.push({ x: p.x, y: p.y, z: p.z, r: 0.2, n: 10, s: 0.62 });
       p.set(0, 0, 0.45).applyMatrix4(rootM);
       this.beachDecorFloralSpots.push({ x: p.x, y: this.beachHeight(p.x, p.z) + 0.15, z: p.z, r: 0.26, n: 12, s: 0.75 });
@@ -12717,9 +13055,399 @@ export class WeddingGallery {
   /** 触屏滑动环视：dx/dy 为手指位移（px），视角跟手（手指往右滑 → 往右看，往上滑 → 抬头） */
   addLookDelta(dx: number, dy: number) {
     if (!this.active) return;
+    this.autoFace = null;
     const k = (Math.PI * 0.4) / Math.max(this.canvas.clientWidth, 1);
     this.yaw -= dx * k;
     this.pitch = clamp(this.pitch - dy * k * 0.8, -1.15, 1.15);
+  }
+
+  /**
+   * 点哪走哪：屏幕坐标射线先测照片、再沿射线步进找地面。
+   * 点中照片 → 走到照片正前方（按视场角算出能看全整张的距离）并转身正对；
+   * 点中地面 → 走到该点。跨越室内外时经门洞中线绕行，避免撞前墙卡住。
+   */
+  tapAt(clientX: number, clientY: number) {
+    if (!this.active) return;
+    const rect = this.canvas.getBoundingClientRect();
+    const ndc = new THREE.Vector2(
+      ((clientX - rect.left) / Math.max(rect.width, 1)) * 2 - 1,
+      -((clientY - rect.top) / Math.max(rect.height, 1)) * 2 + 1,
+    );
+    this.camera.updateMatrixWorld();
+    this.tapRay.setFromCamera(ndc, this.camera);
+    const ray = this.tapRay.ray;
+    const cam = this.camera.position;
+    const indoor = cam.z < this.ARCH_Z;
+    const zone = indoor ? "hall" : this.outdoor;
+
+    const candidates = this.photoTargets.filter((t) => t.zone === zone);
+    const hit = this.tapRay.intersectObjects(
+      candidates.map((t) => t.mesh),
+      false,
+    )[0];
+    const ground = this.marchGround(ray.origin, ray.direction, indoor);
+
+    if (hit && (!ground || hit.distance < ground.distance + 0.5)) {
+      const t = candidates.find((c) => c.mesh === hit.object);
+      if (t) {
+        this.walkToPhoto(t);
+        return;
+      }
+    }
+    if (ground) {
+      this.startAutoWalk(ground.point.x, ground.point.z, null);
+    }
+  }
+
+  /** 沿射线步进求与地面的交点；室内出了厅堂范围（撞墙/天花板）即以最后一个室内点为准 */
+  private marchGround(o: THREE.Vector3, d: THREE.Vector3, indoor: boolean) {
+    const p = new THREE.Vector3();
+    const last = new THREE.Vector3().copy(o);
+    const margin = 0.6;
+    for (let t = 0.3; t < 60; t += 0.15) {
+      p.copy(o).addScaledVector(d, t);
+      if (indoor) {
+        const out =
+          Math.abs(p.x) > this.W / 2 - margin || p.z < this.DEPTH_START + margin || p.y > this.H;
+        if (out) {
+          if (d.y >= 0 || t < 1) return null;
+          return { point: last.clone(), distance: t };
+        }
+      }
+      if (p.y <= this.groundYAt(p.x, p.z)) return { point: p.clone(), distance: t };
+      last.copy(p);
+    }
+    return null;
+  }
+
+  private walkToPhoto(t: { mesh: THREE.Mesh; w: number; h: number }) {
+    t.mesh.updateMatrixWorld();
+    const center = new THREE.Vector3().setFromMatrixPosition(t.mesh.matrixWorld);
+    const n = new THREE.Vector3(0, 0, 1).transformDirection(t.mesh.matrixWorld);
+    n.y = 0;
+    if (n.lengthSq() < 1e-6) return;
+    n.normalize();
+    if (n.dot(new THREE.Vector3().subVectors(this.camera.position, center)) < 0) n.negate();
+
+    // 竖直/水平两个方向都要装下整张照片，取较远者再留 15% 边
+    const vHalf = THREE.MathUtils.degToRad(this.camera.fov) / 2;
+    const hHalf = Math.atan(Math.tan(vHalf) * this.camera.aspect);
+    const dist = clamp(Math.max(t.h / 2 / Math.tan(vHalf), t.w / 2 / Math.tan(hHalf)) * 1.15, 1.4, 7);
+    let x = center.x + n.x * dist;
+    let z = center.z + n.z * dist;
+    if (center.z < this.ARCH_Z) {
+      x = clamp(x, -this.W / 2 + 0.8, this.W / 2 - 0.8);
+      z = clamp(z, this.DEPTH_START + 0.8, this.ARCH_Z - 0.8);
+    }
+    const eyeY = this.groundYAt(x, z) + 1.72;
+    const flat = Math.hypot(center.x - x, center.z - z);
+    this.startAutoWalk(x, z, {
+      yaw: Math.atan2(n.x, n.z),
+      pitch: clamp(Math.atan2(center.y - eyeY, Math.max(flat, 0.5)), -0.5, 0.5),
+    });
+  }
+
+  private startAutoWalk(x: number, z: number, face: { yaw: number; pitch: number } | null) {
+    const cam = this.camera.position;
+    let path = this.findPath(cam.x, cam.z, x, z);
+    if (!path) {
+      // 找不到路（目标被围死等）：退回直线走，跨室内外时仍经门洞中线
+      path = [];
+      const fromIn = cam.z < this.ARCH_Z;
+      const toIn = z < this.ARCH_Z;
+      if (fromIn !== toIn) {
+        const inside = new THREE.Vector2(0, this.ARCH_Z - 1.2);
+        const outside = new THREE.Vector2(0, this.ARCH_Z + 1.2);
+        path.push(fromIn ? inside : outside, fromIn ? outside : inside);
+      }
+      path.push(new THREE.Vector2(x, z));
+    }
+    const end = path[path.length - 1];
+    this.autoPath = path;
+    this.autoFace = face;
+    this.autoBestD = Infinity;
+    this.autoStuckT = 0;
+    this.showTapMarker(end.x, end.y);
+  }
+
+  /** 该点能否站人：与 resolveBounds 同一套边界/前墙/碰撞圆/矩形，额外留 5cm 余量 */
+  private navFree(x: number, z: number): boolean {
+    const R = 0.45;
+    if (z < this.ARCH_Z) {
+      if (Math.abs(x) > this.W / 2 - 0.5 || z < this.DEPTH_START + 0.5) return false;
+    } else if (this.outdoor === "beach") {
+      if (Math.abs(x) > 22 || z > 61) return false;
+    } else if (Math.hypot(x / this.LAWN_WALK_R, (z - this.ARCH_Z) / (this.LAWN_WALK_Z - this.ARCH_Z)) > 1) {
+      return false;
+    }
+    if (Math.abs(z - this.ARCH_Z) < 0.45 && Math.abs(x) > this.ARCH_R - 0.5) return false;
+    const inCircles = (list: Circle[]) => {
+      for (const c of list) {
+        const rr = c.r + R;
+        if ((x - c.x) * (x - c.x) + (z - c.z) * (z - c.z) < rr * rr) return true;
+      }
+      return false;
+    };
+    if (inCircles(this.circles) || inCircles(this.outdoorCircles[this.outdoor])) return false;
+    for (const b of this.boxes) {
+      const dx = x - clamp(x, b.x0, b.x1);
+      const dz = z - clamp(z, b.z0, b.z1);
+      if (dx * dx + dz * dz < R * R) return false;
+    }
+    return true;
+  }
+
+  /**
+   * 网格 A* 寻路（格子 0.25m，8 邻接，不切角；往上一步高差 > 0.5m 视为不可走，与 blockTallSteps 一致）。
+   * 只在起终点外扩的矩形里按需求格子，找不到再扩大一次；路径最后做视线拉直，只留拐点。
+   * 起点/终点落在障碍里时就近吸附到 1.5m 内的空地。
+   */
+  private findPath(sx: number, sz: number, gx: number, gz: number): THREE.Vector2[] | null {
+    const CELL = 0.25;
+    const MAX_UP = 0.5;
+    for (const pad of [6, 20]) {
+      const x0 = Math.min(sx, gx) - pad;
+      const z0 = Math.min(sz, gz) - pad;
+      const nx = Math.ceil((Math.max(sx, gx) + pad - x0) / CELL) + 1;
+      const nz = Math.ceil((Math.max(sz, gz) + pad - z0) / CELL) + 1;
+      const n = nx * nz;
+      // 0 = 未求值，1 = 可走，2 = 不可走
+      const state = new Uint8Array(n);
+      const height = new Float32Array(n);
+      const cx = (i: number) => x0 + (i % nx) * CELL;
+      const cz = (i: number) => z0 + Math.floor(i / nx) * CELL;
+      const free = (i: number) => {
+        if (state[i] === 0) {
+          const x = cx(i);
+          const z = cz(i);
+          const ok = this.navFree(x, z);
+          state[i] = ok ? 1 : 2;
+          if (ok) height[i] = this.groundYAt(x, z);
+        }
+        return state[i] === 1;
+      };
+      const cellOf = (x: number, z: number) => {
+        const ix = clamp(Math.round((x - x0) / CELL), 0, nx - 1);
+        const iz = clamp(Math.round((z - z0) / CELL), 0, nz - 1);
+        return iz * nx + ix;
+      };
+      const snap = (x: number, z: number) => {
+        const c = cellOf(x, z);
+        if (free(c)) return c;
+        const ix = c % nx;
+        const iz = Math.floor(c / nx);
+        let best = -1;
+        let bestD = Infinity;
+        const r = Math.ceil(1.5 / CELL);
+        for (let dz = -r; dz <= r; dz++) {
+          for (let dx = -r; dx <= r; dx++) {
+            const jx = ix + dx;
+            const jz = iz + dz;
+            if (jx < 0 || jz < 0 || jx >= nx || jz >= nz) continue;
+            const d = dx * dx + dz * dz;
+            if (d < bestD && free(jz * nx + jx)) {
+              bestD = d;
+              best = jz * nx + jx;
+            }
+          }
+        }
+        return best;
+      };
+      const start = snap(sx, sz);
+      const goal = snap(gx, gz);
+      if (start < 0 || goal < 0) return null;
+
+      const gCost = new Float32Array(n).fill(Infinity);
+      const from = new Int32Array(n).fill(-1);
+      const closed = new Uint8Array(n);
+      const heap: number[] = [];
+      const fOf = new Float32Array(n);
+      const gxI = goal % nx;
+      const gzI = Math.floor(goal / nx);
+      const hOf = (i: number) => {
+        const dx = Math.abs((i % nx) - gxI);
+        const dz = Math.abs(Math.floor(i / nx) - gzI);
+        return Math.max(dx, dz) + 0.4142 * Math.min(dx, dz);
+      };
+      const push = (i: number) => {
+        heap.push(i);
+        let k = heap.length - 1;
+        while (k > 0) {
+          const p = (k - 1) >> 1;
+          if (fOf[heap[p]] <= fOf[heap[k]]) break;
+          [heap[p], heap[k]] = [heap[k], heap[p]];
+          k = p;
+        }
+      };
+      const pop = () => {
+        const top = heap[0];
+        const last = heap.pop()!;
+        if (heap.length > 0) {
+          heap[0] = last;
+          let k = 0;
+          for (;;) {
+            const l = k * 2 + 1;
+            const r = l + 1;
+            let m = k;
+            if (l < heap.length && fOf[heap[l]] < fOf[heap[m]]) m = l;
+            if (r < heap.length && fOf[heap[r]] < fOf[heap[m]]) m = r;
+            if (m === k) break;
+            [heap[m], heap[k]] = [heap[k], heap[m]];
+            k = m;
+          }
+        }
+        return top;
+      };
+
+      gCost[start] = 0;
+      fOf[start] = hOf(start);
+      push(start);
+      let found = false;
+      let budget = 60000;
+      while (heap.length > 0 && budget-- > 0) {
+        const cur = pop();
+        if (closed[cur]) continue;
+        if (cur === goal) {
+          found = true;
+          break;
+        }
+        closed[cur] = 1;
+        const ix = cur % nx;
+        const iz = Math.floor(cur / nx);
+        for (let dz = -1; dz <= 1; dz++) {
+          for (let dx = -1; dx <= 1; dx++) {
+            if (dx === 0 && dz === 0) continue;
+            const jx = ix + dx;
+            const jz = iz + dz;
+            if (jx < 0 || jz < 0 || jx >= nx || jz >= nz) continue;
+            const j = jz * nx + jx;
+            if (closed[j] || !free(j)) continue;
+            if (dx !== 0 && dz !== 0 && (!free(iz * nx + jx) || !free(jz * nx + ix))) continue;
+            if (height[j] - height[cur] > MAX_UP) continue;
+            const g = gCost[cur] + (dx !== 0 && dz !== 0 ? 1.4142 : 1);
+            if (g < gCost[j]) {
+              gCost[j] = g;
+              from[j] = cur;
+              fOf[j] = g + hOf(j);
+              push(j);
+            }
+          }
+        }
+      }
+      if (!found) continue;
+
+      const cells: number[] = [];
+      for (let c = goal; c >= 0; c = from[c]) cells.push(c);
+      cells.reverse();
+      // 视线拉直：沿线段每 0.1m 采样，全程可站且往上无大台阶才算直达
+      const clear = (ax: number, az: number, bx: number, bz: number) => {
+        const len = Math.hypot(bx - ax, bz - az);
+        const steps = Math.max(1, Math.ceil(len / 0.1));
+        let prevY = this.groundYAt(ax, az);
+        for (let k = 1; k <= steps; k++) {
+          const t = k / steps;
+          const x = ax + (bx - ax) * t;
+          const z = az + (bz - az) * t;
+          if (!this.navFree(x, z)) return false;
+          const y = this.groundYAt(x, z);
+          if (y - prevY > MAX_UP) return false;
+          prevY = y;
+        }
+        return true;
+      };
+      const goalFree = this.navFree(gx, gz);
+      const pts = cells.map((c) => new THREE.Vector2(cx(c), cz(c)));
+      pts[pts.length - 1] = goalFree ? new THREE.Vector2(gx, gz) : pts[pts.length - 1];
+      const out: THREE.Vector2[] = [];
+      let ax = sx;
+      let az = sz;
+      let i = 0;
+      while (i < pts.length - 1) {
+        let j = pts.length - 1;
+        while (j > i + 1 && !clear(ax, az, pts[j].x, pts[j].y)) j--;
+        out.push(pts[j]);
+        ax = pts[j].x;
+        az = pts[j].y;
+        i = j;
+      }
+      if (out.length === 0) out.push(pts[pts.length - 1]);
+      return out;
+    }
+    return null;
+  }
+
+  private cancelAutoWalk() {
+    this.autoPath = null;
+    this.autoFace = null;
+  }
+
+  /** 自动行走转向：写入 tmpDesired，返回速度系数（0 = 已到达/放弃） */
+  private steerAutoWalk(dt: number): number {
+    const path = this.autoPath;
+    if (!path || path.length === 0) {
+      this.autoPath = null;
+      return 0;
+    }
+    const wp = path[0];
+    const dx = wp.x - this.camera.position.x;
+    const dz = wp.y - this.camera.position.z;
+    const d = Math.hypot(dx, dz);
+    const last = path.length === 1;
+    // 进度卡住（被椅子/花柱挡住）超过 0.9s：中途点跳过，终点就地停下
+    if (d < this.autoBestD - 0.05) {
+      this.autoBestD = d;
+      this.autoStuckT = 0;
+    } else {
+      this.autoStuckT += dt;
+    }
+    if (d < (last ? 0.12 : 0.3) || this.autoStuckT > 0.9) {
+      path.shift();
+      this.autoBestD = Infinity;
+      this.autoStuckT = 0;
+      if (path.length === 0) this.autoPath = null;
+      return 0;
+    }
+    this.tmpDesired.set(dx / d, 0, dz / d);
+    return (last ? clamp(d / 1.2, 0.2, 1) : 1) * 0.75;
+  }
+
+  /** 到达朝向：yaw 取最短角差平滑转过去，转到位且已停步后清除 */
+  private applyAutoFace(dt: number) {
+    const f = this.autoFace;
+    if (!f) return;
+    const k = 1 - Math.exp(-3.2 * dt);
+    let dy = f.yaw - this.yaw;
+    dy = Math.atan2(Math.sin(dy), Math.cos(dy));
+    const dp = f.pitch - this.pitch;
+    this.yaw += dy * k;
+    this.pitch += dp * k;
+    if (!this.autoPath && Math.abs(dy) < 0.003 && Math.abs(dp) < 0.003) this.autoFace = null;
+  }
+
+  /** 落点提示：地面金色圆环，放大并淡出 */
+  private showTapMarker(x: number, z: number) {
+    if (!this.tapMarker) {
+      const ring = new THREE.Mesh(
+        new THREE.RingGeometry(0.2, 0.27, 40).rotateX(-Math.PI / 2),
+        new THREE.MeshBasicMaterial({ color: "#ffe2b0", transparent: true, depthWrite: false, opacity: 0 }),
+      );
+      ring.renderOrder = 5;
+      this.tapMarker = ring;
+      this.scene.add(ring);
+    }
+    this.tapMarker.position.set(x, this.groundYAt(x, z) + 0.03, z);
+    this.tapMarker.visible = true;
+    this.tapMarkerT = 0;
+  }
+
+  private tickTapMarker(dt: number) {
+    const m = this.tapMarker;
+    if (!m || !m.visible) return;
+    this.tapMarkerT += dt / 0.9;
+    const t = Math.min(this.tapMarkerT, 1);
+    m.scale.setScalar(0.7 + t * 0.8);
+    (m.material as THREE.MeshBasicMaterial).opacity = 0.85 * (1 - t);
+    if (t >= 1) m.visible = false;
   }
 
   // pointer lock 被浏览器拒绝后的降级：按住左键拖拽转向（复用 yaw/pitch 模型）
@@ -12731,21 +13459,31 @@ export class WeddingGallery {
     this.yaw = this.lookEuler.y;
     this.pitch = this.lookEuler.x;
 
+    let downX = 0;
+    let downY = 0;
+    let downT = 0;
     const pd = (e: PointerEvent) => {
       if (e.button !== 0) return;
       this.dragging = true;
       this.lastPX = e.clientX;
       this.lastPY = e.clientY;
+      downX = e.clientX;
+      downY = e.clientY;
+      downT = performance.now();
     };
     const pm = (e: PointerEvent) => {
       if (!this.dragging) return;
+      if (e.clientX !== this.lastPX || e.clientY !== this.lastPY) this.autoFace = null;
       this.yaw -= (e.clientX - this.lastPX) * 0.005;
       this.pitch = clamp(this.pitch - (e.clientY - this.lastPY) * 0.0035, -1.15, 1.15);
       this.lastPX = e.clientX;
       this.lastPY = e.clientY;
     };
-    const pu = () => {
+    const pu = (e: PointerEvent) => {
+      if (!this.dragging) return;
       this.dragging = false;
+      const still = Math.hypot(e.clientX - downX, e.clientY - downY) < 6;
+      if (still && performance.now() - downT < 400) this.tapAt(e.clientX, e.clientY);
     };
 
     this.canvas.addEventListener("pointerdown", pd);
@@ -12774,6 +13512,7 @@ export class WeddingGallery {
 
   /** 退出画廊 */
   exit() {
+    this.cancelAutoWalk();
     if (this.touchMode || this.dragMode) {
       this.active = false;
       this.opts.onActiveChange(false);
@@ -12798,6 +13537,7 @@ export class WeddingGallery {
     const canMove = manualLook ? this.active : (this.controls?.isLocked ?? false);
 
     if (manualLook && this.active) {
+      this.applyAutoFace(dt);
       this.yaw -= this.lookInput.x * 2.3 * dt;
       this.pitch -= this.lookInput.y * 1.7 * dt;
       this.pitch = clamp(this.pitch, -1.15, 1.15);
@@ -12821,8 +13561,9 @@ export class WeddingGallery {
       );
 
       // 上台阶时步子放缓（stepLean 为上台阶用力程度 0~1）
-      const SPEED = 3.2 * (1 - 0.2 * this.stepLean);
+      let SPEED = 3.2 * (1 - 0.2 * this.stepLean);
       this.tmpDesired.set(0, 0, 0);
+      if (fwd !== 0 || side !== 0) this.cancelAutoWalk();
 
       if (fwd !== 0) {
         this.camera.getWorldDirection(this.tmpForward);
@@ -12842,6 +13583,7 @@ export class WeddingGallery {
         }
       }
 
+      if (this.autoPath) SPEED *= this.steerAutoWalk(dt);
       if (this.tmpDesired.lengthSq() > 0) this.tmpDesired.normalize();
       this.tmpTarget.copy(this.tmpDesired).multiplyScalar(SPEED);
       const k = 1 - Math.exp(-10 * dt);
@@ -12866,6 +13608,7 @@ export class WeddingGallery {
       this.updateVertical(dt, 0);
     }
 
+    this.tickTapMarker(dt);
     this.tickPetals(dt);
     this.tickDust();
     this.tickGrandChandelier(dt);

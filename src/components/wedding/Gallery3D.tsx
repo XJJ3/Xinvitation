@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { siteConfig } from "@/config/site";
+import { PHOTO_LAYOUT, WORLD_PHOTOS } from "@/config/worldPhotos";
 import GalleryFallback from "./GalleryFallback";
 import { WeddingGallery } from "./weddingGallery";
 
@@ -45,92 +46,6 @@ const GLOBAL_CSS = `
 @keyframes xinv-glow { 0%,100% { opacity:.75 } 50% { opacity:1 } }
 `;
 
-function VirtualJoystick({
-  side,
-  onChange,
-}: {
-  side: "left" | "right";
-  onChange: (x: number, y: number) => void;
-}) {
-  const baseRef = useRef<HTMLDivElement>(null);
-  const knobRef = useRef<HTMLDivElement>(null);
-  const activeId = useRef<number | null>(null);
-
-  const setKnob = (x: number, y: number) => {
-    const R = 38;
-    const len = Math.hypot(x, y);
-    const k = len > 1 ? 1 / len : 1;
-    if (knobRef.current) {
-      knobRef.current.style.transform = `translate(${x * k * R}px, ${y * k * R}px)`;
-    }
-    onChange(x * k, y * k);
-  };
-
-  const fromEvent = (e: React.PointerEvent<HTMLDivElement>) => {
-    const base = baseRef.current;
-    if (!base) return;
-    const r = base.getBoundingClientRect();
-    const R = r.width / 2;
-    setKnob((e.clientX - (r.left + r.width / 2)) / R, (e.clientY - (r.top + r.height / 2)) / R);
-  };
-
-  return (
-    <div
-      ref={baseRef}
-      onPointerDown={(e) => {
-        e.stopPropagation();
-        activeId.current = e.pointerId;
-        e.currentTarget.setPointerCapture(e.pointerId);
-        fromEvent(e);
-      }}
-      onPointerMove={(e) => {
-        if (activeId.current !== e.pointerId) return;
-        e.stopPropagation();
-        fromEvent(e);
-      }}
-      onPointerUp={(e) => {
-        if (activeId.current !== e.pointerId) return;
-        e.stopPropagation();
-        activeId.current = null;
-        setKnob(0, 0);
-      }}
-      onPointerCancel={() => {
-        activeId.current = null;
-        setKnob(0, 0);
-      }}
-      style={{
-        position: "absolute",
-        bottom: 34,
-        ...(side === "left" ? { left: 26 } : { right: 26 }),
-        width: 112,
-        height: 112,
-        borderRadius: "50%",
-        background: "rgba(120, 60, 80, 0.26)",
-        border: "1.5px solid rgba(232,184,75,0.45)",
-        touchAction: "none",
-        zIndex: 30,
-      }}
-    >
-      <div
-        ref={knobRef}
-        style={{
-          position: "absolute",
-          left: "50%",
-          top: "50%",
-          width: 50,
-          height: 50,
-          marginLeft: -25,
-          marginTop: -25,
-          borderRadius: "50%",
-          background: "radial-gradient(circle at 35% 30%, #f5c0ce, #c9849a 70%)",
-          boxShadow: "0 2px 10px rgba(0,0,0,0.35)",
-          transition: "transform 0.06s linear",
-        }}
-      />
-    </div>
-  );
-}
-
 export default function Gallery3D() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const galleryRef = useRef<WeddingGallery | null>(null);
@@ -159,6 +74,8 @@ export default function Gallery3D() {
         namesLine: NAMES,
         dateLine: DATE,
         wallPhotos: WALL_PHOTOS,
+        worldPhotos: WORLD_PHOTOS,
+        photoLayout: PHOTO_LAYOUT,
         touch: isTouchDevice(),
         onReady: () => {
           if (!cancelled) setPhase((p) => (p === "loading" ? "ready" : p));
@@ -194,17 +111,21 @@ export default function Gallery3D() {
     setLocked(false);
   }, []);
 
-  const handleMove = useCallback((x: number, y: number) => {
-    galleryRef.current?.setMoveInput(x, y);
-  }, []);
-
-  // 触屏滑动环视：记住当前负责环视的那根手指（摇杆的手指已 stopPropagation，不会进来）
-  const lookPointer = useRef<{ id: number; x: number; y: number } | null>(null);
+  // 触屏滑动环视：记住当前负责环视的那根手指
+  // 同一根手指：移动 < 8px 且 < 350ms 松开视为「点一下」→ 点哪走哪
+  const lookPointer = useRef<{ id: number; x: number; y: number; x0: number; y0: number; t0: number } | null>(null);
 
   const onLookDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     if (e.pointerType === "mouse" || lookPointer.current) return;
     if ((e.target as HTMLElement).closest("button")) return;
-    lookPointer.current = { id: e.pointerId, x: e.clientX, y: e.clientY };
+    lookPointer.current = {
+      id: e.pointerId,
+      x: e.clientX,
+      y: e.clientY,
+      x0: e.clientX,
+      y0: e.clientY,
+      t0: performance.now(),
+    };
     e.currentTarget.setPointerCapture(e.pointerId);
   }, []);
 
@@ -217,7 +138,13 @@ export default function Gallery3D() {
   }, []);
 
   const onLookEnd = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    if (lookPointer.current?.id === e.pointerId) lookPointer.current = null;
+    const p = lookPointer.current;
+    if (!p || p.id !== e.pointerId) return;
+    lookPointer.current = null;
+    const still = Math.hypot(e.clientX - p.x0, e.clientY - p.y0) < 8;
+    if (e.type === "pointerup" && still && performance.now() - p.t0 < 350) {
+      galleryRef.current?.tapAt(e.clientX, e.clientY);
+    }
   }, []);
 
   const toggleOutdoor = useCallback(() => {
@@ -230,12 +157,12 @@ export default function Gallery3D() {
 
   const hints: [string, string][] = isTouch
     ? [
-        ["摇杆", "移动"],
         ["滑动屏幕", "环视"],
-        ["点击", "进入"],
+        ["点地面", "走过去"],
+        ["点照片", "走到照片前"],
       ]
     : [
-        ["W A S D / 摇杆", "移动"],
+        ["单击地面/照片", "走过去"],
         ["拖拽鼠标", "环视"],
         ["Esc", "暂停"],
       ];
@@ -499,8 +426,8 @@ export default function Gallery3D() {
             }}
           >
             {isTouch
-              ? "摇杆移动 · 滑动屏幕环视 · 点右上切换户外"
-              : "W A S D / 摇杆移动 · 按住鼠标拖拽环视 · Esc 暂停 · T 切换户外"}
+              ? "滑动环视 · 点地面或照片走过去"
+              : "拖拽环视 · 单击地面或照片走过去 · W A S D 移动 · Esc 暂停 · T 切换户外"}
           </div>
         </>
       )}
@@ -551,12 +478,6 @@ export default function Gallery3D() {
           >
             退出画廊
           </button>
-        </>
-      )}
-
-      {phase === "entered" && locked && (
-        <>
-          <VirtualJoystick side="left" onChange={handleMove} />
         </>
       )}
     </div>
