@@ -60,6 +60,8 @@ export type WeddingGalleryOptions = {
   onActiveChange: (active: boolean) => void;
   /** 户外主题切换时通知（含键盘 T 触发），用于同步 React 层按钮文案 */
   onOutdoorChange?: (kind: "lawn" | "beach") => void;
+  /** 分步构建中途失败（构造器已返回，外层 try/catch 接不到），由外层回退到 CSS 版画廊 */
+  onError?: () => void;
 };
 
 /**
@@ -302,15 +304,24 @@ export class WeddingGallery {
   private animId = 0;
   /** 页面不可见 / 画廊滚出视口时暂停整个渲染循环（省电省 CPU，恢复时立即补一帧） */
   private renderPaused = false;
+  /** 至少渲染过一帧才真正暂停：首帧会编译厅内着色器，放到构建时做，别拖到滚动到达时 */
+  private framesRendered = 0;
   /** 未进入漫游（深色封面层盖着画布）时降为半帧率，被遮住的变化肉眼不可见 */
   private idleMode = false;
   private idleAcc = 0;
-  /** 自适应分辨率：中端手机持续掉帧时逐级降低 pixelRatio，流畅优先于清晰 */
+  /** 自适应分辨率：按 rAF 实际帧间隔判断掉帧（GPU 耗时只体现在这里），逐级降低 pixelRatio */
   private prLevels: number[] = [];
   private prIdx = 0;
-  private frameCostEma = 16;
+  private lastFrameTs = 0;
+  private frameIvEma = 16.7;
+  private frameJitterEma = 0;
   private slowFrames = 0;
   private fastFrames = 0;
+  private lastUpgradeTs = -Infinity;
+  private prUpgradeLocked = false;
+  /** 预热：被剔除/暂停期间提前编译着色器、上传已加载的贴图，避免首次看到时集中卡顿 */
+  private lastWarmTs = 0;
+  private warmCompiling = false;
   private readonly keys: Record<string, boolean> = {};
   private readonly velocity = new THREE.Vector3();
   private readonly moveInput = { x: 0, y: 0 };
@@ -702,9 +713,41 @@ export class WeddingGallery {
       this.cleanups.push(() => document.removeEventListener("pointerlockerror", onLockError));
     }
 
-    this.buildScene();
-    this.loadPhotos();
-    this.buildTrackLightFixtures();
+    this.buildAsync().catch((err) => {
+      console.error("[WeddingGallery] 场景构建失败", err);
+      this.opts.onError?.();
+    });
+  }
+
+  /**
+   * 分步构建：一次性同步构建在中端手机上会阻塞主线程 1.3s（首屏空闲时后台构建会卡住封面），
+   * 所以每步之后若本轮已占用主线程超过 30ms 就让出一次；首帧前再用 compileAsync 预编译着色器。
+   */
+  private async buildAsync() {
+    const yieldToMain = () => new Promise<void>((r) => window.setTimeout(r, 0));
+    let sliceStart = performance.now();
+    for (const step of this.sceneBuildSteps()) {
+      if (this.disposed) return;
+      step();
+      if (performance.now() - sliceStart > 30) {
+        await yieldToMain();
+        sliceStart = performance.now();
+      }
+    }
+    if (this.disposed) return;
+    await this.renderer.compileAsync(this.scene, this.camera).catch(() => undefined);
+    if (this.disposed) return;
+    // 首帧会把全部贴图一次性上传 GPU（实测阻塞 1.4s），改为提前逐张上传、按时间片让出
+    sliceStart = performance.now();
+    for (const tex of this.collectSceneTextures()) {
+      if (this.disposed) return;
+      this.renderer.initTexture(tex);
+      if (performance.now() - sliceStart > 30) {
+        await yieldToMain();
+        sliceStart = performance.now();
+      }
+    }
+    if (this.disposed) return;
     this.setupInput();
     this.animate();
 
@@ -713,67 +756,100 @@ export class WeddingGallery {
   }
 
   // ── 场景组装 ───────────────────────────────────────────────
-  private buildScene() {
-    // 环境光压低，主要亮度交给 envMap + HemisphereLight 打底，避免生硬直射
-    this.ambientLight = new THREE.AmbientLight("#f8eee6", 0.2);
-    this.scene.add(this.ambientLight);
-
-    this.hemiLight = new THREE.HemisphereLight("#fff6ee", "#e6c9c4", 0.55);
-    this.scene.add(this.hemiLight);
-
-    // 小吊灯 4 盏（桌面仅第 1 盏投影，触屏全部不投影）
-    this.CHAND_Z.forEach((z, i) => {
-      const pt = new THREE.PointLight("#ffe3d2", 1.15, 26, 1.7);
-      pt.position.set(0, z === this.GRAND_COPY_Z ? this.H - 0.7 : this.H - 0.6, z);
-      pt.castShadow = !this.touchMode && i === 0;
-      pt.shadow.mapSize.set(512, 512);
-      pt.shadow.bias = -0.0015;
-      this.scene.add(pt);
-      // 门口往里第 2 盏换成大吊灯的复制品（buildGrandChandelier 之后由 syncGrandCopies 生成）
-      if (z !== this.GRAND_COPY_Z) this.scene.add(this.makeChandelier(0, this.H - 0.5, z));
-    });
-
-    const grandLight = new THREE.PointLight("#ffe9e4", 2.2, 40, 1.7);
-    grandLight.position.set(0, this.H - 0.7, this.GRAND_Z);
-    grandLight.castShadow = !this.touchMode;
-    grandLight.shadow.mapSize.set(512, 512);
-    grandLight.shadow.bias = -0.0015;
-    this.scene.add(grandLight);
-
-    this.buildFloor();
-    this.buildCeiling();
-    this.buildWalls();
-    this.buildFrontWall();
-    this.buildWainscotAll();
-    this.buildMolding();
-    this.buildBackEmblem();
-    this.buildArch();
-    this.buildRoseGarland();
-    this.buildCarpet();
-    this.buildFloorRing();
-    this.buildHallStage();
-    this.buildPedestals();
-    this.buildAisleDecor();
-    this.buildCeremonyChairs();
-    this.loadRoseModels();
-    this.buildPetals();
-    this.buildLightDust();
-    this.buildGrandChandelier();
-    this.buildWallWash();
-
-    this.finalizeFlora();
-
+  /** 场景构建步骤（顺序即原 buildScene 的执行顺序），由 buildAsync 逐步执行 */
+  private sceneBuildSteps(): (() => void)[] {
+    const hall = [
+      () => this.buildFloor(),
+      () => this.buildCeiling(),
+      () => this.buildWalls(),
+      () => this.buildFrontWall(),
+      () => this.buildWainscotAll(),
+      () => this.buildMolding(),
+      () => this.buildBackEmblem(),
+      () => this.buildArch(),
+      () => this.buildRoseGarland(),
+      () => this.buildCarpet(),
+      () => this.buildFloorRing(),
+      () => this.buildHallStage(),
+      () => this.buildPedestals(),
+      () => this.buildAisleDecor(),
+      () => this.buildCeremonyChairs(),
+      () => this.loadRoseModels(),
+      () => this.buildPetals(),
+      () => this.buildLightDust(),
+      () => this.buildGrandChandelier(),
+      () => this.buildWallWash(),
+      () => this.finalizeFlora(),
+    ];
     // 室外共享部分：天空 / 云 / 门口花瓮 / 建筑外壳
-    this.buildSky();
-    this.buildClouds();
-    this.buildUrns();
-    this.buildExteriorShell();
+    const exterior = [
+      () => this.buildSky(),
+      () => this.buildClouds(),
+      () => this.buildUrns(),
+      () => this.buildExteriorShell(),
+    ];
+    // 默认草坪主题拆成多步构建（整片草坪是最重的一段）；先标记已构建，activateOutdoor 不会重复构建
+    const lawn =
+      this.outdoor === "lawn"
+        ? [
+            () => {
+              this.lawnBuilt = true;
+              this.buildGround();
+            },
+            () => this.buildGrassCards(),
+            () => this.buildLawnFlowers(),
+            () => this.buildLawnRotunda(),
+            () => this.buildLawnAisle(),
+            () => this.buildLawnTrees(),
+            () => this.buildMeadowStemRoses(),
+          ]
+        : [];
+    return [
+      () => {
+        // 环境光压低，主要亮度交给 envMap + HemisphereLight 打底，避免生硬直射
+        this.ambientLight = new THREE.AmbientLight("#f8eee6", 0.2);
+        this.scene.add(this.ambientLight);
 
-    // 主题内容各自懒构建，切换只切 visible
-    this.lawnGroup.visible = false;
-    this.beachGroup.visible = false;
-    this.scene.add(this.lawnGroup, this.beachGroup);
-    this.activateOutdoor(this.outdoor, false);
+        this.hemiLight = new THREE.HemisphereLight("#fff6ee", "#e6c9c4", 0.55);
+        this.scene.add(this.hemiLight);
+
+        // 小吊灯 4 盏（桌面仅第 1 盏投影，触屏全部不投影）
+        this.CHAND_Z.forEach((z, i) => {
+          const pt = new THREE.PointLight("#ffe3d2", 1.15, 26, 1.7);
+          pt.position.set(0, z === this.GRAND_COPY_Z ? this.H - 0.7 : this.H - 0.6, z);
+          pt.castShadow = !this.touchMode && i === 0;
+          pt.shadow.mapSize.set(512, 512);
+          pt.shadow.bias = -0.0015;
+          this.scene.add(pt);
+          // 门口往里第 2 盏换成大吊灯的复制品（buildGrandChandelier 之后由 syncGrandCopies 生成）
+          if (z !== this.GRAND_COPY_Z) this.scene.add(this.makeChandelier(0, this.H - 0.5, z));
+        });
+
+        const grandLight = new THREE.PointLight("#ffe9e4", 2.2, 40, 1.7);
+        grandLight.position.set(0, this.H - 0.7, this.GRAND_Z);
+        grandLight.castShadow = !this.touchMode;
+        grandLight.shadow.mapSize.set(512, 512);
+        grandLight.shadow.bias = -0.0015;
+        this.scene.add(grandLight);
+      },
+      ...hall,
+      ...exterior,
+      () => {
+        // 主题内容各自懒构建，切换只切 visible
+        this.lawnGroup.visible = false;
+        this.beachGroup.visible = false;
+        this.scene.add(this.lawnGroup, this.beachGroup);
+      },
+      ...lawn,
+      () => this.activateOutdoor(this.outdoor, false),
+      // 铭牌画布材质逐张预生成（每张要逐像素处理），loadPhotos 里直接命中缓存，不再一口气生成 6 张
+      ...this.opts.photos.map((ph) => () => {
+        const key = `${ph.label}|${ph.sub}`;
+        if (!this.plaqueCache.has(key)) this.plaqueCache.set(key, this.makePlaqueFaceMaterial(ph.label, ph.sub));
+      }),
+      () => this.loadPhotos(),
+      () => this.buildTrackLightFixtures(),
+    ];
   }
 
   private buildFloor() {
@@ -13601,48 +13677,125 @@ export class WeddingGallery {
 
   // ── 帧循环 ─────────────────────────────────────────────────
   private animate = () => {
-    const loop = () => {
+    const loop = (now: number) => {
       this.animId = requestAnimationFrame(loop);
-      if (this.renderPaused) return;
-      const frameStart = performance.now();
+      if (this.renderPaused && this.framesRendered > 0) {
+        this.warmTick(now, 1);
+        return;
+      }
       const dt = Math.min(this.clock.getDelta(), 0.05);
 
       if (this.idleMode) {
         // 封面层不透明度 0.72~0.92，半帧率下的跳变被遮罩吸收，肉眼不可分辨
         this.idleAcc += dt;
-        if (this.idleAcc < 1 / 30) return;
+        if (this.idleAcc < 1 / 30) {
+          this.warmTick(now, 4);
+          return;
+        }
         this.idleAcc = 0;
       }
 
       this.update(dt);
       this.syncOutdoorVisibility();
       this.renderer.render(this.scene, this.camera);
-      this.trackFrameCost(performance.now() - frameStart);
+      this.framesRendered++;
+      this.trackFrameInterval(now);
+      this.warmTick(now, this.idleMode ? 4 : 1);
     };
     this.animId = requestAnimationFrame(loop);
   };
 
-  private trackFrameCost(ms: number) {
+  /**
+   * 每 250ms 扫一遍场景（含被剔除的室外组）：有材质还没编译就整体 compileAsync（支持
+   * KHR_parallel_shader_compile 时不阻塞主线程）；已加载但未上传的贴图每次最多上传 budget 张。
+   * 室外组在厅内背对大门时不参与渲染，不预热的话首次转身会集中编译+上传（实测卡 1.2s）。
+   */
+  private warmTick(now: number, budget: number) {
+    if (now - this.lastWarmTs < 250) return;
+    this.lastWarmTs = now;
+    const props = this.renderer.properties;
+    let needCompile = false;
+    let uploads = 0;
+    const tryUpload = (v: unknown) => {
+      if (uploads >= budget || !(v instanceof THREE.Texture)) return;
+      if (v.version > 0 && (props.get(v) as { __version?: number }).__version !== v.version) {
+        this.renderer.initTexture(v);
+        uploads++;
+      }
+    };
+    this.scene.traverse((o) => {
+      const mat = (o as THREE.Mesh).material as THREE.Material | THREE.Material[] | undefined;
+      if (!mat) return;
+      for (const m of Array.isArray(mat) ? mat : [mat]) {
+        if ((props.get(m) as { currentProgram?: unknown }).currentProgram === undefined) needCompile = true;
+        if (uploads >= budget) continue;
+        for (const v of Object.values(m)) tryUpload(v);
+        const uniforms = (m as THREE.ShaderMaterial).uniforms;
+        if (uniforms) for (const u of Object.values(uniforms)) tryUpload(u?.value);
+      }
+    });
+    if (needCompile && !this.warmCompiling) {
+      this.warmCompiling = true;
+      this.renderer
+        .compileAsync(this.scene, this.camera)
+        .catch(() => undefined)
+        .finally(() => {
+          this.warmCompiling = false;
+        });
+    }
+  }
+
+  /** 场景里已就绪（version>0，即图像已加载或为画布贴图）的贴图，含 ShaderMaterial uniforms 里的 */
+  private collectSceneTextures(): Set<THREE.Texture> {
+    const out = new Set<THREE.Texture>();
+    const add = (v: unknown) => {
+      if (v instanceof THREE.Texture && v.version > 0) out.add(v);
+    };
+    this.scene.traverse((o) => {
+      const mat = (o as THREE.Mesh).material as THREE.Material | THREE.Material[] | undefined;
+      if (!mat) return;
+      for (const m of Array.isArray(mat) ? mat : [mat]) {
+        for (const v of Object.values(m)) add(v);
+        const uniforms = (m as THREE.ShaderMaterial).uniforms;
+        if (uniforms) for (const u of Object.values(uniforms)) add(u?.value);
+      }
+    });
+    add(this.scene.environment);
+    return out;
+  }
+
+  private trackFrameInterval(now: number) {
+    const iv = now - this.lastFrameTs;
+    this.lastFrameTs = now;
     if (this.idleMode || !this.active || this.prLevels.length < 2) return;
-    this.frameCostEma += (ms - this.frameCostEma) * 0.05;
-    this.slowFrames = this.frameCostEma > 22 ? this.slowFrames + 1 : 0;
-    this.fastFrames = this.frameCostEma < 12 ? this.fastFrames + 1 : 0;
-    // 连续 ~1s 帧耗时超 22ms 才降档；连续 ~5s 富余才升档，避免来回抖动
-    if (this.slowFrames > 60 && this.prIdx < this.prLevels.length - 1) {
+    // 暂停恢复、偶发编译等超长帧不代表持续负载
+    if (iv <= 0 || iv > 100) return;
+    this.frameIvEma += (iv - this.frameIvEma) * 0.05;
+    this.frameJitterEma += (Math.abs(iv - this.frameIvEma) - this.frameJitterEma) * 0.05;
+    // 稳定的 33ms（iOS 低电量模式把 rAF 锁在 30fps）不是掉帧：只有忽快忽慢，或明显低于 25fps 才算
+    const struggling = (this.frameIvEma > 22 && this.frameJitterEma > 3) || this.frameIvEma > 40;
+    this.slowFrames = struggling ? this.slowFrames + 1 : 0;
+    this.fastFrames = this.frameIvEma < 18 ? this.fastFrames + 1 : 0;
+    if (this.slowFrames > 90 && this.prIdx < this.prLevels.length - 1) {
+      // 刚升档 3s 内又撑不住，说明上一档就是极限，之后不再升档，避免清晰度来回跳
+      if (now - this.lastUpgradeTs < 3000) this.prUpgradeLocked = true;
       this.prIdx++;
       this.renderer.setPixelRatio(this.prLevels[this.prIdx]);
       this.slowFrames = 0;
-    } else if (this.fastFrames > 300 && this.prIdx > 0) {
+      this.frameIvEma = 16.7;
+      this.frameJitterEma = 0;
+    } else if (this.fastFrames > 600 && this.prIdx > 0 && !this.prUpgradeLocked) {
       this.prIdx--;
       this.renderer.setPixelRatio(this.prLevels[this.prIdx]);
       this.fastFrames = 0;
+      this.lastUpgradeTs = now;
     }
   }
 
   setRenderPaused(paused: boolean) {
     if (this.renderPaused === paused || this.disposed) return;
     this.renderPaused = paused;
-    if (!paused) {
+    if (!paused && this.framesRendered > 0) {
       this.clock.getDelta();
       this.renderer.render(this.scene, this.camera);
     }

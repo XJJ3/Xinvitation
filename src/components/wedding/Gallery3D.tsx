@@ -43,7 +43,8 @@ const GLOBAL_CSS = `
 @keyframes xinv-glow { 0%,100% { opacity:.75 } 50% { opacity:1 } }
 `;
 
-export default function Gallery3D() {
+/** buildNow：首屏空闲后由外层置 true，不等滚到附近就提前在后台构建场景 */
+export default function Gallery3D({ buildNow = false }: { buildNow?: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const galleryRef = useRef<WeddingGallery | null>(null);
   const [mode, setMode] = useState<Mode>("pending");
@@ -53,8 +54,14 @@ export default function Gallery3D() {
   const [outdoor, setOutdoor] = useState<"lawn" | "beach">("lawn");
   // 画廊接近视口（约 1.5 屏内）才开始构建场景；离屏/后台则暂停渲染循环
   const [near, setNear] = useState(false);
+  // 画廊当前是否在视口（含 20% 余量）内：IO 回调可能早于场景构建触发，必须记下来，构建完成与切回前台时按它决定是否暂停
+  const onScreenRef = useRef(false);
 
   const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (buildNow) setNear(true);
+  }, [buildNow]);
 
   useEffect(() => {
     setIsTouch(isTouchDevice());
@@ -77,18 +84,14 @@ export default function Gallery3D() {
     nearIO.observe(el);
     // 真正滚出视口才暂停渲染，避免上下滚动经过时的抖动
     const pauseIO = new IntersectionObserver(
-      (es) => galleryRef.current?.setRenderPaused(!es[0].isIntersecting),
+      (es) => {
+        onScreenRef.current = es[0].isIntersecting;
+        galleryRef.current?.setRenderPaused(document.hidden || !onScreenRef.current);
+      },
       { rootMargin: "20% 0px" },
     );
     pauseIO.observe(el);
-    const onVis = () => {
-      if (document.hidden) galleryRef.current?.setRenderPaused(true);
-      else {
-        const r = rootRef.current;
-        const onScreen = !r || r.getBoundingClientRect().bottom > 0;
-        if (onScreen) galleryRef.current?.setRenderPaused(false);
-      }
-    };
+    const onVis = () => galleryRef.current?.setRenderPaused(document.hidden || !onScreenRef.current);
     document.addEventListener("visibilitychange", onVis);
     return () => {
       nearIO.disconnect();
@@ -123,8 +126,12 @@ export default function Gallery3D() {
         onOutdoorChange: (kind) => {
           if (!cancelled) setOutdoor(kind);
         },
+        onError: () => {
+          if (!cancelled) setMode("css");
+        },
       });
       galleryRef.current = gallery;
+      gallery.setRenderPaused(document.hidden || !onScreenRef.current);
     } catch {
       if (!cancelled) setMode("css");
       return;
