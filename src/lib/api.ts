@@ -70,6 +70,17 @@ export async function sendBlessing(content: string): Promise<{ item: Blessing } 
   return r.error ? { error: r.error } : null
 }
 
+// 提交出席回复：姓名按当前浏览器 vid 落库，服务端据此把该访客此前的祝福/点击归到名下
+// 返回：成功 → { ok: true }；服务端拒绝 → { error }；网络/服务不可用 → null（调用方静默忽略）
+export async function sendRsvp(name: string, attending: boolean, guests: number): Promise<{ ok: true } | { error: string } | null> {
+  const r = await request<{ ok: true }>("/api/rsvp", {
+    method: "POST",
+    body: JSON.stringify({ ...ident(), name, attending, guests }),
+  })
+  if (r.ok) return { ok: true }
+  return r.error ? { error: r.error } : null
+}
+
 export type WxSignature = { appId: string; timestamp: string; nonceStr: string; signature: string }
 
 // 微信 JS-SDK 签名（服务端持有 AppSecret；invite 域名同源，其他域名跨域到同一后端）

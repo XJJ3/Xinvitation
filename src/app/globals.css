@@ -187,6 +187,11 @@ html { scroll-snap-type: y mandatory; }
 .inv > section, .inv > footer { scroll-snap-align: start; }
 .inv-gallery-sec { scroll-snap-stop: always; }
 
+/* 高于一屏的模块取消强制吸附：金色祝福墙与 RSVP 表单都比一屏高，
+   强制吸附会把模块顶部钉在视口顶，下方输入框被截断够不到；取消后宾客可自然滚动查看 */
+.inv > section.inv-love-sec,
+.inv > section.inv-rsvp-sec { scroll-snap-align: none; scroll-snap-stop: normal; }
+
 /* 全屏高度 = 当前浏览器可视高度：优先 --inv-vh（JS 按 innerHeight 实时写入），
    其次 dvh（随地址栏收起/展开变化），最旧的浏览器退回 vh */
 .inv-fullh { height: 100vh; height: 100dvh; height: var(--inv-vh, 100dvh); }
@@ -492,13 +497,14 @@ html { scroll-snap-type: y mandatory; }
 .inv-wall-list p:last-child { border-bottom: 0; }
 .inv-wall-list p.mine { color: var(--rose-dark); }
 .inv-wall-list svg.ico { width: 12px; height: 12px; margin-top: 5px; color: var(--rose); flex: 0 0 auto; }
-.inv-wall-input { display: flex; align-items: center; margin-top: 16px; overflow: hidden; border: 1px solid #e4c7ce; border-radius: 999px; background: #fff; }
-.inv-wall-input .wish { flex: 1; min-width: 0; padding: 12px 4px 12px 16px; border: 0; color: var(--ink); background: transparent; font-family: var(--cn); font-size: 14px; text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+/* 输入框：圆角矩形（祝福语换行变高时，全高发送键仍贴合，不留悬空的按钮） */
+.inv-wall-input { display: flex; align-items: stretch; margin-top: 16px; overflow: hidden; border: 1px solid #e4c7ce; border-radius: 16px; background: #fff; }
+.inv-wall-input .wish { flex: 1; min-width: 0; display: flex; align-items: center; padding: 12px 6px 12px 16px; border: 0; color: var(--ink); background: transparent; font-family: var(--cn); font-size: 14px; text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .inv-wall-input .wish span { display: block; line-height: 1.5; animation: inv-wish-in .35s cubic-bezier(.22,1,.36,1); }
 @keyframes inv-wish-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-.inv-wall-input .dice { flex: 0 0 auto; width: 38px; height: 38px; display: grid; place-items: center; color: var(--rose); background: transparent; font-size: 17px; transition: transform .4s; }
+.inv-wall-input .dice { flex: 0 0 auto; align-self: center; width: 38px; height: 38px; display: grid; place-items: center; color: var(--rose); background: transparent; font-size: 17px; transition: transform .4s; }
 .inv-wall-input .dice.roll { transform: rotate(360deg); }
-.inv-wall-input .send { flex: 0 0 auto; width: 46px; height: 46px; display: grid; place-items: center; color: #fff; background: var(--rose); }
+.inv-wall-input .send { flex: 0 0 auto; align-self: stretch; width: 52px; height: auto; min-height: 46px; display: grid; place-items: center; color: #fff; background: var(--rose); }
 .inv-wall-input .send svg.ico { width: 16px; height: 16px; }
 .inv-wall-hint { margin: 8px 4px 0; color: var(--muted); font-size: 11px; }
 /* 发送：按钮回弹 + 纸飞机飞出再从左侧飞回 + 三颗小心飘起；新留言从上方滑入并闪一下粉色底 */
@@ -506,7 +512,7 @@ html { scroll-snap-type: y mandatory; }
 .inv-wall-send .inv-wall-input { margin-top: 0; }
 .inv-wall-input .send.go { animation: inv-love-bump .45s cubic-bezier(.3,1.6,.5,1); }
 .inv-wall-input .send.go svg.ico { animation: inv-plane .8s ease-in-out; }
-.inv-send-hearts { position: absolute; z-index: 2; right: 23px; top: 23px; pointer-events: none; }
+.inv-send-hearts { position: absolute; z-index: 2; right: 26px; top: 50%; pointer-events: none; }
 .inv-send-hearts b { position: absolute; left: 0; top: 0; color: var(--rose); font-size: 11px; font-weight: normal; opacity: 0; animation: inv-send-heart .9s ease-out forwards; }
 .inv-send-hearts b:nth-child(2) { font-size: 9px; animation-delay: .12s; --dx: -14px; }
 .inv-send-hearts b:nth-child(3) { font-size: 13px; animation-delay: .22s; --dx: 12px; }

@@ -6,7 +6,7 @@ import confetti from "canvas-confetti";
 import { siteConfig } from "@/config/site";
 import { PHOTO_LAYOUT, WORLD_PHOTOS } from "@/config/worldPhotos";
 import { openInWeChat, isWeChat, openWebMap, jumpToMap, MAP_PROVIDERS, type MapProvider, type MapPoint } from "@/lib/openMap";
-import { track, fetchLove, sendLove, fetchBlessings, sendBlessing, type Blessing } from "@/lib/api";
+import { track, fetchLove, sendLove, fetchBlessings, sendBlessing, sendRsvp, type Blessing } from "@/lib/api";
 
 /* 3D 画廊是纯客户端模块（three / WebGL），关闭 SSR 预渲染避免服务端执行 */
 const Gallery3D = dynamic(() => import("./Gallery3D"), {
@@ -83,6 +83,47 @@ const C = {
   muted: "#8b7379",
   line: "#ecd4d9",
   cream: "#f8f1eb",
+}
+
+/* ── 首屏新人姓名：字号自适应，保证「徐俊杰 ♡ 鲍阳阳」始终单行；窄屏按比例缩小，不低于 NAMES_MIN ──
+   内层用 inline-block + nowrap，scrollWidth 恒等于单行自然宽度，据此与容器可用宽度求比例 */
+const NAMES_MAX = 52
+const NAMES_MIN = 34
+function CoupleNames() {
+  const boxRef = useRef<HTMLDivElement>(null)
+  const rowRef = useRef<HTMLSpanElement>(null)
+  const [fontSize, setFontSize] = useState(NAMES_MAX)
+
+  useEffect(() => {
+    const box = boxRef.current
+    const row = rowRef.current
+    if (!box || !row) return
+    const fit = () => {
+      const avail = box.clientWidth
+      const natural = row.scrollWidth
+      if (!avail || !natural) return
+      // 等比缩放并夹在 [NAMES_MIN, NAMES_MAX] 之间；收敛后 next === fontSize 不再触发更新
+      const next = Math.min(NAMES_MAX, Math.max(NAMES_MIN, Math.floor((fontSize * avail) / natural)))
+      if (next !== fontSize) setFontSize(next)
+    }
+    fit()
+    document.fonts?.ready.then(fit).catch(() => {})
+    window.addEventListener("resize", fit)
+    return () => window.removeEventListener("resize", fit)
+  }, [fontSize])
+
+  const nameStyle: React.CSSProperties = {
+    fontFamily: "var(--font-brush)", fontSize, color: C.wine, textShadow: "0 2px 12px rgba(158,78,99,0.18)",
+  }
+  return (
+    <div ref={boxRef} style={{ textAlign: "center", overflow: "hidden" }}>
+      <span ref={rowRef} style={{ display: "inline-block", whiteSpace: "nowrap" }}>
+        <span style={nameStyle}>{couple.groom.name}</span>
+        <span className="animate-heartbeat" style={{ display: "inline-block", fontSize: Math.round((fontSize * 28) / NAMES_MAX), margin: "0 12px", color: C.rose }}>{couple.separator}</span>
+        <span style={nameStyle}>{couple.bride.name}</span>
+      </span>
+    </div>
+  )
 }
 
 /* ── Scroll reveal ── */
@@ -608,9 +649,9 @@ function LoveSection() {
     const id = Date.now() + Math.random()
     setPops(p => [...p, id])
     window.setTimeout(() => setPops(p => p.filter(x => x !== id)), 1100)
-    // 每次轻触都上报（服务端按访客去重计点亮数，同时累计点击量）
+    // 每次轻触都上报并刷新计数（count 为累计值，故每次点击都会 +1）；上报不依赖 lit，永远执行
     sendLove().then(s => { if (s) setCount(s.count) })
-    if (lit) return
+    if (lit) return // 已点亮过：只跳过首次的大彩带与本地标记，不影响上面的计数更新
     setLit(true)
     fireworksConfetti()
     try { localStorage.setItem(LOVE_KEY, "1") } catch {}
@@ -745,9 +786,16 @@ function RSVP() {
   const [guests, setGuests] = useState(1)
 
   const handleYes = () => {
-    if (!name.trim()) return
+    const n = name.trim()
+    if (!n) return
+    void sendRsvp(n, true, guests) // 后台落库（姓名绑定 vid），失败静默，不阻塞成功页与彩带
     setStep("yes")
     fireworksConfetti()
+  }
+  const handleNo = () => {
+    const n = name.trim()
+    if (n) void sendRsvp(n, false, 1) // 未填姓名时跳过上报，保留原可缺席流程
+    setStep("no")
   }
   if (step === "yes") return (
     <div style={{ textAlign: "center", padding: "40px 20px", animation: "fadeUp 0.6s ease both" }}>
@@ -805,7 +853,7 @@ function RSVP() {
           onMouseDown={e => (e.currentTarget.style.transform = "scale(0.97)")}
           onMouseUp={e => (e.currentTarget.style.transform = "scale(1)")}
         >✓ 欣然赴约</button>
-        <button onClick={() => setStep("no")} style={{
+        <button onClick={handleNo} style={{
           padding: "14px", background: "transparent",
           color: "rgba(255,248,248,0.75)", border: "1px solid rgba(242,195,206,0.4)",
           fontFamily: "var(--font-serif)", fontSize: 14, cursor: "pointer", borderRadius: 999,
@@ -892,13 +940,7 @@ export default function WeddingApp() {
 
         <div className="animate-fade-up delay-300" style={{ textAlign: "center", marginBottom: 18 }}>
           <div style={{ fontFamily: "var(--font-en)", fontStyle: "italic", fontSize: 22, color: C.roseDark, marginBottom: 6 }}>Save our date</div>
-          <span style={{ fontFamily: "var(--font-brush)", fontSize: 52, color: C.wine, textShadow: "0 2px 12px rgba(158,78,99,0.18)" }}>
-            {couple.groom.name}
-          </span>
-          <span className="animate-heartbeat" style={{ display: "inline-block", fontSize: 28, margin: "0 12px", color: C.rose }}>{couple.separator}</span>
-          <span style={{ fontFamily: "var(--font-brush)", fontSize: 52, color: C.wine, textShadow: "0 2px 12px rgba(158,78,99,0.18)" }}>
-            {couple.bride.name}
-          </span>
+          <CoupleNames />
         </div>
 
         <div className="animate-fade-up delay-400" style={{ textAlign: "center", marginBottom: 24 }}>
@@ -975,7 +1017,7 @@ export default function WeddingApp() {
       </section>
 
       {/* ══════════ RSVP ══════════ */}
-      <section style={{ padding: "56px 28px", background: darkBg, position: "relative", overflow: "hidden" }}>
+      <section className="inv-rsvp-sec" style={{ padding: "56px 28px", background: darkBg, position: "relative", overflow: "hidden" }}>
         <div style={{ position: "absolute", top: 24, left: "50%", transform: "translateX(-50%)", fontFamily: "var(--font-en)", fontSize: 95, color: "rgba(255,255,255,0.05)", pointerEvents: "none" }}>LOVE</div>
         <Reveal>
           <DarkHead script={wedding.rsvp.script} zh={wedding.rsvp.zh} />
