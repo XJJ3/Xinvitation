@@ -1017,7 +1017,7 @@ export default function WeddingApp() {
       </section>
 
       {/* ══════════ RSVP ══════════ */}
-      <section className="inv-rsvp-sec" style={{ padding: "56px 28px", background: darkBg, position: "relative", overflow: "hidden" }}>
+      <section className="inv-rsvp-sec" style={{ background: darkBg, position: "relative", overflow: "hidden" }}>
         <div style={{ position: "absolute", top: 24, left: "50%", transform: "translateX(-50%)", fontFamily: "var(--font-en)", fontSize: 95, color: "rgba(255,255,255,0.05)", pointerEvents: "none" }}>LOVE</div>
         <Reveal>
           <DarkHead script={wedding.rsvp.script} zh={wedding.rsvp.zh} />

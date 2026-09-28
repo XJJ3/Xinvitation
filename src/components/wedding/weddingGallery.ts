@@ -322,6 +322,9 @@ export class WeddingGallery {
   /** 预热：被剔除/暂停期间提前编译着色器、上传已加载的贴图，避免首次看到时集中卡顿 */
   private lastWarmTs = 0;
   private warmCompiling = false;
+  /** warmTick 的缓存扫描表：材质 → 其纹理引用。2s 重建一次，tick 内零分配 */
+  private warmTable: { mat: THREE.Material; texs: THREE.Texture[] }[] = [];
+  private warmTableTs = -Infinity;
   private readonly keys: Record<string, boolean> = {};
   private readonly velocity = new THREE.Vector3();
   private readonly moveInput = { x: 0, y: 0 };
@@ -13680,7 +13683,7 @@ export class WeddingGallery {
     const loop = (now: number) => {
       this.animId = requestAnimationFrame(loop);
       if (this.renderPaused && this.framesRendered > 0) {
-        this.warmTick(now, 1);
+        this.warmTick(now, 8);
         return;
       }
       const dt = Math.min(this.clock.getDelta(), 0.05);
@@ -13689,7 +13692,7 @@ export class WeddingGallery {
         // 封面层不透明度 0.72~0.92，半帧率下的跳变被遮罩吸收，肉眼不可分辨
         this.idleAcc += dt;
         if (this.idleAcc < 1 / 30) {
-          this.warmTick(now, 4);
+          this.warmTick(now, 8);
           return;
         }
         this.idleAcc = 0;
@@ -13700,40 +13703,37 @@ export class WeddingGallery {
       this.renderer.render(this.scene, this.camera);
       this.framesRendered++;
       this.trackFrameInterval(now);
-      this.warmTick(now, this.idleMode ? 4 : 1);
+      this.warmTick(now, this.idleMode ? 8 : 4);
     };
     this.animId = requestAnimationFrame(loop);
   };
 
   /**
-   * 每 250ms 扫一遍场景（含被剔除的室外组）：有材质还没编译就整体 compileAsync（支持
-   * KHR_parallel_shader_compile 时不阻塞主线程）；已加载但未上传的贴图每次最多上传 budget 张。
-   * 室外组在厅内背对大门时不参与渲染，不预热的话首次转身会集中编译+上传（实测卡 1.2s）。
+   * 预热：有材质还没编译就整体 compileAsync（支持 KHR_parallel_shader_compile 时不阻塞主线程）；
+   * 已加载但未上传的贴图每次最多上传 budget 张。室外组在厅内背对大门时不参与渲染，
+   * 不预热的话首次转身会集中编译+上传（实测卡 1.2s）。
+   * 扫描基于缓存扁平表（材质 → 其纹理列表），避免每 tick 全场景 traverse + Object.values 的
+   * 重复分配开销；表每 2s 重建一次，兼顾异步挂载的 GLB / 装饰材质。
    */
   private warmTick(now: number, budget: number) {
-    if (now - this.lastWarmTs < 250) return;
+    const interval = this.idleMode ? 120 : 250;
+    if (now - this.lastWarmTs < interval) return;
     this.lastWarmTs = now;
+    if (now - this.warmTableTs > 2000) this.rebuildWarmTable();
     const props = this.renderer.properties;
     let needCompile = false;
     let uploads = 0;
-    const tryUpload = (v: unknown) => {
-      if (uploads >= budget || !(v instanceof THREE.Texture)) return;
-      if (v.version > 0 && (props.get(v) as { __version?: number }).__version !== v.version) {
-        this.renderer.initTexture(v);
-        uploads++;
+    for (const entry of this.warmTable) {
+      if ((props.get(entry.mat) as { currentProgram?: unknown }).currentProgram === undefined) needCompile = true;
+      for (const tex of entry.texs) {
+        if (uploads >= budget) break;
+        if (tex.version > 0 && (props.get(tex) as { __version?: number }).__version !== tex.version) {
+          this.renderer.initTexture(tex);
+          uploads++;
+        }
       }
-    };
-    this.scene.traverse((o) => {
-      const mat = (o as THREE.Mesh).material as THREE.Material | THREE.Material[] | undefined;
-      if (!mat) return;
-      for (const m of Array.isArray(mat) ? mat : [mat]) {
-        if ((props.get(m) as { currentProgram?: unknown }).currentProgram === undefined) needCompile = true;
-        if (uploads >= budget) continue;
-        for (const v of Object.values(m)) tryUpload(v);
-        const uniforms = (m as THREE.ShaderMaterial).uniforms;
-        if (uniforms) for (const u of Object.values(uniforms)) tryUpload(u?.value);
-      }
-    });
+      if (uploads >= budget) break;
+    }
     if (needCompile && !this.warmCompiling) {
       this.warmCompiling = true;
       this.renderer
@@ -13743,6 +13743,27 @@ export class WeddingGallery {
           this.warmCompiling = false;
         });
     }
+  }
+
+  /** 收集场景中所有「材质 → 纹理引用列表」，供 warmTick 零分配扫描；约 2-5ms，2s 才跑一次 */
+  private rebuildWarmTable() {
+    this.warmTableTs = performance.now();
+    const table: { mat: THREE.Material; texs: THREE.Texture[] }[] = [];
+    const seen = new Set<THREE.Material>();
+    this.scene.traverse((o) => {
+      const mat = (o as THREE.Mesh).material as THREE.Material | THREE.Material[] | undefined;
+      if (!mat) return;
+      for (const m of Array.isArray(mat) ? mat : [mat]) {
+        if (seen.has(m)) continue;
+        seen.add(m);
+        const texs: THREE.Texture[] = [];
+        for (const v of Object.values(m)) if (v instanceof THREE.Texture) texs.push(v);
+        const uniforms = (m as THREE.ShaderMaterial).uniforms;
+        if (uniforms) for (const u of Object.values(uniforms)) if (u?.value instanceof THREE.Texture) texs.push(u.value);
+        table.push({ mat: m, texs });
+      }
+    });
+    this.warmTable = table;
   }
 
   /** 场景里已就绪（version>0，即图像已加载或为画布贴图）的贴图，含 ShaderMaterial uniforms 里的 */

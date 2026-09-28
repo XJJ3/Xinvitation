@@ -189,8 +189,37 @@ html { scroll-snap-type: y mandatory; }
 
 /* 高于一屏的模块取消强制吸附：金色祝福墙与 RSVP 表单都比一屏高，
    强制吸附会把模块顶部钉在视口顶，下方输入框被截断够不到；取消后宾客可自然滚动查看 */
-.inv > section.inv-love-sec,
-.inv > section.inv-rsvp-sec { scroll-snap-align: none; scroll-snap-stop: normal; }
+
+/* ── 点亮祝福区：整屏吸附展示（恢复 snap），内容压进一屏 ──
+   mandatory 吸附下该区不能缺席：没有吸附点会被惯性滚动直接越过，宾客根本停不住。
+   所以改为把内容压回一屏：矮视口时祝福墙列表自动变矮（flex 收缩），输入框始终可见 */
+.inv-love-sec {
+  display: flex; flex-direction: column; justify-content: center; box-sizing: border-box;
+  height: var(--inv-vh, 100dvh);
+  padding-top: 28px; padding-bottom: 16px;
+}
+/* Reveal 是唯一子块：铺满剩余高度并垂直居中，把富余空间分给祝福墙列表 */
+.inv-love-sec > .reveal { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; justify-content: center; }
+.inv-love-sec .inv-orbit { width: 158px; height: 158px; margin: 14px auto 8px; }
+.inv-love-sec .inv-love-count { margin-bottom: 14px; }
+/* 祝福墙：自身成纵向 flex，列表吃掉富余高度并可滚动，输入框永远贴底可见 */
+.inv-love-sec .inv-wall { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+.inv-love-sec .inv-wall-list { max-height: none; flex: 0 1 auto; min-height: 48px; overflow-y: auto; }
+@media (max-height: 640px) {
+  .inv-love-sec { padding-top: 18px; padding-bottom: 10px; }
+  .inv-love-sec .inv-orbit { width: 142px; height: 142px; margin: 8px auto 6px; }
+  .inv-love-sec .inv-title h2 { font-size: 24px; margin: 4px 0 8px; }
+  .inv-love-sec .inv-wall { padding: 14px 20px 10px; }
+  .inv-love-sec .inv-wall-hint { margin-top: 2px; }
+  .inv-love-sec .inv-love-count { margin-bottom: 8px; }
+}
+
+/* ── RSVP 区：恢复整屏吸附，内容本就不足一屏，居中即可 ── */
+.inv-rsvp-sec {
+  display: flex; flex-direction: column; justify-content: center; box-sizing: border-box;
+  min-height: var(--inv-vh, 100dvh);
+  padding: 40px 28px;
+}
 
 /* 全屏高度 = 当前浏览器可视高度：优先 --inv-vh（JS 按 innerHeight 实时写入），
    其次 dvh（随地址栏收起/展开变化），最旧的浏览器退回 vh */
