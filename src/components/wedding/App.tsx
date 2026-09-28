@@ -18,6 +18,37 @@ const Gallery3D = dynamic(() => import("./Gallery3D"), {
   ),
 });
 
+/* three.js 代码块（约 450KB）+ 画廊全部模型贴图（约 8MB）不参与首屏：
+ * 接近视口前 2 屏才挂载 Gallery3D 开始加载；首屏渲染完成后浏览器空闲时预取代码块，
+ * 用户滚到画廊时 three 已就绪，只需等模型贴图。 */
+function GalleryLazy() {
+  const [near, setNear] = useState(false);
+  const ref = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      (es) => {
+        if (es[0].isIntersecting) {
+          setNear(true);
+          io.disconnect();
+        }
+      },
+      { rootMargin: "200% 0px" },
+    );
+    io.observe(el);
+    const prefetch = () => window.requestIdleCallback?.(() => void import("./Gallery3D"));
+    if (document.readyState === "complete") window.setTimeout(prefetch, 2500);
+    else window.addEventListener("load", () => window.setTimeout(prefetch, 2500), { once: true });
+    return () => io.disconnect();
+  }, []);
+  return (
+    <section ref={ref} className="inv-gallery-sec">
+      {near ? <Gallery3D /> : <div className="inv-fullh" style={{ background: "#2a1520" }} />}
+    </section>
+  );
+}
+
 const { wedding, couple, event } = siteConfig;
 
 const C = {
@@ -218,7 +249,8 @@ const LETTER_PHOTO_MIN = 80
 
 function LetterSection() {
   const l = wedding.letter
-  const photo = WORLD_PHOTOS[PHOTO_LAYOUT[l.photoSlot] - 1].src
+  // 轮播/信件里的照片显示尺寸远小于原图，统一用 small（长边 760）省带宽，画质无损
+  const photo = WORLD_PHOTOS[PHOTO_LAYOUT[l.photoSlot] - 1].small
   const date = event.date.slice(0, 10).replace(/-/g, ".")
   const secRef = useRef<HTMLElement>(null)
   const photoRef = useRef<HTMLDivElement>(null)
@@ -273,7 +305,7 @@ function LetterSection() {
 /* ── 属于我们的画面：自动轮播 + 左右滑动 ── */
 function MomentsSection() {
   const m = wedding.moments
-  const photos = m.photos.map(p => ({ src: WORLD_PHOTOS[PHOTO_LAYOUT[p.slot] - 1].src, note: p.note }))
+  const photos = m.photos.map(p => ({ src: WORLD_PHOTOS[PHOTO_LAYOUT[p.slot] - 1].small, note: p.note }))
   const [idx, setIdx] = useState(0)
   const [paused, setPaused] = useState(false)
   const touchX = useRef<number | null>(null)
@@ -880,9 +912,7 @@ export default function WeddingApp() {
       <MomentsSection />
 
       {/* ══════════ 3D GALLERY ══════════ */}
-      <section className="inv-gallery-sec">
-        <Gallery3D />
-      </section>
+      <GalleryLazy />
 
       {/* ══════════ 地址 ══════════ */}
       <VenueSection toast={toast} />

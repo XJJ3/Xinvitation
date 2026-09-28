@@ -190,6 +190,13 @@ html { scroll-snap-type: y mandatory; }
 /* 全屏高度 = 当前浏览器可视高度：优先 --inv-vh（JS 按 innerHeight 实时写入），
    其次 dvh（随地址栏收起/展开变化），最旧的浏览器退回 vh */
 .inv-fullh { height: 100vh; height: 100dvh; height: var(--inv-vh, 100dvh); }
+
+/* 屏外整屏区块跳过渲染：首屏不下载它们的字体分片、不跑动画，滚近才渲染。
+ * 只用于高度恒等于 intrinsic-size 的全屏区块（画廊区含 WebGL 画布、变高区块不适用），
+ * 否则 mandatory 滚动吸附会因尺寸估算失准而跳动。 */
+.inv-fullh { content-visibility: auto; contain-intrinsic-size: auto var(--inv-vh, 100dvh); }
+/* 3D 画廊内部复用了 inv-fullh，但其 canvas 在屏外被跳过渲染时会拿不到尺寸，排除 */
+.inv-gallery-sec .inv-fullh { content-visibility: visible; }
 .inv-screen {
   min-height: 100vh; min-height: 100dvh; min-height: var(--inv-vh, 100dvh);
   box-sizing: border-box; display: flex; flex-direction: column; justify-content: center;

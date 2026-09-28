@@ -121,7 +121,7 @@ export function BgMusic() {
         ref={audioRef}
         src={siteConfig.music.src}
         loop
-        preload="auto"
+        preload="metadata"
         playsInline
       />
 
