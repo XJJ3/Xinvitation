@@ -1,0 +1,27 @@
+# 放到 /etc/systemd/system/invitation-server.service
+# systemctl daemon-reload && systemctl enable --now invitation-server
+[Unit]
+Description=Invitation API (guest clicks & blessings)
+After=network.target
+
+[Service]
+Type=simple
+User=invitation
+Group=invitation
+WorkingDirectory=/opt/invitation-server
+# node 安装在 /usr/local/bin/node（见 README）
+ExecStart=/usr/local/bin/node --disable-warning=ExperimentalWarning --env-file=/opt/invitation-server/.env dist/index.js
+Environment=NODE_ENV=production
+Restart=on-failure
+RestartSec=3
+MemoryMax=256M
+
+# 最小权限：只允许写数据目录
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/opt/invitation-server/data
+
+[Install]
+WantedBy=multi-user.target
