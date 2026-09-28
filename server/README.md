@@ -121,7 +121,7 @@ nginx -t && systemctl reload nginx
 
 ## 日常查看数据
 
-直接用手机或电脑打开 **https://invite.xjj-love-byy.cloud/admin**，输入 `ADMIN_TOKEN`：
+直接用手机或电脑打开 **https://invite.xjj-love-byy.cloud/admin**，输入后台口令（`.env` 里的 `ADMIN_TOKEN`，登录后本机记住 30 天）：
 
 - **概览**：打开次数、宾客数、点亮人数、祝福数、各类点击、每日趋势
 - **点亮名单**：谁（宾客 #编号 + 设备型号/系统/微信版本 + IP）在什么时候点亮，支持搜索
@@ -129,7 +129,7 @@ nginx -t && systemctl reload nginx
 - **祝福留言**：隐藏/恢复（请帖祝福墙即时生效）
 - **导出**：点亮名单 / 宾客汇总 / 祝福 / 点击明细 CSV
 
-令牌只保存在当前浏览器标签页（sessionStorage），关闭即失效。也可以用命令行：
+同一 IP 15 分钟内输错 10 次会被暂时锁定。也可以用命令行：
 
 ```bash
 T=<ADMIN_TOKEN>

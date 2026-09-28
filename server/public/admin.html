@@ -60,7 +60,18 @@
 const TOKEN_KEY = "inv-admin-token";
 const TABS = [["overview", "概览"], ["lights", "点亮名单"], ["visitors", "宾客"], ["blessings", "祝福留言"], ["export", "导出"]];
 const TYPE_NAMES = { visit: "打开请帖", love: "点击爱心", fortune: "摇签", blessing: "祝福", share: "分享", nav: "导航", music: "音乐" };
-const state = { token: sessionStorage.getItem(TOKEN_KEY) || "", tab: "overview", q: "" };
+const REMEMBER_MS = 30 * 24 * 3600 * 1000;
+// 登录后在本机记住 30 天，免得每次输入
+function loadToken() {
+  try {
+    const s = JSON.parse(localStorage.getItem(TOKEN_KEY) || "null");
+    if (s && s.t && s.exp > Date.now()) return s.t;
+  } catch {}
+  localStorage.removeItem(TOKEN_KEY);
+  return "";
+}
+function saveToken(t) { localStorage.setItem(TOKEN_KEY, JSON.stringify({ t, exp: Date.now() + REMEMBER_MS })); }
+const state = { token: loadToken(), tab: "overview", q: "" };
 const app = document.getElementById("app");
 
 // 极简 DOM 构建：所有文本都走 textContent，杜绝 XSS
@@ -114,23 +125,23 @@ function device(ua) {
 }
 
 async function api(path, opts = {}) {
-  const res = await fetch(path, { ...opts, headers: { Authorization: `Bearer ${state.token}`, ...(opts.body ? { "Content-Type": "application/json" } : {}) } });
-  if (res.status === 401 || res.status === 503) { const e = new Error(res.status === 503 ? "服务端未配置 ADMIN_TOKEN" : "令牌不正确"); e.auth = true; throw e; }
+  const res = await fetch(path, { ...opts, headers: { Authorization: `Bearer ${encodeURIComponent(state.token)}`, ...(opts.body ? { "Content-Type": "application/json" } : {}) } });
+  if (res.status === 401 || res.status === 503) { const e = new Error(res.status === 503 ? "服务端未配置后台口令" : "口令不正确"); e.auth = true; throw e; }
   if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || `请求失败 ${res.status}`);
   return opts.raw ? res : res.json();
 }
 
 function logout(msg) {
-  state.token = ""; sessionStorage.removeItem(TOKEN_KEY); renderLogin(msg);
+  state.token = ""; localStorage.removeItem(TOKEN_KEY); renderLogin(msg);
 }
 
 function renderLogin(msg = "") {
-  const input = h("input", { type: "password", placeholder: "管理令牌 ADMIN_TOKEN", autocomplete: "current-password" });
+  const input = h("input", { type: "password", placeholder: "后台口令", autocomplete: "current-password" });
   const err = h("div", { class: "err" }, msg);
   const go = async () => {
     state.token = input.value.trim();
     if (!state.token) return;
-    try { await api("/api/admin/stats"); sessionStorage.setItem(TOKEN_KEY, state.token); render(); }
+    try { await api("/api/admin/stats"); saveToken(state.token); render(); }
     catch (e) { err.textContent = e.message; }
   };
   input.addEventListener("keydown", e => e.key === "Enter" && go());

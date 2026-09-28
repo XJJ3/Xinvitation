@@ -3,16 +3,39 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify"
 import { db } from "../db.js"
 import { env, adminEnabled } from "../env.js"
 
-// 常量时间比较，避免按响应时间逐字符猜令牌
+// 常量时间比较，避免按响应时间逐字符猜口令。
+// 前端对口令做 encodeURIComponent（请求头不能直接放中文），这里解码后再比较
 function tokenOk(header: string | undefined): boolean {
-  const got = Buffer.from(header?.replace(/^Bearer\s+/i, "") ?? "")
+  let raw = header?.replace(/^Bearer\s+/i, "") ?? ""
+  try { raw = decodeURIComponent(raw) } catch { return false }
+  const got = Buffer.from(raw)
   const want = Buffer.from(env.adminToken)
   return got.length === want.length && timingSafeEqual(got, want)
 }
 
+// 口令允许很短，所以按 IP 限制猜测次数：15 分钟内错 10 次即锁定到窗口结束
+const FAIL_LIMIT = 10
+const FAIL_WINDOW_MS = 15 * 60 * 1000
+const fails = new Map<string, { n: number; resetAt: number }>()
+
 async function guard(req: FastifyRequest, reply: FastifyReply) {
-  if (!adminEnabled) return reply.code(503).send({ error: "未配置 ADMIN_TOKEN" })
-  if (!tokenOk(req.headers.authorization)) return reply.code(401).send({ error: "unauthorized" })
+  if (!adminEnabled) return reply.code(503).send({ error: "未配置后台口令 ADMIN_TOKEN" })
+  const now = Date.now()
+  const rec = fails.get(req.ip)
+  if (rec && now > rec.resetAt) fails.delete(req.ip)
+  const cur = fails.get(req.ip)
+  if (cur && cur.n >= FAIL_LIMIT) {
+    const min = Math.ceil((cur.resetAt - now) / 60000)
+    return reply.code(429).send({ error: `口令错误次数过多，请 ${min} 分钟后再试` })
+  }
+  if (!tokenOk(req.headers.authorization)) {
+    const next = cur ?? { n: 0, resetAt: now + FAIL_WINDOW_MS }
+    next.n += 1
+    fails.set(req.ip, next)
+    if (fails.size > 10000) fails.clear()
+    return reply.code(401).send({ error: "口令不正确" })
+  }
+  fails.delete(req.ip)
 }
 
 // 按北京时间分天

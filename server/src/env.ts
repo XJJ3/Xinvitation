@@ -16,5 +16,5 @@ export const env = {
   wxSignDomains: list(process.env.WX_SIGN_DOMAINS || "xjj-love-byy.cloud"),
 }
 
-// 未配置或仍是示例值时，管理接口一律拒绝，避免裸奔
-export const adminEnabled = env.adminToken.length >= 16 && env.adminToken !== "change-me"
+// 后台口令至少 4 位（有按 IP 的错误次数锁定兜底）；未配置或仍是示例值时，管理接口一律拒绝
+export const adminEnabled = [...env.adminToken].length >= 4 && env.adminToken !== "change-me"

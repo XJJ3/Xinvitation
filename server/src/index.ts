@@ -49,4 +49,4 @@ process.on("SIGINT", shutdown)
 process.on("SIGTERM", shutdown)
 
 await app.listen({ host: env.host, port: env.port })
-if (!adminEnabled) app.log.warn("ADMIN_TOKEN 未配置（或少于 16 位），管理接口已禁用")
+if (!adminEnabled) app.log.warn("ADMIN_TOKEN 未配置（或少于 4 位），后台已禁用")
