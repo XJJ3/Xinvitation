@@ -1,17 +1,17 @@
 @import "tailwindcss";
 
-/* ══════════ 中式红金主题（保留：WxShare/SiteFooter/BgMusic 仍在引用 china-* token）══════════ */
+/* ══════════ 旧 token 名保留（WxShare/SiteFooter/BgMusic 仍在引用），取值已换成玫瑰粉色板 ══════════ */
 :root {
-  --china-red: #9e1318;
-  --china-red-deep: #7a0f13;
-  --china-red-bright: #c1272d;
-  --china-red-photo: #75100f;
-  --china-red-photo-deep: #560b0c;
-  --china-gold: #c9a86a;
-  --china-gold-bright: #e3c88a;
-  --china-cream: #f3e8d6;
-  --china-text: #f5ece0;
-  --china-text-soft: #e8d9c4;
+  --china-red: #9e4e63;
+  --china-red-deep: #542d38;
+  --china-red-bright: #c66f84;
+  --china-red-photo: #9e4e63;
+  --china-red-photo-deep: #542d38;
+  --china-gold: #f2c3ce;
+  --china-gold-bright: #fff8f8;
+  --china-cream: #f8f1eb;
+  --china-text: #fff8f8;
+  --china-text-soft: #f7e3e7;
 }
 
 @theme inline {
@@ -27,33 +27,34 @@
   --color-china-text-soft: var(--china-text-soft);
 }
 
-/* ══════════ 婚礼请帖新主题（源：设计稿 @theme，色板与设计稿一致）══════════ */
+/* ══════════ 请帖主题色（w-* 名沿用，色值换成第 5 版设计稿的玫瑰粉 / 酒红）══════════ */
 @theme {
-  --color-w-red-deep: #3d1020;
-  --color-w-red: #7a2240;
-  --color-w-red-bright: #9b3358;
-  --color-w-red-light: #c47890;
-  --color-w-gold: #a87c3a;
-  --color-w-gold-light: #c9a050;
-  --color-w-gold-pale: #e8d098;
-  --color-w-ivory: #fdf7f0;
-  --color-w-cream: #f7ede0;
-  --color-w-dark: #1e0e14;
-  --color-w-muted: #6b4050;
+  --color-w-red-deep: #542d38;
+  --color-w-red: #9e4e63;
+  --color-w-red-bright: #c66f84;
+  --color-w-red-light: #e5a9b7;
+  --color-w-gold: #c66f84;
+  --color-w-gold-light: #e5a9b7;
+  --color-w-gold-pale: #f7e3e7;
+  --color-w-ivory: #fff8f8;
+  --color-w-cream: #f8f1eb;
+  --color-w-dark: #4f3b40;
+  --color-w-muted: #8b7379;
 }
 
 :root {
-  --color-ivory: #fdf7f0;
-  --color-red-deep: #3d1020;
-  --color-red: #7a2240;
-  --color-gold: #a87c3a;
-  --color-gold-light: #c9a050;
-  --color-muted: #6b4050;
+  --color-ivory: #fff8f8;
+  --color-red-deep: #542d38;
+  --color-red: #9e4e63;
+  --color-gold: #c66f84;
+  --color-gold-light: #e5a9b7;
+  --color-muted: #8b7379;
+  --color-dark: #4f3b40;
 }
 
 /* ══════════ 全局基础 ══════════ */
 html {
-  background: #1e0e14;
+  background: #542d38;
   scroll-behavior: smooth;
   overflow-x: clip;
 }
@@ -179,40 +180,350 @@ body {
   opacity: 1;
 }
 
-/* Flip card */
-.flip-card {
-  perspective: 1200px;
-  cursor: pointer;
-  transform-style: preserve-3d;
-}
-.flip-inner {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  transition: transform 0.7s cubic-bezier(0.4, 0, 0.2, 1);
-  transform-style: preserve-3d;
-  will-change: transform;
-}
-.flip-inner.flipped {
-  transform: rotateY(180deg);
-}
-.flip-front,
-.flip-back {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
-  transform: translateZ(0);
-}
-.flip-back {
-  transform: rotateY(180deg) translateZ(0);
+/* ══════════ 模块吸附：每次滑动都停在下一个模块的顶部 ══════════
+   mandatory：松手后一定吸到某个模块；比屏幕高的模块内部仍可自由滚动，到边缘才吸附。
+   3D 画廊加 scroll-snap-stop: always，快速甩动也不会越过它，一定先停在全屏画廊。 */
+html { scroll-snap-type: y mandatory; }
+.inv > section, .inv > footer { scroll-snap-align: start; }
+.inv-gallery-sec { scroll-snap-stop: always; }
+
+/* 全屏高度 = 当前浏览器可视高度：优先 --inv-vh（JS 按 innerHeight 实时写入），
+   其次 dvh（随地址栏收起/展开变化），最旧的浏览器退回 vh */
+.inv-fullh { height: 100vh; height: 100dvh; height: var(--inv-vh, 100dvh); }
+.inv-screen {
+  min-height: 100vh; min-height: 100dvh; min-height: var(--inv-vh, 100dvh);
+  box-sizing: border-box; display: flex; flex-direction: column; justify-content: center;
 }
 
-/* Red envelope */
-.envelope-btn {
-  animation: pulse-red 2s ease-in-out infinite;
-  cursor: pointer;
+/* ══════════ 请帖模块（信件 / 画面 / 地址 / 幸福签 / 点亮祝福 / 留言墙）══════════ */
+.inv {
+  --blush: #f7e3e7;
+  --blush-soft: #fff8f8;
+  --rose: #c66f84;
+  --rose-dark: #9e4e63;
+  --wine: #542d38;
+  --ink: #4f3b40;
+  --muted: #8b7379;
+  --line: #ecd4d9;
+  --paper: #fffdfb;
+  --cream: #f8f1eb;
+  --shadow: 0 20px 60px rgba(92, 46, 58, 0.16);
+  --en: var(--font-en), "Cormorant Garamond", serif;
+  --cn: var(--font-serif), "Noto Serif SC", serif;
+  color: var(--ink);
+  font-family: var(--cn);
+}
+.inv button { font: inherit; border: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.inv svg.ico { display: block; width: 1.25em; height: 1.25em; }
+.inv-section { padding: 76px 24px; }
+
+.inv-title { text-align: center; }
+.inv-title > span { color: var(--rose); font-family: var(--en); font-size: 13px; letter-spacing: .28em; }
+.inv-title h2 { margin: 6px 0 12px; color: var(--wine); font-size: 28px; font-weight: 500; letter-spacing: .12em; }
+.inv-title i { position: relative; display: inline-block; width: 34px; height: 1px; background: var(--rose); }
+.inv-title i::after { content: "◆"; position: absolute; top: -8px; left: 12px; padding: 2px; color: var(--rose); font-size: 8px; font-style: normal; background: var(--title-bg, var(--blush-soft)); }
+.inv-lead { margin: 18px 0 0; color: var(--muted); font-size: 13px; text-align: center; }
+
+/* 信件：行高、分段照第 6 版；字号大一号，上下留白收紧以便整块放进一屏 */
+.inv-letter-sec { padding: 22px 24px 18px; background: var(--blush-soft); }
+.inv-letter-sec .inv-title h2 { margin-bottom: 4px; }
+.inv-letter-sec .inv-title i { display: block; margin: 0 auto; }
+.inv-letter { position: relative; margin-top: 8px; padding: 10px 10px 18px; background: var(--paper); border: 1px solid var(--line); box-shadow: 9px 9px 0 var(--blush); }
+.inv-letter::before, .inv-letter::after { content: "❀"; position: absolute; color: var(--line); font-size: 32px; }
+.inv-letter::before { top: 42%; left: -14px; transform: rotate(-22deg); }
+.inv-letter::after { right: -12px; bottom: 38px; transform: rotate(158deg); }
+.inv-letter-photo { position: relative; height: 250px; flex: none; overflow: hidden; border-radius: 150px 150px 3px 3px; background: var(--blush); }
+.inv-letter-photo::after { content: ""; position: absolute; inset: 9px; border: 1px solid rgba(255,255,255,.72); border-radius: 145px 145px 2px 2px; pointer-events: none; }
+/* 进入视口后照片从 1.12 倍缓慢推回原尺寸（参考项目封面的 hero-zoom）；
+   悬停放大用独立的 scale 属性，才能和动画的 transform 叠加而不被覆盖 */
+.inv-letter-photo img { display: block; width: 100%; height: 100%; object-fit: cover; transform: scale(1.12); transition: scale 1s ease; }
+.inv-letter-box.visible .inv-letter-photo img { animation: inv-photo-zoom 12s ease-out both; }
+.inv-letter:hover .inv-letter-photo img { scale: 1.035; }
+@keyframes inv-photo-zoom { from { transform: scale(1.12); } to { transform: scale(1); } }
+.inv-letter-photo > span, .inv-letter-photo > i { position: absolute; z-index: 1; bottom: 20px; color: #fff; font-family: var(--en); font-size: 11px; font-style: normal; text-shadow: 0 2px 10px rgba(50,25,32,.4); }
+.inv-letter-photo > span { left: 21px; letter-spacing: .22em; }
+.inv-letter-photo > i { right: 20px; letter-spacing: .12em; }
+.inv-letter-paper { position: relative; margin: -18px 12px 0; padding: 28px 18px 18px; background: rgba(255,253,251,.97); border: 1px solid var(--line); box-shadow: 0 10px 30px rgba(87,42,53,.08); }
+.inv-quote { position: absolute; top: 4px; left: 18px; color: var(--blush); font-family: var(--en); font-size: 72px; line-height: 1; }
+.inv-letter-to { position: relative; display: block; margin-bottom: 14px; color: var(--rose); font-family: var(--en); font-size: 10px; letter-spacing: .2em; }
+.inv-letter-paper p { position: relative; margin: 0 0 12px; color: #725e63; font-size: 13px; line-height: 2.15; text-align: justify; }
+.inv-letter-paper blockquote { position: relative; margin: 16px 0 0; padding: 12px 0 0; border-top: 1px solid var(--line); color: var(--rose-dark); font-size: 12px; line-height: 2; text-align: center; }
+.inv-sign { position: relative; margin: 12px 18px 0; padding-right: 54px; text-align: right; }
+.inv-sign::after { content: "囍"; position: absolute; right: 0; top: 50%; display: grid; place-items: center; width: 42px; height: 42px; border: 1px solid var(--rose); border-radius: 50%; color: var(--rose); font-size: 15px; transform: translateY(-50%) rotate(-8deg); }
+.inv-sign span { display: block; color: var(--rose); font-family: var(--en); font-size: 10px; letter-spacing: .18em; }
+.inv-sign strong { color: var(--wine); font-size: 16px; font-weight: 500; }
+.inv-sign strong i { color: var(--rose); font-family: var(--en); font-style: italic; }
+.inv-sign small { display: block; margin-top: 3px; color: var(--muted); font-size: 10px; letter-spacing: .08em; }
+
+/* 属于我们的画面 */
+.inv-moments-sec { --title-bg: var(--cream); background: var(--cream); padding-top: 48px; padding-bottom: 32px; }
+/* 照片高度 = 一屏减去标题和按钮，保证整个模块刚好一屏；大屏上限 620px 避免照片过长 */
+.inv-moments { margin-top: 26px; flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: center; }
+.inv-photo { position: relative; flex: 1; min-height: 300px; max-height: 620px; overflow: hidden; border-radius: 160px 160px 8px 8px; background: var(--blush); box-shadow: var(--shadow); touch-action: pan-y; }
+.inv-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transform: scale(1.06); transition: opacity .8s ease, transform 1.2s ease; }
+.inv-photo img.on { opacity: 1; transform: scale(1); }
+.inv-count { position: absolute; top: 20px; right: 20px; padding: 6px 10px; color: #fff; background: rgba(50,25,32,.35); border-radius: 999px; font-family: var(--en); font-size: 12px; backdrop-filter: blur(8px); }
+.inv-note { position: absolute; left: 17px; bottom: 18px; color: #fff; font-family: var(--en); font-size: 12px; letter-spacing: .18em; writing-mode: vertical-rl; text-shadow: 0 1px 8px rgba(0,0,0,.4); }
+.inv-ctrl { display: flex; align-items: center; justify-content: space-between; margin-top: 17px; }
+.inv-ctrl > button { width: 40px; height: 40px; border-radius: 50%; color: var(--rose-dark); background: var(--paper); box-shadow: 0 5px 16px rgba(92,46,58,.1); font-size: 16px; }
+.inv-dots { display: flex; gap: 4px; }
+.inv-dots button { padding: 8px 2px; background: transparent; }
+.inv-dots span { display: block; width: 10px; height: 2px; background: var(--line); transition: width .3s, background .3s; }
+.inv-dots .on span { width: 22px; background: var(--rose); }
+
+/* 地址 */
+.inv-venue { position: relative; box-sizing: border-box; display: flex; align-items: flex-end; padding: 34px 24px; overflow: hidden; color: #fff; background: var(--wine); }
+.inv-venue > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.inv-venue-shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(44,25,30,.1), rgba(44,25,30,.72)); }
+.inv-venue-card { position: relative; z-index: 1; width: 100%; padding: 31px 25px; text-align: center; border: 1px solid rgba(255,255,255,.5); background: rgba(64,34,42,.55); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+.inv-venue-card > span { font-family: var(--en); font-size: 12px; letter-spacing: .25em; }
+.inv-venue-card h2 { margin: 8px 0; font-size: 29px; font-weight: 500; letter-spacing: .12em; }
+.inv-venue-card > p { margin: 0; color: #eddde1; font-size: 13px; line-height: 1.8; }
+.inv-venue-info { display: grid; grid-template-columns: 1fr 1fr; margin: 22px 0; border-top: 1px solid rgba(255,255,255,.24); border-bottom: 1px solid rgba(255,255,255,.24); }
+.inv-venue-info div { padding: 15px 5px; }
+.inv-venue-info div + div { border-left: 1px solid rgba(255,255,255,.24); }
+.inv-venue-info small { display: block; margin-bottom: 4px; color: #e7c5cd; font-size: 11px; }
+.inv-venue-info strong { display: block; font-size: 14px; font-weight: 500; }
+.inv-venue-btns { display: flex; justify-content: center; gap: 10px; }
+.inv-venue-btns button { display: inline-flex; align-items: center; gap: 6px; padding: 11px 18px; border-radius: 999px; font-size: 13px; }
+.inv-venue-btns .solid { color: var(--wine); background: #fff; }
+.inv-venue-btns .ghost { color: #fff; background: transparent; border: 1px solid rgba(255,255,255,.55); }
+.inv-venue-tip { margin-top: 12px; color: #f2c3ce; font-size: 12px; line-height: 1.6; }
+
+/* 幸福签：竹筒求签（参考第 7 版）。舞台按 320×452 设计尺寸绘制，--stage-k 等比缩放以放进一屏 */
+.inv-fortune-sec {
+  position: relative; overflow: hidden; text-align: center; padding-top: 26px; padding-bottom: 20px;
+  background: radial-gradient(ellipse 80% 40% at 50% 50%, rgba(242,195,206,.5), transparent 70%), var(--blush-soft);
+}
+.inv-fortune-sec::before, .inv-fortune-sec::after { content: "✦"; position: absolute; color: var(--line); font-size: 80px; }
+.inv-fortune-sec::before { top: 72px; left: -20px; transform: rotate(18deg); }
+.inv-fortune-sec::after { right: -18px; bottom: 55px; transform: rotate(-22deg); }
+.inv-fortune-sec .inv-lead { margin-top: 10px; }
+.inv-fortune-arch { position: absolute; inset: 14px; border: 1px solid var(--line); border-radius: 50% 50% 6px 6px / 22% 22% 6px 6px; pointer-events: none; }
+.inv-fortune-arch::before { content: ""; position: absolute; z-index: 1; inset: 6px; border: 1px dashed rgba(198,111,132,.25); border-radius: inherit; }
+/* 拱形框内衬一张淡化的婚纱照做底；签落下时亮一下再暗回（g0/g1 交替让每次抽签都能重播动画） */
+.inv-fortune-arch { overflow: hidden; }
+.inv-fortune-arch img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .18; -webkit-mask: linear-gradient(180deg, #000 0%, #000 55%, transparent 100%); mask: linear-gradient(180deg, #000 0%, #000 55%, transparent 100%); }
+.inv-fortune-arch.g0 img { animation: inv-arch-glow0 2.4s ease-out; }
+.inv-fortune-arch.g1 img { animation: inv-arch-glow1 2.4s ease-out; }
+@keyframes inv-arch-glow0 { 0%, 100% { opacity: .18; } 30% { opacity: .38; } }
+@keyframes inv-arch-glow1 { 0%, 100% { opacity: .18; } 30% { opacity: .38; } }
+.inv-spark { position: absolute; color: var(--rose); font-size: 12px; opacity: .5; pointer-events: none; animation: inv-twinkle 3s ease-in-out infinite; }
+.inv-spark.s0 { top: 16%; left: 14%; }
+.inv-spark.s1 { top: 24%; right: 12%; font-size: 9px; animation-delay: -1s; }
+.inv-spark.s2 { top: 48%; left: 7%; font-size: 15px; animation-delay: -2s; }
+.inv-spark.s3 { top: 56%; right: 8%; animation-delay: -.5s; }
+.inv-spark.s4 { bottom: 16%; left: 16%; font-size: 9px; animation-delay: -1.5s; }
+.inv-spark.s5 { bottom: 22%; right: 18%; font-size: 14px; animation-delay: -2.5s; }
+@keyframes inv-twinkle { 0%,100% { opacity: .15; transform: scale(.8); } 50% { opacity: .7; transform: scale(1.15); } }
+
+.inv-stage-fit { --stage-k: 1; position: relative; z-index: 2; height: calc(452px * var(--stage-k)); margin-top: 8px; }
+@media (max-height: 800px) { .inv-stage-fit { --stage-k: .88; } }
+@media (max-height: 700px) { .inv-stage-fit { --stage-k: .78; } }
+@media (max-height: 620px) { .inv-stage-fit { --stage-k: .68; } }
+.inv-stage { position: absolute; left: 50%; top: 0; width: 320px; height: 452px; margin-left: -160px; perspective: 900px; transform: scale(var(--stage-k)); transform-origin: top center; }
+
+.inv-halo { position: absolute; left: 50%; top: 70px; width: 250px; height: 250px; margin-left: -125px; border: 1px dashed rgba(198,111,132,.28); border-radius: 50%; animation: inv-spin 24s linear infinite; }
+.inv-halo::before, .inv-halo::after { content: ""; position: absolute; border: 1px solid rgba(198,111,132,.17); border-radius: 50%; }
+.inv-halo::before { inset: 18px; }
+.inv-halo::after { inset: 38px; }
+.inv-halo i { position: absolute; width: 7px; height: 7px; border-radius: 50%; background: var(--rose); }
+.inv-halo i:nth-child(1) { top: 28px; left: 34px; }
+.inv-halo i:nth-child(2) { right: 12px; top: 112px; }
+.inv-halo i:nth-child(3) { bottom: 12px; left: 105px; }
+@keyframes inv-spin { to { transform: rotate(360deg); } }
+
+.inv .inv-tube-btn { position: absolute; z-index: 3; left: 45px; top: 30px; width: 230px; height: 285px; padding: 0; background: transparent; transform-origin: 50% 85%; }
+.inv-stage.shaking .inv-tube-btn { animation: inv-bamboo-shake 1.35s cubic-bezier(.36,.07,.19,.97) both; }
+.inv-sticks { position: absolute; z-index: 1; left: 44px; top: 0; width: 142px; height: 155px; }
+.inv-sticks > i { --angle: calc((var(--stick) - 3.5) * 3deg); position: absolute; left: calc(17px + var(--stick) * 14px); bottom: 0; width: 15px; height: calc(126px + (var(--stick) % 3) * 12px); border: 1px solid #9d643a; border-radius: 5px 5px 2px 2px; background: linear-gradient(90deg,#c78a50,#edc17f 45%,#b97842); box-shadow: inset 2px 0 rgba(255,255,255,.24); transform: rotate(var(--angle)); transform-origin: bottom; }
+.inv-sticks > i::before { content: ""; position: absolute; top: 7px; left: 3px; right: 3px; height: 1px; background: rgba(107,57,29,.45); }
+.inv-sticks > i span { position: absolute; top: 15px; left: 2px; color: #794524; font-size: 9px; font-style: normal; writing-mode: vertical-rl; }
+.inv-stage.shaking .inv-sticks > i { animation: inv-sticks-rattle .18s ease-in-out infinite alternate; animation-delay: calc(var(--stick) * -.03s); }
+.inv-tube { position: absolute; z-index: 2; left: 41px; bottom: 0; width: 148px; height: 190px; filter: drop-shadow(0 18px 18px rgba(86,47,29,.2)); }
+.inv-tube-rim { position: absolute; z-index: 4; top: 0; left: -5px; width: 158px; height: 35px; box-sizing: border-box; border: 6px solid #9b6138; border-radius: 50%; background: #633b24; box-shadow: inset 0 5px 8px rgba(35,16,8,.45), 0 3px #d7a260; }
+.inv-tube-body { position: absolute; z-index: 3; top: 17px; left: 0; width: 148px; height: 164px; box-sizing: border-box; overflow: hidden; border-left: 4px solid #92572f; border-right: 4px solid #754224; border-radius: 4px 4px 24px 24px; background: linear-gradient(90deg,#a96d3c 0%,#d9a05f 18%,#e8b671 45%,#bd7c43 73%,#8c512e 100%); }
+.inv-tube-body > i { position: absolute; top: 0; bottom: 0; width: 1px; background: rgba(99,53,27,.25); box-shadow: 1px 0 rgba(255,255,255,.18); }
+.inv-tube-body > i:nth-child(1) { left: 27px; }
+.inv-tube-body > i:nth-child(2) { left: 56px; }
+.inv-tube-body > i:nth-child(3) { left: 87px; }
+.inv-tube-body > i:nth-child(4) { left: 116px; }
+.inv-tube-body > span { position: absolute; left: 50%; top: 38px; width: 50px; height: 70px; box-sizing: border-box; display: grid; place-items: center; padding: 7px 0; border: 1px solid rgba(116,51,28,.55); color: #754026; background: rgba(251,224,171,.6); font-size: 18px; line-height: 1.25; transform: translateX(-50%); }
+.inv-tube-body > small { position: absolute; left: 50%; bottom: 15px; color: rgba(96,48,26,.72); font-family: var(--en); font-size: 8px; letter-spacing: .16em; transform: translateX(-50%); }
+.inv-tube-base { position: absolute; z-index: 4; left: -3px; bottom: -2px; width: 154px; height: 28px; box-sizing: border-box; border: 5px solid #8c512e; border-radius: 50%; background: #b7743f; box-shadow: inset 0 -4px 6px rgba(78,38,19,.25); }
+
+.inv-drop-stick { position: absolute; z-index: 6; left: 144px; top: 85px; width: 32px; height: 200px; box-sizing: border-box; padding: 16px 6px 10px; border: 1px solid #995b30; border-radius: 7px 7px 3px 3px; color: #7a4021; background: linear-gradient(90deg,#c98a4c,#f0c982 48%,#b8733e); box-shadow: 6px 10px 18px rgba(80,39,20,.2), inset 3px 0 rgba(255,255,255,.28); opacity: 0; }
+.inv-drop-stick small, .inv-drop-stick strong, .inv-drop-stick i { display: block; writing-mode: vertical-rl; }
+.inv-drop-stick small { margin: auto; font-size: 10px; letter-spacing: .08em; }
+.inv-drop-stick strong { margin: 14px auto 0; font-size: 16px; font-weight: 600; letter-spacing: .16em; }
+.inv-drop-stick i { position: absolute; left: 50%; bottom: 10px; color: #9a4f2a; font-size: 13px; font-style: normal; transform: translateX(-50%); }
+.inv-stage.dropped .inv-drop-stick { animation: inv-stick-drop 1s cubic-bezier(.2,.8,.25,1) both; }
+
+.inv-shake-fx i { position: absolute; z-index: 8; color: var(--rose); font-style: normal; opacity: 0; }
+.inv-shake-fx i:nth-child(1) { top: 62px; left: 47px; }
+.inv-shake-fx i:nth-child(2) { top: 112px; right: 35px; }
+.inv-shake-fx i:nth-child(3) { top: 26px; right: 75px; }
+.inv-shake-fx i:nth-child(4) { top: 176px; left: 38px; }
+.inv-stage.shaking .inv-shake-fx i { animation: inv-sparkle-pop .6s ease-out infinite; }
+.inv-stage.shaking .inv-shake-fx i:nth-child(2) { animation-delay: .15s; }
+.inv-stage.shaking .inv-shake-fx i:nth-child(3) { animation-delay: .3s; }
+.inv-stage.shaking .inv-shake-fx i:nth-child(4) { animation-delay: .45s; }
+
+.inv-tube-status { position: absolute; left: 0; right: 0; top: 326px; margin: 0; color: var(--rose-dark); font-size: 12px; letter-spacing: .08em; }
+.inv-slip { position: absolute; z-index: 10; left: 8px; right: 8px; bottom: 0; min-height: 100px; box-sizing: border-box; padding: 14px 16px 13px 76px; text-align: left; border: 1px solid #d8b27d; background: linear-gradient(100deg,#f8e5bd,#fff5da 45%,#efd39e); box-shadow: 0 12px 30px rgba(96,53,25,.15); opacity: 0; transform: perspective(700px) rotateX(-78deg) translateY(18px); transform-origin: top; }
+.inv-slip::before { content: "吉"; position: absolute; left: 18px; top: 50%; width: 43px; height: 43px; display: grid; place-items: center; border: 1px solid #a75a35; border-radius: 50%; color: #a75a35; font-size: 16px; transform: translateY(-50%) rotate(-8deg); }
+.inv-slip > div { display: flex; align-items: center; justify-content: space-between; }
+.inv-slip small { color: #a2663f; font-family: var(--en); font-size: 10px; letter-spacing: .12em; }
+.inv-slip span { color: #9e6b48; font-size: 10px; }
+.inv-slip strong { display: block; margin: 4px 0 2px; color: #754026; font-size: 20px; font-weight: 500; letter-spacing: .16em; }
+.inv-slip p { margin: 0; color: #83583c; font-size: 12px; line-height: 1.6; }
+.inv-stage.dropped .inv-slip { animation: inv-slip-unfold .75s 1s cubic-bezier(.22,1,.36,1) both; }
+
+.inv-collect { position: relative; z-index: 1; width: min(320px, 100%); margin: 18px auto 0; }
+.inv-collect-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px dashed var(--line); }
+.inv-collect-head span { color: var(--rose); font-family: var(--en); font-size: 11px; letter-spacing: .2em; }
+.inv-collect-head em { color: var(--muted); font-size: 12px; font-style: normal; }
+.inv-collect-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 5px; }
+.inv-collect-grid span { padding: 6px 0; border: 1px dashed var(--line); border-radius: 6px; color: #c9b3b8; font-size: 12px; line-height: 1.3; white-space: nowrap; background: rgba(255,255,255,.4); transition: all .4s ease; }
+.inv-collect-grid span.got { border-style: solid; border-color: var(--rose); color: var(--rose-dark); background: #fff; }
+.inv-collect-grid span.now { color: #fff; border-color: var(--rose-dark); background: var(--rose-dark); animation: inv-chip-pop .5s ease 1.6s both; }
+@keyframes inv-chip-pop { 0% { transform: scale(1); } 50% { transform: scale(1.15); } 100% { transform: scale(1); } }
+
+@media (max-height: 640px) {
+  .inv-fortune-sec { padding-top: 18px; padding-bottom: 14px; }
+  .inv-fortune-sec .inv-title h2 { margin: 2px 0 8px; font-size: 24px; }
+  .inv-collect { margin-top: 10px; }
+}
+
+@keyframes inv-bamboo-shake {
+  0%,100% { transform: translateX(0) rotate(0); }
+  8% { transform: translateX(-11px) rotate(-8deg); }
+  16% { transform: translateX(12px) rotate(8deg); }
+  24% { transform: translateX(-14px) rotate(-9deg); }
+  32% { transform: translateX(13px) rotate(9deg); }
+  42% { transform: translateX(-10px) rotate(-7deg); }
+  52% { transform: translateX(11px) rotate(7deg); }
+  64% { transform: translateX(-7px) rotate(-5deg); }
+  76% { transform: translateX(6px) rotate(4deg); }
+  88% { transform: translateX(-3px) rotate(-2deg); }
+}
+@keyframes inv-sticks-rattle {
+  from { transform: rotate(calc(var(--angle) - 3deg)) translateY(0); }
+  to { transform: rotate(calc(var(--angle) + 3deg)) translateY(-7px); }
+}
+/* 签从筒口跳出，划一道弧线落到竹筒右侧，最后立稳（底部与竹筒底对齐）以便竖排文字能读清 */
+@keyframes inv-stick-drop {
+  0% { opacity: 0; transform: translate(0,40px) rotate(0); }
+  12% { opacity: 1; transform: translate(0,-50px) rotate(0); }
+  40% { opacity: 1; transform: translate(60px,-80px) rotate(18deg); }
+  72% { opacity: 1; transform: translate(106px,34px) rotate(-5deg); }
+  86% { opacity: 1; transform: translate(106px,22px) rotate(2deg); }
+  100% { opacity: 1; transform: translate(106px,30px) rotate(0); }
+}
+@keyframes inv-sparkle-pop {
+  0% { opacity: 0; transform: scale(.3) rotate(0); }
+  40% { opacity: 1; transform: scale(1.3) rotate(25deg); }
+  100% { opacity: 0; transform: translateY(-25px) scale(.6) rotate(55deg); }
+}
+@keyframes inv-slip-unfold {
+  0% { opacity: 0; transform: perspective(700px) rotateX(-78deg) translateY(18px); }
+  55% { opacity: 1; transform: perspective(700px) rotateX(8deg) translateY(0); }
+  100% { opacity: 1; transform: perspective(700px) rotateX(0) translateY(0); }
+}
+
+/* 点亮一颗祝福 + 留言墙 */
+.inv-love-sec { --title-bg: var(--blush); text-align: center; background: var(--blush); }
+.inv-orbit { position: relative; width: 190px; height: 190px; display: grid; place-items: center; margin: 30px auto 10px; }
+.inv-orbit::before, .inv-orbit::after { content: ""; position: absolute; inset: 9px; border: 1px dashed rgba(198,111,132,.35); border-radius: 50%; animation: spin-slow 18s linear infinite; }
+.inv-orbit::after { inset: 23px; animation-direction: reverse; animation-duration: 12s; }
+/* 三张小圆照片沿外圈轨道公转；照片自身反向同速自转，始终保持正立 */
+.inv-orbit-photos { position: absolute; inset: 9px; z-index: 3; animation: spin-slow 30s linear infinite; }
+.inv-orbit-photos span { position: absolute; width: 38px; height: 38px; margin: -19px 0 0 -19px; }
+.inv-orbit-photos .p0 { left: 50%; top: 0; }
+.inv-orbit-photos .p1 { left: 93%; top: 75%; }
+.inv-orbit-photos .p2 { left: 7%; top: 75%; }
+.inv-orbit-photos img { display: block; width: 100%; height: 100%; object-fit: cover; border: 2px solid #fff; border-radius: 50%; box-sizing: border-box; box-shadow: 0 4px 12px rgba(92,46,58,.22); animation: spin-slow 30s linear infinite reverse; }
+.inv-orbit.lit .inv-orbit-photos span { animation: inv-orbit-pop .9s cubic-bezier(.3,1.6,.5,1); }
+@keyframes inv-orbit-pop { 0%, 100% { transform: scale(1); } 40% { transform: scale(1.4); } }
+
+/* 执子之手：满屏婚纱照，底部酒红渐变托住白色引言 */
+.inv-quote-sec { position: relative; overflow: hidden; justify-content: flex-end; padding: 0 30px 64px; text-align: center; color: #fff; background: var(--wine); }
+.inv-quote-sec > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.inv-quote-shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(84,45,56,0) 35%, rgba(84,45,56,.55) 62%, rgba(58,28,37,.9) 100%); }
+.inv-quote-sec::after { content: ""; position: absolute; inset: 14px; border: 1px solid rgba(255,255,255,.35); pointer-events: none; }
+.inv-quote-body { position: relative; z-index: 1; }
+.inv-quote-rule { display: flex; align-items: center; justify-content: center; gap: 12px; color: #f2c3ce; }
+.inv-quote-rule i { width: 40px; height: 1px; background: #f2c3ce; }
+.inv-quote-rule span { font-size: 12px; }
+.inv-quote-text { margin-top: 18px; font-family: var(--font-serif); font-size: 26px; font-weight: 500; line-height: 1.8; letter-spacing: 3px; text-shadow: 0 2px 14px rgba(0,0,0,.35); }
+.inv-quote-src { margin-top: 10px; font-family: var(--font-serif); font-size: 12px; letter-spacing: 3px; color: #f2c3ce; }
+.inv-quote-en { margin-top: 22px; font-family: var(--font-en); font-style: italic; font-size: 18px; color: #fbe3e8; }
+.inv-love-btn { position: relative; z-index: 4; width: 128px; height: 128px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; border-radius: 50%; color: #fff; background: var(--rose); box-shadow: 0 12px 35px rgba(158,78,99,.3); transition: transform .3s, background .3s; }
+.inv-love-btn:active { transform: scale(.92); }
+.inv-love-btn svg.ico { width: 31px; height: 31px; animation: heartbeat 1.8s infinite; }
+.inv-love-btn span { font-size: 12px; }
+.inv-orbit.lit .inv-love-btn { background: var(--rose-dark); }
+.inv-love-btn.bump { animation: inv-love-bump .45s cubic-bezier(.3,1.6,.5,1); }
+.inv-love-burst { position: absolute; inset: 0; z-index: 5; pointer-events: none; }
+.inv-love-ripple { position: absolute; left: 50%; top: 50%; width: 128px; height: 128px; margin: -64px 0 0 -64px; border: 2px solid var(--rose); border-radius: 50%; animation: inv-love-ripple .8s ease-out forwards; }
+.inv-love-fly { position: absolute; left: 50%; top: 50%; color: var(--rose); font-size: var(--s, 16px); font-weight: normal; opacity: 0; animation: inv-love-fly 1s ease-out forwards; }
+@keyframes inv-love-bump { 0% { transform: scale(1); } 30% { transform: scale(.86); } 65% { transform: scale(1.08); } 100% { transform: scale(1); } }
+@keyframes inv-love-ripple { from { transform: scale(1); opacity: .7; } to { transform: scale(1.7); opacity: 0; } }
+@keyframes inv-love-fly {
+  0% { transform: translate(-50%, -50%) scale(.4); opacity: 0; }
+  20% { opacity: 1; }
+  100% { transform: translate(calc(-50% + var(--dx)), calc(-50% - 110px)) scale(1.1); opacity: 0; }
+}
+.inv-love-count { margin: 0 0 35px; color: var(--rose-dark); font-size: 13px; }
+.inv-love-count strong { font-family: var(--en); font-size: 22px; font-weight: 500; }
+.inv-wall { padding: 24px 20px; text-align: left; background: rgba(255,255,255,.62); border-radius: 18px; }
+.inv-wall-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 12px; }
+.inv-wall-head h3 { margin: 0; color: var(--wine); font-size: 16px; font-weight: 500; }
+.inv-wall-head small { color: var(--muted); font-size: 11px; }
+.inv-wall-list { max-height: 196px; overflow-y: auto; }
+.inv-wall-list p { display: flex; align-items: flex-start; gap: 8px; margin: 0; padding: 8px 0; color: #725b61; font-size: 13px; line-height: 1.6; border-bottom: 1px dashed var(--line); animation: fadeUp .4s both; }
+.inv-wall-list p:last-child { border-bottom: 0; }
+.inv-wall-list p.mine { color: var(--rose-dark); }
+.inv-wall-list svg.ico { width: 12px; height: 12px; margin-top: 5px; color: var(--rose); flex: 0 0 auto; }
+.inv-wall-input { display: flex; align-items: center; margin-top: 16px; overflow: hidden; border: 1px solid #e4c7ce; border-radius: 999px; background: #fff; }
+.inv-wall-input input { flex: 1; min-width: 0; padding: 12px 4px 12px 16px; border: 0; outline: 0; color: var(--ink); background: transparent; font-family: var(--cn); font-size: 14px; }
+.inv-wall-input .dice { flex: 0 0 auto; width: 38px; height: 38px; display: grid; place-items: center; color: var(--rose); background: transparent; font-size: 17px; transition: transform .4s; }
+.inv-wall-input .dice.roll { transform: rotate(360deg); }
+.inv-wall-input .send { flex: 0 0 auto; width: 46px; height: 46px; display: grid; place-items: center; color: #fff; background: var(--rose); }
+.inv-wall-input .send svg.ico { width: 16px; height: 16px; }
+.inv-wall-hint { margin: 8px 4px 0; color: var(--muted); font-size: 11px; }
+/* 发送：按钮回弹 + 纸飞机飞出再从左侧飞回 + 三颗小心飘起；新留言从上方滑入并闪一下粉色底 */
+.inv-wall-send { position: relative; margin-top: 16px; }
+.inv-wall-send .inv-wall-input { margin-top: 0; }
+.inv-wall-input .send.go { animation: inv-love-bump .45s cubic-bezier(.3,1.6,.5,1); }
+.inv-wall-input .send.go svg.ico { animation: inv-plane .8s ease-in-out; }
+.inv-send-hearts { position: absolute; z-index: 2; right: 23px; top: 23px; pointer-events: none; }
+.inv-send-hearts b { position: absolute; left: 0; top: 0; color: var(--rose); font-size: 11px; font-weight: normal; opacity: 0; animation: inv-send-heart .9s ease-out forwards; }
+.inv-send-hearts b:nth-child(2) { font-size: 9px; animation-delay: .12s; --dx: -14px; }
+.inv-send-hearts b:nth-child(3) { font-size: 13px; animation-delay: .22s; --dx: 12px; }
+.inv-wall-list p.fresh { animation: inv-wall-in .6s cubic-bezier(.22,1,.36,1) both, inv-wall-glow 1.6s ease .3s; border-radius: 8px; }
+.inv-wall-input.shake { animation: inv-shake .4s ease; border-color: var(--rose); }
+@keyframes inv-plane {
+  0% { transform: translate(0, 0) rotate(0); opacity: 1; }
+  40% { transform: translate(26px, -22px) rotate(-12deg) scale(.7); opacity: 0; }
+  41% { transform: translate(-22px, 16px) scale(.7); opacity: 0; }
+  100% { transform: translate(0, 0) scale(1); opacity: 1; }
+}
+@keyframes inv-send-heart {
+  0% { transform: translate(-50%, -50%) scale(.4); opacity: 0; }
+  25% { opacity: 1; }
+  100% { transform: translate(calc(-50% + var(--dx, 0px)), -56px) scale(1.1); opacity: 0; }
+}
+@keyframes inv-wall-in { from { transform: translateY(-14px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes inv-wall-glow { 0%, 100% { background: transparent; } 30% { background: rgba(242,195,206,.55); } }
+@keyframes inv-shake { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
+
+.inv-toast { position: fixed; z-index: 100; top: 72px; left: 50%; padding: 10px 17px; border-radius: 999px; color: #fff; background: rgba(84,45,56,.88); font-size: 13px; opacity: 0; pointer-events: none; transform: translate(-50%, -12px); transition: opacity .3s, transform .3s; backdrop-filter: blur(12px); }
+.inv-toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+@keyframes love-pop {
+  0%   { transform: scale(1); opacity: 1; }
+  100% { transform: translateY(-80px) scale(2); opacity: 0; }
 }
 
 /* Falling petals */
