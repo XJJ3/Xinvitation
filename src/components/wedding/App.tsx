@@ -19,10 +19,12 @@ const Gallery3D = dynamic(() => import("./Gallery3D"), {
 });
 
 /* three.js 代码块（约 450KB）+ 画廊全部模型贴图（约 8MB）不参与首屏：
- * 接近视口前 2 屏才挂载 Gallery3D 开始加载；首屏渲染完成后浏览器空闲时预取代码块，
- * 用户滚到画廊时 three 已就绪，只需等模型贴图。 */
+ * 首屏加载完成 4s 后、浏览器空闲时才在后台挂载并构建画廊（宾客通常还在看封面/信件），
+ * 滚到画廊时基本已就绪；若宾客滑得更快，接近视口前 2 屏也会立即开始。
+ * 省流量模式 / 2G 网络下不提前构建，只按滚动位置加载。 */
 function GalleryLazy() {
   const [near, setNear] = useState(false);
+  const [warm, setWarm] = useState(false);
   const ref = useRef<HTMLElement | null>(null);
   useEffect(() => {
     const el = ref.current;
@@ -37,14 +39,32 @@ function GalleryLazy() {
       { rootMargin: "200% 0px" },
     );
     io.observe(el);
-    const prefetch = () => window.requestIdleCallback?.(() => void import("./Gallery3D"));
-    if (document.readyState === "complete") window.setTimeout(prefetch, 2500);
-    else window.addEventListener("load", () => window.setTimeout(prefetch, 2500), { once: true });
-    return () => io.disconnect();
+
+    const conn = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection;
+    const lowData = !!conn?.saveData || /(^|-)2g$/.test(conn?.effectiveType ?? "");
+    let timer = 0;
+    let idleId = 0;
+    // iOS Safari / 微信 iOS 没有 requestIdleCallback，退回 setTimeout
+    const idleApi = window as Window & { requestIdleCallback?: Window["requestIdleCallback"] };
+    const whenIdle = (cb: () => void) => {
+      if (idleApi.requestIdleCallback) idleId = idleApi.requestIdleCallback(cb, { timeout: 3000 });
+      else timer = window.setTimeout(cb, 300);
+    };
+    const start = () => {
+      timer = window.setTimeout(() => whenIdle(() => (lowData ? void import("./Gallery3D") : setWarm(true))), 4000);
+    };
+    if (document.readyState === "complete") start();
+    else window.addEventListener("load", start, { once: true });
+    return () => {
+      io.disconnect();
+      window.removeEventListener("load", start);
+      window.clearTimeout(timer);
+      if (idleId) window.cancelIdleCallback?.(idleId);
+    };
   }, []);
   return (
     <section ref={ref} className="inv-gallery-sec">
-      {near ? <Gallery3D /> : <div className="inv-fullh" style={{ background: "#2a1520" }} />}
+      {near || warm ? <Gallery3D buildNow={warm} /> : <div className="inv-fullh" style={{ background: "#2a1520" }} />}
     </section>
   );
 }
@@ -249,8 +269,7 @@ const LETTER_PHOTO_MIN = 80
 
 function LetterSection() {
   const l = wedding.letter
-  // 轮播/信件里的照片显示尺寸远小于原图，统一用 small（长边 760）省带宽，画质无损
-  const photo = WORLD_PHOTOS[PHOTO_LAYOUT[l.photoSlot] - 1].small
+  const photo = WORLD_PHOTOS[PHOTO_LAYOUT[l.photoSlot] - 1].src
   const date = event.date.slice(0, 10).replace(/-/g, ".")
   const secRef = useRef<HTMLElement>(null)
   const photoRef = useRef<HTMLDivElement>(null)
@@ -305,21 +324,40 @@ function LetterSection() {
 /* ── 属于我们的画面：自动轮播 + 左右滑动 ── */
 function MomentsSection() {
   const m = wedding.moments
-  const photos = m.photos.map(p => ({ src: WORLD_PHOTOS[PHOTO_LAYOUT[p.slot] - 1].small, note: p.note }))
+  // 轮播框在手机上约占 1000×1200 物理像素，必须用原图（小图会被放大近 2 倍发虚）
+  const photos = m.photos.map(p => ({ src: WORLD_PHOTOS[PHOTO_LAYOUT[p.slot] - 1].src, note: p.note }))
   const [idx, setIdx] = useState(0)
   const [paused, setPaused] = useState(false)
+  const [onScreen, setOnScreen] = useState(false)
+  // 只给看过的和下一张设置 src：12 张原图不会在进入本屏时一次性下载
+  const [shown, setShown] = useState<Set<number>>(() => new Set([0, 1]))
+  const secRef = useRef<HTMLElement>(null)
   const touchX = useRef<number | null>(null)
   const go = (n: number) => setIdx((n + photos.length) % photos.length)
 
   useEffect(() => {
-    if (paused) return
+    const el = secRef.current
+    if (!el) return
+    const io = new IntersectionObserver(es => setOnScreen(es[0].isIntersecting))
+    io.observe(el)
+    return () => io.disconnect()
+  }, [])
+
+  useEffect(() => {
+    const next = (idx + 1) % photos.length
+    setShown(s => (s.has(idx) && s.has(next) ? s : new Set([...s, idx, next])))
+  }, [idx, photos.length])
+
+  // 不在屏幕上时不自动翻页：否则打开页面后在别处停留，会在后台把原图一张张下载完
+  useEffect(() => {
+    if (paused || !onScreen) return
     const id = window.setInterval(() => setIdx(i => (i + 1) % photos.length), 5000)
     return () => window.clearInterval(id)
-  }, [paused, photos.length])
+  }, [paused, onScreen, photos.length])
 
   const pad = (n: number) => String(n).padStart(2, "0")
   return (
-    <section className="inv-section inv-screen inv-fullh inv-moments-sec">
+    <section ref={secRef} className="inv-section inv-screen inv-fullh inv-moments-sec">
       <Reveal>
         <InvTitle en={m.en}>{m.title}</InvTitle>
       </Reveal>
@@ -338,7 +376,7 @@ function MomentsSection() {
         >
           {photos.map((p, i) => (
             // eslint-disable-next-line @next/next/no-img-element
-            <img key={p.src} src={p.src} alt={p.note} className={i === idx ? "on" : ""} loading={i === 0 ? "eager" : "lazy"} />
+            <img key={p.src} src={shown.has(i) ? p.src : undefined} alt={p.note} className={i === idx ? "on" : ""} loading="lazy" />
           ))}
           <span className="inv-count">{pad(idx + 1)} / {pad(photos.length)}</span>
           <span className="inv-note">{photos[idx].note}</span>
