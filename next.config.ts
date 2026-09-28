@@ -12,6 +12,15 @@ const nextConfig: NextConfig = {
   images: {
     unoptimized: true,
   },
+  // 仅本地开发：把 /api/* 转发到本机 server/（pnpm --dir server dev，默认 3100 端口），前后端联调免跨域。
+  // 生产环境由 nginx 反代或 NEXT_PUBLIC_API_BASE 指定接口地址；静态导出本身也不支持 rewrites。
+  ...(process.env.NODE_ENV === "development"
+    ? {
+        async rewrites() {
+          return [{ source: "/api/:path*", destination: `${process.env.DEV_API_ORIGIN ?? "http://127.0.0.1:3100"}/api/:path*` }];
+        },
+      }
+    : {}),
 };
 
 export default nextConfig;
