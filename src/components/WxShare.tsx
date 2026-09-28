@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { siteConfig } from "@/config/site";
+import { fetchWxSignature } from "@/lib/api";
 
 // 微信 JS-SDK 类型（最小声明，避免引入额外依赖）
 declare global {
@@ -48,7 +49,7 @@ function loadJSSDK(): Promise<void> {
 /**
  * 微信分享配置组件：
  * - 仅在微信内置浏览器生效（其它环境直接什么都不做）
- * - 向后端 /api/wx-signature 取签名 -> wx.config -> 设置「发送给朋友」「分享到朋友圈」卡片
+ * - 向请帖后端（server/）/api/wx-signature 取签名 -> wx.config -> 设置「发送给朋友」「分享到朋友圈」卡片
  * - 同时渲染一个「分享给好友」提示按钮，引导用户用右上角「···」分享
  */
 export function WxShare() {
@@ -65,12 +66,9 @@ export function WxShare() {
         await loadJSSDK();
         // 待签名 URL：去掉 # 后的部分（微信要求）
         const pageUrl = location.href.split("#")[0];
-        const res = await fetch(
-          `/api/wx-signature?url=${encodeURIComponent(pageUrl)}`
-        );
-        const data = await res.json();
+        const data = await fetchWxSignature(pageUrl);
         if (cancelled || !window.wx) return;
-        if (data.error) {
+        if ("error" in data) {
           console.error("微信签名失败：", data.error);
           return;
         }
@@ -89,13 +87,15 @@ export function WxShare() {
           ],
         });
 
-        // 分享卡片内容
+        // 分享卡片内容。链接用当前域名：微信要求分享链接与当前页面同属已配置的 JS 安全域名，
+        // 从 invite 打开就分享 invite、从主域名打开就分享主域名
+        const origin = location.origin;
         const shareData = {
           title: siteConfig.share.title,
           desc: siteConfig.share.description,
-          link: siteConfig.url,
-          // 缩略图：复用构建时生成的红金 OG 图（绝对地址）
-          imgUrl: `${siteConfig.url}/opengraph-image`,
+          link: `${origin}/`,
+          // 缩略图：复用构建时生成的 OG 图（绝对地址）
+          imgUrl: `${origin}/opengraph-image`,
         };
 
         wx.ready(() => {
@@ -105,7 +105,7 @@ export function WxShare() {
           // 分享到朋友圈 / QZone（朋友圈无 desc 字段）
           wx.updateTimelineShareData({
             title: siteConfig.share.title,
-            link: siteConfig.url,
+            link: shareData.link,
             imgUrl: shareData.imgUrl,
           });
           setReady(true);
