@@ -51,6 +51,10 @@ export default function Gallery3D() {
   const [locked, setLocked] = useState(false);
   const [isTouch, setIsTouch] = useState(false);
   const [outdoor, setOutdoor] = useState<"lawn" | "beach">("lawn");
+  // 画廊接近视口（约 1.5 屏内）才开始构建场景；离屏/后台则暂停渲染循环
+  const [near, setNear] = useState(false);
+
+  const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setIsTouch(isTouchDevice());
@@ -58,7 +62,43 @@ export default function Gallery3D() {
   }, []);
 
   useEffect(() => {
-    if (mode !== "3d") return;
+    const el = rootRef.current;
+    if (!el) return;
+    // 提前 1.5 屏开始构建，滚动到达时加载已完成；一旦开始就不再拆掉（重建代价高）
+    const nearIO = new IntersectionObserver(
+      (es) => {
+        if (es[0].isIntersecting) {
+          setNear(true);
+          nearIO.disconnect();
+        }
+      },
+      { rootMargin: "150% 0px" },
+    );
+    nearIO.observe(el);
+    // 真正滚出视口才暂停渲染，避免上下滚动经过时的抖动
+    const pauseIO = new IntersectionObserver(
+      (es) => galleryRef.current?.setRenderPaused(!es[0].isIntersecting),
+      { rootMargin: "20% 0px" },
+    );
+    pauseIO.observe(el);
+    const onVis = () => {
+      if (document.hidden) galleryRef.current?.setRenderPaused(true);
+      else {
+        const r = rootRef.current;
+        const onScreen = !r || r.getBoundingClientRect().bottom > 0;
+        if (onScreen) galleryRef.current?.setRenderPaused(false);
+      }
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      nearIO.disconnect();
+      pauseIO.disconnect();
+      document.removeEventListener("visibilitychange", onVis);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (mode !== "3d" || !near) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -95,15 +135,17 @@ export default function Gallery3D() {
       gallery?.dispose();
       galleryRef.current = null;
     };
-  }, [mode]);
+  }, [mode, near]);
 
   const enter = useCallback(() => {
     setPhase("entered");
+    galleryRef.current?.setIdleMode(false);
     galleryRef.current?.enter();
   }, []);
 
   const exit = useCallback(() => {
     galleryRef.current?.exit();
+    galleryRef.current?.setIdleMode(true);
     setPhase("ready");
     setLocked(false);
   }, []);
@@ -152,7 +194,6 @@ export default function Gallery3D() {
 
   const lookActive = phase === "entered" && locked;
 
-  const rootRef = useRef<HTMLDivElement>(null);
   const leave = useCallback(
     (dir: 1 | -1) => {
       const sec = rootRef.current?.closest("section");
