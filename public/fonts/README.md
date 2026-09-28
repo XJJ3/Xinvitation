@@ -10,12 +10,6 @@
 | `huiwen-mincho-subset.woff2` | 汇文明朝体（修正版）| 中文标题 / 诗句（`.font-mincho`、正文默认）| CC0-1.0 公共领域 | [bosswnx/huiwenmincho-improved](https://github.com/bosswnx/huiwenmincho-improved) |
 | `lxgw-wenkai-subset.woff2` | 霞鹜文楷 | 中文人名 / 书法标题（`.font-kai`）| SIL OFL 1.1 | [lxgw/LxgwWenKai](https://github.com/lxgw/LxgwWenKai) |
 | `ebgaramond-regular.woff2`<br>`ebgaramond-italic.woff2` | EB Garamond | 英文装饰（`font-serif`：WELCOME / GROOM / BRIDE / AND 等）| SIL OFL 1.1 | [octaviopardo/EBGaramond12](https://github.com/octaviopardo/EBGaramond12) |
-| `og-lxgw-subset.woff` | 霞鹜文楷（OG 专用极小子集）| 微信/社交分享卡片缩略图（`src/app/opengraph-image.tsx`）| SIL OFL 1.1 | 同上，由本地 `lxgw.ttf` 子集化 |
-
-> `og-lxgw-subset.woff` 为何单独存在：`opengraph-image.tsx` 用 satori 在构建时把卡片渲成 PNG，
-> satori **不支持 woff2**，只吃 woff/ttf/otf。它仅含卡片固定文案那十几个字（囍 + 男女名 + 描述 + 英文），
-> 约 9KB，必须提交进仓库（EdgeOne 构建环境没有 `.fonts-src/` 里的原始字体）。
-> 改了 `site.ts` 的姓名或 `share.description` 后，需重新生成它——命令见文末。
 
 > OFL 唯一限制：字体文件本身不得单独出售。嵌入网页、自托管完全合法。
 
@@ -45,16 +39,11 @@ python3 scripts/subset-fonts.py
 
 脚本会自动从 `site.ts` 和组件里提取**会渲染的中文**（排除代码注释），无需手动维护字符列表。
 
-## 改了姓名 / 分享文案后，重新生成 OG 卡片字体
+## 分享卡片缩略图
 
-分享卡片缩略图用的 `og-lxgw-subset.woff` 字符是写死的（卡片文案固定）。
-如果改了 `site.ts` 里的新人姓名或 `share.description`，单独重跑这一行：
+`src/app/opengraph-image.jpg` 由 `scripts/make-share-card.py` 用 `.fonts-src/lxgw.ttf` 直接绘制，
+不需要单独的字体子集。改了姓名、日期或换合照后重跑：
 
 ```bash
-~/Library/Python/3.9/bin/pyftsubset .fonts-src/lxgw.ttf \
-  --text="囍徐俊杰鲍阳阳我们要订婚啦,期待您的到来WELCOME TO OUR ENGAGEMENT PARTY& " \
-  --flavor=woff --output-file=public/fonts/og-lxgw-subset.woff \
-  --layout-features='*' --no-hinting
+python3 scripts/make-share-card.py
 ```
-
-把 `--text=` 里的姓名/描述换成新的即可（务必包含「囍」和卡片上的英文）。

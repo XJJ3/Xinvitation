@@ -40,8 +40,8 @@ export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.url),
   title: siteConfig.share.title,
   description: siteConfig.share.description,
-  // 微信分享卡片：标题/描述在此声明；缩略图由同目录 opengraph-image.tsx
-  // 自动生成并注入为 og:image（绝对地址依赖 metadataBase，即 siteConfig.url）。
+  // 微信分享卡片：标题/描述在此声明；缩略图是同目录 opengraph-image.jpg，
+  // Next 自动注入为 og:image（绝对地址依赖 metadataBase，即 siteConfig.url）。
   openGraph: {
     type: "website",
     title: siteConfig.share.title,

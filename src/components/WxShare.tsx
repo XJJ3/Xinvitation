@@ -94,8 +94,12 @@ export function WxShare() {
           title: siteConfig.share.title,
           desc: siteConfig.share.description,
           link: `${origin}/`,
-          // 缩略图：复用构建时生成的 OG 图（绝对地址）
-          imgUrl: `${origin}/opengraph-image`,
+          // 缩略图：复用 OG 图，取 Next 注入的 og:image（带内容哈希），换成当前域名的绝对地址
+          imgUrl: (() => {
+            const og = document.querySelector<HTMLMetaElement>('meta[property="og:image"]')?.content;
+            const u = new URL(og ?? "/opengraph-image.jpg", origin);
+            return `${origin}${u.pathname}${u.search}`;
+          })(),
         };
 
         wx.ready(() => {

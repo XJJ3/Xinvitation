@@ -33,15 +33,13 @@ export const siteConfig = {
     },
   },
 
-  // 微信/社交分享卡片文案。缩略图由 src/app/opengraph-image.tsx 构建时自动生成，
-  // 无需在此配置图片路径（Next 会自动注入 og:image 指向 /opengraph-image）。
-  // title 同时用作浏览器标签页标题；现代温馨风、以新人姓名为主，不用花哨 emoji。
+  // 微信/社交分享卡片文案。缩略图是 src/app/opengraph-image.jpg（新人合照方图），
+  // 由 scripts/make-share-card.py 生成，Next 按文件约定自动注入 og:image。
+  // title：朋友圈只显示标题，所以姓名 + 喜讯放标题；聊天卡片在缩略图旁再显示 description，
+  // 放日期与地点，宾客不点开也知道哪天、在哪。title 同时用作浏览器标签页标题。
   share: {
-    title: "徐俊杰 ♡ 鲍阳阳 · 结婚请柬",
-    description: "我们结婚啦，诚邀您来见证这份喜悦与幸福 ♡",
-    // 缩略图（og:image）专用文案：用 og 子集字体渲染，改字需同步重做 og 字体子集
-    // （public/fonts/og-lxgw-subset.woff，生成命令见 public/fonts/README.md），否则缺字成豆腐块。
-    ogDescription: "诚邀您参加我们的婚礼",
+    title: "徐俊杰 ♡ 鲍阳阳 · 我们结婚啦",
+    description: "11月10日 · 温州裕锦大酒店，诚邀您来见证我们的幸福时刻",
   },
 
   // ⚠️ 部署前必须改成你「已备案的真实域名」（含 https://，结尾不要带 /）。
