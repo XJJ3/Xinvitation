@@ -125,7 +125,7 @@ export function BgMusic() {
         playsInline
       />
 
-      {/* 右上角金色唱片开关：播放时缓慢旋转 */}
+      {/* 右上角玫瑰色唱片开关：播放时缓慢旋转 */}
       <button
         type="button"
         onClick={toggle}
@@ -142,15 +142,15 @@ export function BgMusic() {
               : { duration: 0.4, ease: "easeOut" }
           }
         >
-          {/* 唱片图标：金色同心圆 + 中心孔 */}
+          {/* 唱片图标：玫瑰色同心圆 + 中心孔 */}
           <svg viewBox="0 0 32 32" className="h-full w-full">
-            <circle cx="16" cy="16" r="14" fill="#560b0c" stroke="#c9a86a" strokeWidth="1.4" />
-            <circle cx="16" cy="16" r="10" fill="none" stroke="rgba(201,168,106,0.4)" strokeWidth="0.8" />
-            <circle cx="16" cy="16" r="6.5" fill="none" stroke="rgba(201,168,106,0.4)" strokeWidth="0.8" />
-            <circle cx="16" cy="16" r="3.4" fill="#c1272d" stroke="#e3c88a" strokeWidth="1" />
-            <circle cx="16" cy="16" r="1" fill="#e3c88a" />
+            <circle cx="16" cy="16" r="14" fill="#542d38" stroke="#f2c3ce" strokeWidth="1.4" />
+            <circle cx="16" cy="16" r="10" fill="none" stroke="rgba(242,195,206,0.4)" strokeWidth="0.8" />
+            <circle cx="16" cy="16" r="6.5" fill="none" stroke="rgba(242,195,206,0.4)" strokeWidth="0.8" />
+            <circle cx="16" cy="16" r="3.4" fill="#c66f84" stroke="#fff8f8" strokeWidth="1" />
+            <circle cx="16" cy="16" r="1" fill="#fff8f8" />
             {/* 高光弧，让唱片有质感 */}
-            <path d="M 8 9 A 11 11 0 0 1 23 8" fill="none" stroke="rgba(227,200,138,0.55)" strokeWidth="1" strokeLinecap="round" />
+            <path d="M 8 9 A 11 11 0 0 1 23 8" fill="none" stroke="rgba(255,248,248,0.55)" strokeWidth="1" strokeLinecap="round" />
           </svg>
         </motion.span>
       </button>

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Ma_Shan_Zheng, Noto_Serif_SC, Lato } from "next/font/google";
+import { Ma_Shan_Zheng, Noto_Serif_SC, Lato, Cormorant_Garamond } from "next/font/google";
 import { siteConfig } from "@/config/site";
 import "./globals.css";
 
@@ -27,6 +27,15 @@ const sans = Lato({
   subsets: ["latin"],
 });
 
+// 西文标题衬线：Cormorant Garamond（请帖各模块的英文小标题）
+const en = Cormorant_Garamond({
+  weight: ["400", "500", "600"],
+  style: ["normal", "italic"],
+  variable: "--font-en",
+  display: "swap",
+  subsets: ["latin"],
+});
+
 export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.url),
   title: siteConfig.share.title,
@@ -49,7 +58,7 @@ export default function RootLayout({
   return (
     <html
       lang="zh-CN"
-      className={`${brush.variable} ${serif.variable} ${sans.variable} h-full antialiased`}
+      className={`${brush.variable} ${serif.variable} ${sans.variable} ${en.variable} h-full antialiased`}
     >
       <body className="min-h-full">{children}</body>
     </html>

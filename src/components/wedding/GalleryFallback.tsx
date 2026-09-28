@@ -21,8 +21,8 @@ export default function GalleryFallback() {
   return (
     <div
       style={{
-        background: "#fdf7f0",
-        color: "#3a1424",
+        background: "#fff8f8",
+        color: "#4f3b40",
         padding: "40px 20px 56px",
         fontFamily: "var(--font-serif, serif)",
         position: "relative",
@@ -33,7 +33,7 @@ export default function GalleryFallback() {
           style={{
             fontFamily: "var(--font-brush, serif)",
             fontSize: 30,
-            color: "#7a2240",
+            color: "#542d38",
             letterSpacing: 6,
           }}
         >
@@ -42,7 +42,7 @@ export default function GalleryFallback() {
         <div
           style={{
             fontSize: 12,
-            color: "#9b3358",
+            color: "#9e4e63",
             letterSpacing: 2,
             marginTop: 8,
             opacity: 0.8,
@@ -54,7 +54,7 @@ export default function GalleryFallback() {
           style={{
             width: 48,
             height: 2,
-            background: "#c9922a",
+            background: "#c66f84",
             margin: "16px auto 0",
           }}
         />
@@ -85,9 +85,9 @@ export default function GalleryFallback() {
             <div
               style={{
                 background: "#fffdf9",
-                border: "3px solid #c9922a",
+                border: "3px solid #c66f84",
                 borderRadius: 6,
-                boxShadow: "0 4px 16px rgba(58, 20, 36, 0.14)",
+                boxShadow: "0 4px 16px rgba(92, 46, 58, 0.14)",
                 padding: "10px 10px 16px",
               }}
             >
@@ -108,13 +108,13 @@ export default function GalleryFallback() {
                 style={{
                   fontFamily: "var(--font-brush, serif)",
                   fontSize: 22,
-                  color: "#7a2240",
+                  color: "#542d38",
                   marginTop: 12,
                 }}
               >
                 {photo.label}
               </div>
-              <div style={{ fontSize: 13, color: "#9b6a3a", marginTop: 4 }}>
+              <div style={{ fontSize: 13, color: "#8b7379", marginTop: 4 }}>
                 {photo.sub}
               </div>
             </div>
@@ -128,7 +128,7 @@ export default function GalleryFallback() {
           marginTop: 40,
           fontFamily: "var(--font-brush, serif)",
           fontSize: 16,
-          color: "#9b3358",
+          color: "#9e4e63",
           opacity: 0.85,
         }}
       >
@@ -144,7 +144,7 @@ export default function GalleryFallback() {
           style={{
             position: "fixed",
             inset: 0,
-            background: "rgba(30, 14, 20, 0.92)",
+            background: "rgba(62, 31, 40, 0.92)",
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
@@ -162,7 +162,7 @@ export default function GalleryFallback() {
               maxWidth: "100%",
               maxHeight: "80vh",
               objectFit: "contain",
-              border: "2px solid #c9922a",
+              border: "2px solid #c66f84",
               borderRadius: 4,
             }}
           />
@@ -170,19 +170,19 @@ export default function GalleryFallback() {
             style={{
               fontFamily: "var(--font-brush, serif)",
               fontSize: 22,
-              color: "#e8b84b",
+              color: "#f2c3ce",
               marginTop: 16,
             }}
           >
             {PHOTOS[lightbox].label}
           </div>
-          <div style={{ fontSize: 13, color: "#f7ede0", marginTop: 6 }}>
+          <div style={{ fontSize: 13, color: "#fff8f8", marginTop: 6 }}>
             {PHOTOS[lightbox].sub}
           </div>
           <div
             style={{
               fontSize: 12,
-              color: "rgba(247, 237, 224, 0.55)",
+              color: "rgba(255, 248, 248, 0.6)",
               marginTop: 14,
               letterSpacing: 1,
             }}
