@@ -651,21 +651,17 @@ function LoveSection() {
           <div className="inv-wall-send">
           {sent > 0 && <span key={`h-${sent}`} className="inv-send-hearts" aria-hidden><b>♥</b><b>♥</b><b>♥</b></span>}
           <div key={`in-${shake}`} className={`inv-wall-input ${shake ? "shake" : ""}`}>
-            <input
-              value={wish}
-              maxLength={40}
-              onChange={e => { setWish(e.target.value); if (hint) setHint("") }}
-              onKeyDown={e => e.key === "Enter" && send()}
-              placeholder="写下一句祝福…"
-              aria-label="祝福内容"
-            />
-            <button type="button" className={`dice ${rolling ? "roll" : ""}`} onClick={shuffle} aria-label="换一句">🎲</button>
+            {/* 不支持自主输入：轻触祝福语随机换一句，满意后发送 */}
+            <button type="button" className="wish" onClick={() => { shuffle(); if (hint) setHint("") }} aria-label={`当前祝福：${wish}，轻触换一句`}>
+              <span key={wish}>{wish}</span>
+            </button>
+            <button type="button" className={`dice ${rolling ? "roll" : ""}`} onClick={() => { shuffle(); if (hint) setHint("") }} aria-label="换一句">🎲</button>
             <button type="button" key={`s-${sent}`} className={`send ${sent ? "go" : ""}`} onClick={send} aria-label="发送祝福">
               <Icon name="send" />
             </button>
           </div>
           </div>
-          <p className="inv-wall-hint" role={hint ? "alert" : undefined}>{hint || "已为你写好一句，点 🎲 随机换一句，也可以自己改"}</p>
+          <p className="inv-wall-hint" role={hint ? "alert" : undefined}>{hint || "轻触祝福语随机换一句，选好后点发送"}</p>
         </div>
       </Reveal>
     </section>
