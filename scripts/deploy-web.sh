@@ -15,6 +15,7 @@ for i in 1 2 3; do
   echo "构建失败，重试第 $((i + 1)) 次…"
 done
 
-rsync -az --no-owner --no-group --chmod=D755,F644 out/ "$SSH_HOST:$WEB_ROOT/"
-ssh "$SSH_HOST" "chown -R root:root $WEB_ROOT"
+# macOS 自带 rsync 不支持 --chmod，权限在服务器上统一修正
+rsync -rltz out/ "$SSH_HOST:$WEB_ROOT/"
+ssh "$SSH_HOST" "chown -R root:root $WEB_ROOT && find $WEB_ROOT -type d -exec chmod 755 {} + && find $WEB_ROOT -type f -exec chmod 644 {} +"
 echo "已发布到 $SSH_HOST:$WEB_ROOT"
