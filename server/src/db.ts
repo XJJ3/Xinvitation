@@ -55,6 +55,19 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_blessings_time ON blessings(hidden, created_at);
 `)
 
+// 幂等迁移：visitors 补充姓名与回执字段（老库缺列时补齐，每次启动安全执行）
+const visitorColumns = new Set(
+  (db.prepare("PRAGMA table_info(visitors)").all() as { name: string }[]).map(c => c.name),
+)
+const MIGRATIONS: [string, string][] = [
+  ["name", "ALTER TABLE visitors ADD COLUMN name TEXT"],
+  ["attending", "ALTER TABLE visitors ADD COLUMN attending INTEGER"],
+  ["guests", "ALTER TABLE visitors ADD COLUMN guests INTEGER"],
+]
+for (const [col, sql] of MIGRATIONS) {
+  if (!visitorColumns.has(col)) db.exec(sql)
+}
+
 const updateVisitor = db.prepare(
   "UPDATE visitors SET fp = COALESCE(?, fp), ip = ?, ua = ?, last_at = ? WHERE vid = ?",
 )

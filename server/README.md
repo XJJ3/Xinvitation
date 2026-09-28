@@ -22,8 +22,9 @@
 |---|---|---|
 | GET | `/api/health` | 健康检查 |
 | POST | `/api/track` | 埋点 `{ vid, fp?, type }`，type ∈ visit / love / fortune / blessing / share / nav / music |
-| GET | `/api/love?vid=` | `{ count, lit }` 点亮总数、本访客是否已点亮 |
-| POST | `/api/love` | `{ vid, fp? }` 点亮（每访客只计一次，每次点击另记一条 love 事件） |
+| GET | `/api/love?vid=` | `{ count, lit }` 累计点亮点击次数、本访客是否已点亮 |
+| POST | `/api/love` | `{ vid, fp? }` 点亮（每访客只点亮一次，每次点击都累计一条 love 事件） |
+| POST | `/api/rsvp` | `{ vid, fp?, name, attending, guests? }` 赴约回执：姓名（≤20 字）+ 出席状态 + 出席人数落库到 visitors |
 | GET | `/api/blessings?limit=100` | 祝福墙（不含已隐藏） |
 | GET | `/api/wx-signature?url=` | 微信 JS-SDK 签名 `{ appId, timestamp, nonceStr, signature }`（仅允许 `WX_SIGN_DOMAINS` 下的页面） |
 | POST | `/api/blessings` | `{ vid, fp?, content }`，≤40 字，屏蔽网址/长数字/广告词，每 IP 每分钟 6 条 |
@@ -37,6 +38,9 @@
 
 管理接口需 `Authorization: Bearer <ADMIN_TOKEN>`；未配置或少于 16 位时管理接口整体禁用。
 所有错误统一返回 `{ "error": "中文提示" }`。
+
+> `visitors` 表含 `name`（姓名）、`attending`（0=缺席 1=赴约 NULL=未回复）、`guests`（出席人数）三个可选列，
+> 由启动时的幂等迁移自动补齐，通过 `POST /api/rsvp` 写入。
 
 ## 本地开发
 

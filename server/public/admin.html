@@ -59,7 +59,7 @@
 "use strict";
 const TOKEN_KEY = "inv-admin-token";
 const TABS = [["overview", "概览"], ["lights", "点亮名单"], ["visitors", "宾客"], ["blessings", "祝福留言"], ["export", "导出"]];
-const TYPE_NAMES = { visit: "打开请帖", love: "点击爱心", fortune: "摇签", blessing: "祝福", share: "分享", nav: "导航", music: "音乐" };
+const TYPE_NAMES = { visit: "打开请帖", love: "点击爱心", fortune: "摇签", blessing: "祝福", share: "分享", nav: "导航", music: "音乐", rsvp: "赴约回执" };
 const REMEMBER_MS = 30 * 24 * 3600 * 1000;
 // 登录后在本机记住 30 天，免得每次输入
 function loadToken() {
@@ -155,6 +155,8 @@ function renderLogin(msg = "") {
 function guestTags(r) {
   return [
     r.litAt ? h("span", { class: "tag" }, "♥ 已点亮") : null,
+    r.attending === 1 ? h("span", { class: "tag" }, `✓ 赴约 (${r.guests ?? 1}人)`) : null,
+    r.attending === 0 ? h("span", { class: "tag warn" }, "✗ 缺席") : null,
     r.blessings ? h("span", { class: "tag" }, `祝福 ${r.blessings}`) : null,
     r.sameFp > 1 ? h("span", { class: "tag warn", title: "指纹相同的宾客数：可能是同一人清缓存/换浏览器，也可能只是同款手机" }, `同指纹 ${r.sameFp} 人`) : null,
   ];
@@ -180,6 +182,9 @@ function searchBar(placeholder, rerender) {
   return input;
 }
 
+// 带姓名时优先展示姓名（rsvp 绑定过），编号始终保留
+const guestLabel = r => r.name ? `宾客 ${r.name} · #${r.no}` : `宾客 #${r.no}`;
+
 const views = {
   async overview(box) {
     const s = await api("/api/admin/stats");
@@ -201,9 +206,9 @@ const views = {
     const rows = await api("/api/admin/lights");
     const list = h("div", { class: "list" });
     const draw = () => {
-      const shown = filterRows(rows, ["vid", "fp", "ip"]);
+      const shown = filterRows(rows, ["name", "vid", "fp", "ip"]);
       list.replaceChildren(...(shown.length ? shown.map(r => h("div", { class: "item" },
-        h("div", { class: "top" }, h("span", { class: "guest" }, `宾客 #${r.no}`), h("span", {}, `${fmt(r.litAt)} 点亮`), ...guestTags(r)),
+        h("div", { class: "top" }, h("span", { class: "guest" }, guestLabel(r)), h("span", {}, `${fmt(r.litAt)} 点亮`), ...guestTags(r)),
         guestMeta(r))) : [h("div", { class: "empty" }, rows.length ? "没有匹配的宾客" : "还没有人点亮")]));
     };
     box.append(
@@ -217,9 +222,9 @@ const views = {
     const rows = await api("/api/admin/visitors");
     const list = h("div", { class: "list" });
     const draw = () => {
-      const shown = filterRows(rows, ["vid", "fp", "ip"]);
+      const shown = filterRows(rows, ["name", "vid", "fp", "ip"]);
       list.replaceChildren(...(shown.length ? shown.map(r => h("div", { class: "item" },
-        h("div", { class: "top" }, h("span", { class: "guest" }, `宾客 #${r.no}`), ...guestTags(r)),
+        h("div", { class: "top" }, h("span", { class: "guest" }, guestLabel(r)), ...guestTags(r)),
         guestMeta(r))) : [h("div", { class: "empty" }, "暂无宾客")]));
     };
     box.append(h("div", { class: "toolbar" }, h("b", {}, `共 ${rows.length} 位宾客`), searchBar("搜索 #编号 / 设备 / IP / ID", draw)), list);
@@ -231,7 +236,7 @@ const views = {
     const list = h("div", { class: "list" });
     const draw = () => {
       const q = state.q.trim();
-      const shown = q ? rows.filter(r => r.content.includes(q) || `#${r.no}` === q) : rows;
+      const shown = q ? rows.filter(r => r.content.includes(q) || (r.name || "").includes(q) || `#${r.no}` === q) : rows;
       list.replaceChildren(...(shown.length ? shown.map(r => {
         const btn = h("button", {}, r.hidden ? "恢复显示" : "隐藏");
         btn.addEventListener("click", async () => {
@@ -240,7 +245,7 @@ const views = {
           catch (e) { alert(e.message); btn.disabled = false; }
         });
         return h("div", { class: `item${r.hidden ? " hidden" : ""}` },
-          h("div", { class: "top" }, h("span", { class: "guest" }, r.no ? `宾客 #${r.no}` : "宾客"), h("span", { class: "meta", style: "margin:0" }, fmt(r.createdAt)),
+          h("div", { class: "top" }, h("span", { class: "guest" }, r.no ? guestLabel(r) : "宾客"), h("span", { class: "meta", style: "margin:0" }, fmt(r.createdAt)),
             r.hidden ? h("span", { class: "tag off" }, "已隐藏") : null, h("span", { class: "actions" }, btn)),
           h("div", { class: "content" }, r.content),
           h("div", { class: "meta" }, `${device(r.ua)} · IP ${r.ip || "—"}`));

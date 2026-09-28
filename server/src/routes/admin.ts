@@ -45,7 +45,7 @@ const T = (col: string) => `datetime(${col} / 1000, 'unixepoch', '+8 hours')`
 
 // 每位宾客的行为汇总；same_fp = 与其指纹相同的宾客数（>1 说明可能是同一人换了浏览器/清了缓存，也可能只是同款手机）
 const VISITOR_SQL = `
-  SELECT v.no, v.vid, v.fp, v.ip, v.ua, v.first_at AS firstAt, v.last_at AS lastAt,
+  SELECT v.no, v.vid, v.name, v.attending, v.guests, v.fp, v.ip, v.ua, v.first_at AS firstAt, v.last_at AS lastAt,
          l.created_at AS litAt,
          (SELECT COUNT(*) FROM events e WHERE e.vid = v.vid AND e.type = 'visit') AS visits,
          (SELECT COUNT(*) FROM events e WHERE e.vid = v.vid AND e.type = 'love')  AS loveClicks,
@@ -54,14 +54,14 @@ const VISITOR_SQL = `
   FROM visitors v LEFT JOIN lights l ON l.vid = v.vid`
 
 const EXPORTS = {
-  lights: `SELECT v.no AS guest_no, l.vid, v.fp, v.ip, v.ua, ${T("l.created_at")} AS lit_time,
+  lights: `SELECT v.no AS guest_no, v.name, l.vid, v.fp, v.ip, v.ua, ${T("l.created_at")} AS lit_time,
              (SELECT COUNT(*) FROM events e WHERE e.vid = l.vid AND e.type = 'love') AS love_clicks
            FROM lights l LEFT JOIN visitors v ON v.vid = l.vid ORDER BY l.created_at`,
-  blessings: `SELECT b.id, v.no AS guest_no, b.content, b.hidden, b.vid, b.ip, b.ua, ${T("b.created_at")} AS time
+  blessings: `SELECT b.id, v.no AS guest_no, v.name, b.content, b.hidden, b.vid, b.ip, b.ua, ${T("b.created_at")} AS time
               FROM blessings b LEFT JOIN visitors v ON v.vid = b.vid ORDER BY b.id`,
   events: `SELECT e.id, v.no AS guest_no, e.type, e.vid, e.ip, e.ua, e.ref, ${T("e.created_at")} AS time
            FROM events e LEFT JOIN visitors v ON v.vid = e.vid ORDER BY e.id`,
-  visitors: `SELECT no AS guest_no, vid, fp, ip, ua, visits, loveClicks AS love_clicks, blessings,
+  visitors: `SELECT no AS guest_no, vid, name, attending, guests, fp, ip, ua, visits, loveClicks AS love_clicks, blessings,
                CASE WHEN litAt IS NULL THEN '' ELSE ${T("litAt")} END AS lit_time,
                ${T("firstAt")} AS first_time, ${T("lastAt")} AS last_time
              FROM (${VISITOR_SQL}) ORDER BY no`,
@@ -111,7 +111,7 @@ export async function adminRoutes(app: FastifyInstance) {
 
   app.get("/api/admin/blessings", async () =>
     db.prepare(
-      `SELECT b.id, b.content, b.hidden, b.vid, v.no, b.ip, b.ua, b.created_at AS createdAt
+      `SELECT b.id, b.content, b.hidden, b.vid, v.no, v.name, b.ip, b.ua, b.created_at AS createdAt
        FROM blessings b LEFT JOIN visitors v ON v.vid = b.vid ORDER BY b.id DESC`,
     ).all(),
   )

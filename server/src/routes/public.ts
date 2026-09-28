@@ -25,9 +25,10 @@ function visit(req: FastifyRequest, who: Ident, now: number) {
 
 const stmt = {
   insertEvent: db.prepare("INSERT INTO events (type, vid, ip, ua, ref, created_at) VALUES (?, ?, ?, ?, ?, ?)"),
-  lightCount: db.prepare("SELECT COUNT(*) AS n FROM lights"),
+  loveClickCount: db.prepare("SELECT COUNT(*) AS n FROM events WHERE type = 'love'"),
   hasLight: db.prepare("SELECT 1 AS x FROM lights WHERE vid = ?"),
   insertLight: db.prepare("INSERT OR IGNORE INTO lights (vid, created_at) VALUES (?, ?)"),
+  updateRsvp: db.prepare("UPDATE visitors SET name = ?, attending = ?, guests = ?, last_at = ? WHERE vid = ?"),
   listBlessings: db.prepare(
     "SELECT id, content, created_at AS createdAt FROM blessings WHERE hidden = 0 ORDER BY id DESC LIMIT ?",
   ),
@@ -38,7 +39,8 @@ const stmt = {
 }
 
 const loveState = (vid?: string) => ({
-  count: Number(stmt.lightCount.get()?.n ?? 0),
+  // 计数 = 累计点击次数（每次点击记一条 love 事件）；点亮人数见管理接口的 lights 表
+  count: Number(stmt.loveClickCount.get()?.n ?? 0),
   lit: vid ? Boolean(stmt.hasLight.get(vid)) : false,
 })
 
@@ -101,5 +103,34 @@ export async function publicRoutes(app: FastifyInstance) {
     const { ip, ua } = visit(req, req.body, now)
     const item = stmt.insertBlessing.get(req.body.vid, content, ip, ua, now)
     return reply.code(201).send({ item })
+  })
+
+  const NAME_MAX = 20
+
+  // 赴约回执：把姓名/出席状态/出席人数绑定到宾客
+  app.post<{ Body: Ident & { name: string; attending: boolean; guests?: number } }>("/api/rsvp", {
+    config: { rateLimit: { max: 10, timeWindow: "1 minute" } },
+    schema: {
+      body: {
+        type: "object",
+        required: ["vid", "name", "attending"],
+        properties: {
+          vid: VID,
+          fp: FP,
+          name: { type: "string", maxLength: 100 },
+          attending: { type: "boolean" },
+          guests: { type: "integer", minimum: 1, maximum: 20, default: 1 },
+        },
+      },
+    },
+  }, async (req, reply) => {
+    const name = clean(req.body.name)
+    if (!name) return reply.code(400).send({ error: "请填写您的姓名" })
+    if ([...name].length > NAME_MAX) return reply.code(400).send({ error: "姓名过长" })
+    const now = Date.now()
+    visit(req, req.body, now)
+    stmt.updateRsvp.run(name, req.body.attending ? 1 : 0, req.body.guests ?? 1, now, req.body.vid)
+    stmt.insertEvent.run("rsvp", req.body.vid, req.ip, String(req.headers["user-agent"] ?? "").slice(0, 300), null, now)
+    return { ok: true, name, attending: req.body.attending, guests: req.body.guests ?? 1 }
   })
 }
