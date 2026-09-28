@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>请帖后台</title>
+<link rel="icon" href="data:,">
+<style>
+  :root { --rose: #c66f84; --rose-d: #9e4e63; --wine: #542d38; --blush: #f7e3e7; --bg: #fff8f8; --line: #ecd4d9; --ink: #4f3b40; --muted: #8b7379; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.6 -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; color: var(--ink); background: var(--bg); }
+  header { position: sticky; top: 0; z-index: 5; background: var(--wine); color: #fff; padding: 12px 16px; display: flex; align-items: center; gap: 12px; }
+  header h1 { font-size: 17px; margin: 0; flex: 1; letter-spacing: 2px; }
+  header small { opacity: .7; font-size: 12px; }
+  button { font: inherit; border: 1px solid var(--rose); background: #fff; color: var(--rose-d); border-radius: 999px; padding: 5px 14px; cursor: pointer; }
+  button.primary { background: var(--rose); color: #fff; }
+  button:disabled { opacity: .5; cursor: default; }
+  header button { border-color: rgba(255,255,255,.5); background: transparent; color: #fff; padding: 4px 12px; }
+  main { max-width: 960px; margin: 0 auto; padding: 16px; }
+  nav { display: flex; gap: 8px; margin-bottom: 16px; overflow-x: auto; scrollbar-width: none; }
+  nav button { white-space: nowrap; flex-shrink: 0; }
+  nav button.on { background: var(--rose); color: #fff; }
+  .login { max-width: 360px; margin: 18vh auto 0; background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 28px 24px; text-align: center; }
+  .login input { width: 100%; padding: 10px 14px; border: 1px solid var(--line); border-radius: 999px; font: inherit; margin: 16px 0 12px; outline: none; }
+  .err { color: #c0392b; min-height: 1.6em; font-size: 13px; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px; }
+  .card { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; }
+  .card b { display: block; font-size: 26px; color: var(--wine); font-weight: 600; }
+  .card span { color: var(--muted); font-size: 12px; }
+  h2 { font-size: 15px; color: var(--wine); margin: 20px 0 10px; }
+  .table-wrap { overflow-x: auto; background: #fff; border: 1px solid var(--line); border-radius: 14px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { padding: 9px 12px; text-align: left; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th { color: var(--muted); font-weight: 500; background: #fdf3f5; }
+  tr:last-child td { border-bottom: 0; }
+  td.wrap { white-space: normal; min-width: 180px; }
+  .list { display: grid; gap: 10px; }
+  .item { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; }
+  .item .top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .guest { font-weight: 600; color: var(--wine); }
+  .tag { font-size: 11px; padding: 1px 8px; border-radius: 999px; background: var(--blush); color: var(--rose-d); }
+  .tag.warn { background: #fff1d6; color: #9a6400; }
+  .tag.off { background: #eee; color: #888; }
+  .meta { color: var(--muted); font-size: 12px; margin-top: 4px; word-break: break-all; }
+  .content { margin: 6px 0 2px; font-size: 15px; }
+  .item.hidden .content { color: #aaa; text-decoration: line-through; }
+  .item .actions { margin-left: auto; }
+  .toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+  .toolbar input { flex: 1; min-width: 160px; padding: 6px 14px; border: 1px solid var(--line); border-radius: 999px; font: inherit; outline: none; }
+  .empty { text-align: center; color: var(--muted); padding: 40px 0; }
+  .hint { color: var(--muted); font-size: 12px; margin: -4px 0 12px; }
+  .mono { font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+"use strict";
+const TOKEN_KEY = "inv-admin-token";
+const TABS = [["overview", "概览"], ["lights", "点亮名单"], ["visitors", "宾客"], ["blessings", "祝福留言"], ["export", "导出"]];
+const TYPE_NAMES = { visit: "打开请帖", love: "点击爱心", fortune: "摇签", blessing: "祝福", share: "分享", nav: "导航", music: "音乐" };
+const state = { token: sessionStorage.getItem(TOKEN_KEY) || "", tab: "overview", q: "" };
+const app = document.getElementById("app");
+
+// 极简 DOM 构建：所有文本都走 textContent，杜绝 XSS
+function h(tag, props, ...kids) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(props || {})) {
+    if (v == null || v === false) continue;
+    if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+    else if (k === "class") el.className = v;
+    else el.setAttribute(k, v === true ? "" : v);
+  }
+  for (const kid of kids.flat()) if (kid != null && kid !== false) el.append(kid instanceof Node ? kid : document.createTextNode(String(kid)));
+  return el;
+}
+
+const pad = n => String(n).padStart(2, "0");
+function fmt(ms) {
+  if (!ms) return "—";
+  const d = new Date(ms);
+  return `${d.getMonth() + 1}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+function ago(ms) {
+  const s = (Date.now() - ms) / 1000;
+  if (s < 60) return "刚刚";
+  if (s < 3600) return `${Math.floor(s / 60)} 分钟前`;
+  if (s < 86400) return `${Math.floor(s / 3600)} 小时前`;
+  return `${Math.floor(s / 86400)} 天前`;
+}
+
+// 从 UA 提取「设备 · 系统 · 环境」，便于辨认是谁的手机
+function device(ua) {
+  if (!ua) return "未知设备";
+  let dev = "", os = "", env = "";
+  let m;
+  if ((m = ua.match(/iPhone OS (\d+)[_.](\d+)/))) { dev = "iPhone"; os = `iOS ${m[1]}.${m[2]}`; }
+  else if ((m = ua.match(/iPad.*OS (\d+)[_.](\d+)/))) { dev = "iPad"; os = `iPadOS ${m[1]}.${m[2]}`; }
+  else if ((m = ua.match(/Android (\d+(?:\.\d+)?)/))) {
+    os = `Android ${m[1]}`;
+    const model = ua.match(/Android [^;)]*;\s*(?:[a-z]{2}-[a-z]{2};\s*)?([^;)]+?)(?:\s+Build\/|\))/i);
+    dev = model && model[1] !== "K" ? model[1].trim() : "Android 手机";
+  }
+  else if (/Macintosh/.test(ua)) { dev = "Mac"; }
+  else if (/Windows/.test(ua)) { dev = "Windows 电脑"; }
+  if ((m = ua.match(/MicroMessenger\/([\d.]+)/))) env = `微信 ${m[1].split(".").slice(0, 2).join(".")}`;
+  else if (/QQ\//.test(ua)) env = "QQ";
+  else if (/Edg\//.test(ua)) env = "Edge";
+  else if (/Chrome\//.test(ua)) env = "Chrome";
+  else if (/Safari\//.test(ua)) env = "Safari";
+  else if (/curl\//.test(ua)) env = "curl";
+  return [dev, os, env].filter(Boolean).join(" · ") || ua.slice(0, 40);
+}
+
+async function api(path, opts = {}) {
+  const res = await fetch(path, { ...opts, headers: { Authorization: `Bearer ${state.token}`, ...(opts.body ? { "Content-Type": "application/json" } : {}) } });
+  if (res.status === 401 || res.status === 503) { const e = new Error(res.status === 503 ? "服务端未配置 ADMIN_TOKEN" : "令牌不正确"); e.auth = true; throw e; }
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || `请求失败 ${res.status}`);
+  return opts.raw ? res : res.json();
+}
+
+function logout(msg) {
+  state.token = ""; sessionStorage.removeItem(TOKEN_KEY); renderLogin(msg);
+}
+
+function renderLogin(msg = "") {
+  const input = h("input", { type: "password", placeholder: "管理令牌 ADMIN_TOKEN", autocomplete: "current-password" });
+  const err = h("div", { class: "err" }, msg);
+  const go = async () => {
+    state.token = input.value.trim();
+    if (!state.token) return;
+    try { await api("/api/admin/stats"); sessionStorage.setItem(TOKEN_KEY, state.token); render(); }
+    catch (e) { err.textContent = e.message; }
+  };
+  input.addEventListener("keydown", e => e.key === "Enter" && go());
+  app.replaceChildren(h("div", { class: "login" },
+    h("div", { style: "font-size:32px" }, "囍"),
+    h("div", { style: "font-size:16px;color:var(--wine);letter-spacing:2px" }, "请帖后台"),
+    input, h("button", { class: "primary", onclick: go, style: "width:100%" }, "进入"), err));
+  input.focus();
+}
+
+function guestTags(r) {
+  return [
+    r.litAt ? h("span", { class: "tag" }, "♥ 已点亮") : null,
+    r.blessings ? h("span", { class: "tag" }, `祝福 ${r.blessings}`) : null,
+    r.sameFp > 1 ? h("span", { class: "tag warn", title: "指纹相同的宾客数：可能是同一人清缓存/换浏览器，也可能只是同款手机" }, `同指纹 ${r.sameFp} 人`) : null,
+  ];
+}
+
+function guestMeta(r) {
+  return h("div", { class: "meta" },
+    `${device(r.ua)} · IP ${r.ip || "—"} · 打开 ${r.visits} 次 · 点爱心 ${r.loveClicks} 次`,
+    h("br"),
+    h("span", { class: "mono" }, `ID ${r.vid.slice(0, 12)}…  指纹 ${r.fp ? r.fp.slice(0, 12) : "—"}`),
+    `  · 首次 ${fmt(r.firstAt)} · 最近 ${ago(r.lastAt)}`);
+}
+
+function filterRows(rows, keys) {
+  const q = state.q.trim().toLowerCase();
+  if (!q) return rows;
+  return rows.filter(r => keys.some(k => String(r[k] ?? "").toLowerCase().includes(q)) || device(r.ua).toLowerCase().includes(q) || `#${r.no}` === q);
+}
+
+function searchBar(placeholder, rerender) {
+  const input = h("input", { placeholder, value: state.q });
+  input.addEventListener("input", () => { state.q = input.value; rerender(); });
+  return input;
+}
+
+const views = {
+  async overview(box) {
+    const s = await api("/api/admin/stats");
+    box.append(
+      h("div", { class: "cards" },
+        [["打开次数 PV", s.pv], ["宾客数", s.uv], ["点亮人数", s.lights], ["祝福留言", s.blessings], ["隐藏的祝福", s.hiddenBlessings], ["不同指纹", s.fingerprints]]
+          .map(([k, v]) => h("div", { class: "card" }, h("b", {}, v), h("span", {}, k)))),
+      h("h2", {}, "各类点击"),
+      h("div", { class: "table-wrap" }, h("table", {},
+        h("tr", {}, h("th", {}, "行为"), h("th", {}, "次数"), h("th", {}, "人数")),
+        s.clicks.map(c => h("tr", {}, h("td", {}, TYPE_NAMES[c.type] || c.type), h("td", {}, c.n), h("td", {}, c.visitors))))),
+      h("h2", {}, "每日趋势"),
+      h("div", { class: "table-wrap" }, h("table", {},
+        h("tr", {}, h("th", {}, "日期"), h("th", {}, "打开次数"), h("th", {}, "打开人数"), h("th", {}, "全部事件")),
+        s.daily.map(d => h("tr", {}, h("td", {}, d.day), h("td", {}, d.pv), h("td", {}, d.uv), h("td", {}, d.events))))));
+  },
+
+  async lights(box) {
+    const rows = await api("/api/admin/lights");
+    const list = h("div", { class: "list" });
+    const draw = () => {
+      const shown = filterRows(rows, ["vid", "fp", "ip"]);
+      list.replaceChildren(...(shown.length ? shown.map(r => h("div", { class: "item" },
+        h("div", { class: "top" }, h("span", { class: "guest" }, `宾客 #${r.no}`), h("span", {}, `${fmt(r.litAt)} 点亮`), ...guestTags(r)),
+        guestMeta(r))) : [h("div", { class: "empty" }, rows.length ? "没有匹配的宾客" : "还没有人点亮")]));
+    };
+    box.append(
+      h("div", { class: "toolbar" }, h("b", {}, `共 ${rows.length} 人点亮`), searchBar("搜索 #编号 / 设备 / IP / ID", draw)),
+      h("p", { class: "hint" }, "宾客编号按首次打开请帖的先后分配。未做微信授权，无法得知姓名，可结合设备、IP 和时间辨认。"),
+      list);
+    draw();
+  },
+
+  async visitors(box) {
+    const rows = await api("/api/admin/visitors");
+    const list = h("div", { class: "list" });
+    const draw = () => {
+      const shown = filterRows(rows, ["vid", "fp", "ip"]);
+      list.replaceChildren(...(shown.length ? shown.map(r => h("div", { class: "item" },
+        h("div", { class: "top" }, h("span", { class: "guest" }, `宾客 #${r.no}`), ...guestTags(r)),
+        guestMeta(r))) : [h("div", { class: "empty" }, "暂无宾客")]));
+    };
+    box.append(h("div", { class: "toolbar" }, h("b", {}, `共 ${rows.length} 位宾客`), searchBar("搜索 #编号 / 设备 / IP / ID", draw)), list);
+    draw();
+  },
+
+  async blessings(box) {
+    const rows = await api("/api/admin/blessings");
+    const list = h("div", { class: "list" });
+    const draw = () => {
+      const q = state.q.trim();
+      const shown = q ? rows.filter(r => r.content.includes(q) || `#${r.no}` === q) : rows;
+      list.replaceChildren(...(shown.length ? shown.map(r => {
+        const btn = h("button", {}, r.hidden ? "恢复显示" : "隐藏");
+        btn.addEventListener("click", async () => {
+          btn.disabled = true;
+          try { await api(`/api/admin/blessings/${r.id}`, { method: "PATCH", body: JSON.stringify({ hidden: !r.hidden }) }); r.hidden = r.hidden ? 0 : 1; draw(); }
+          catch (e) { alert(e.message); btn.disabled = false; }
+        });
+        return h("div", { class: `item${r.hidden ? " hidden" : ""}` },
+          h("div", { class: "top" }, h("span", { class: "guest" }, r.no ? `宾客 #${r.no}` : "宾客"), h("span", { class: "meta", style: "margin:0" }, fmt(r.createdAt)),
+            r.hidden ? h("span", { class: "tag off" }, "已隐藏") : null, h("span", { class: "actions" }, btn)),
+          h("div", { class: "content" }, r.content),
+          h("div", { class: "meta" }, `${device(r.ua)} · IP ${r.ip || "—"}`));
+      }) : [h("div", { class: "empty" }, "还没有祝福")]));
+    };
+    box.append(h("div", { class: "toolbar" }, h("b", {}, `共 ${rows.length} 条`), searchBar("搜索祝福内容 / #编号", draw)),
+      h("p", { class: "hint" }, "隐藏后请帖祝福墙上立即不再显示，可随时恢复。"), list);
+    draw();
+  },
+
+  async export(box) {
+    const kinds = [["lights", "点亮名单"], ["visitors", "宾客汇总"], ["blessings", "祝福留言"], ["events", "全部点击明细"]];
+    box.append(h("p", { class: "hint" }, "CSV 可直接用 Excel 打开。"),
+      h("div", { class: "list" }, kinds.map(([k, name]) => {
+        const btn = h("button", { class: "primary" }, "下载 CSV");
+        btn.addEventListener("click", async () => {
+          btn.disabled = true;
+          try {
+            const res = await api(`/api/admin/export/${k}`, { raw: true });
+            const name = (res.headers.get("Content-Disposition") || "").match(/filename="([^"]+)"/);
+            const a = h("a", { href: URL.createObjectURL(await res.blob()), download: name ? name[1] : `${k}.csv` });
+            document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+          } catch (e) { alert(e.message); }
+          btn.disabled = false;
+        });
+        return h("div", { class: "item" }, h("div", { class: "top" }, h("span", { class: "guest" }, name), h("span", { class: "actions" }, btn)));
+      })));
+  },
+};
+
+async function render() {
+  const box = h("div");
+  app.replaceChildren(
+    h("header", {}, h("h1", {}, "囍 请帖后台"), h("small", {}, new Date().toLocaleTimeString()),
+      h("button", { onclick: () => render() }, "刷新"), h("button", { onclick: () => logout("") }, "退出")),
+    h("main", {},
+      h("nav", {}, TABS.map(([k, name]) => h("button", { class: state.tab === k ? "on" : "", onclick: () => { state.tab = k; state.q = ""; render(); } }, name))),
+      box));
+  try { await views[state.tab](box); }
+  catch (e) { if (e.auth) logout(e.message); else box.append(h("div", { class: "empty" }, e.message)); }
+}
+
+state.token ? render() : renderLogin();
+</script>
+</body>
+</html>

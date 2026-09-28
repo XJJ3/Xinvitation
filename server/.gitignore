@@ -1,0 +1,6 @@
+node_modules/
+dist/
+data/
+.env
+# 根 .gitignore 忽略了 .env*，这里把示例文件放回版本库
+!.env.example
