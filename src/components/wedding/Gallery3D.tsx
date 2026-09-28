@@ -7,13 +7,10 @@ import GalleryFallback from "./GalleryFallback";
 import { WeddingGallery } from "./weddingGallery";
 
 const PHOTOS = siteConfig.wedding.photos.gallery;
-const TITLE = "爱的画廊";
+const TITLE = "婚礼画廊";
 const NAMES = siteConfig.wedding.footer.namesLine;
 const DATE = "2026.11.10";
-const WALL_PHOTOS = [
-  siteConfig.wedding.photos.flips[0].front,
-  siteConfig.wedding.photos.flips[1].back,
-] as const;
+const WALL_PHOTOS = siteConfig.wedding.photos.wallPhotos;
 
 type Mode = "pending" | "3d" | "css";
 type Phase = "loading" | "ready" | "entered";
@@ -153,6 +150,43 @@ export default function Gallery3D() {
     galleryRef.current?.setOutdoor(next);
   }, [outdoor]);
 
+  const lookActive = phase === "entered" && locked;
+
+  const rootRef = useRef<HTMLDivElement>(null);
+  const leave = useCallback(
+    (dir: 1 | -1) => {
+      const sec = rootRef.current?.closest("section");
+      const target = dir > 0 ? sec?.nextElementSibling : sec?.previousElementSibling;
+      exit();
+      target?.scrollIntoView({ behavior: "smooth" });
+    },
+    [exit],
+  );
+
+  // 漫游中滚轮不参与 3D 操作，攒够一格就当翻页：退出画廊并滚到相邻模块。
+  // 翻页后多拦 800ms，触控板的惯性滚动会打断平滑滚动、一次冲过好几个模块
+  useEffect(() => {
+    if (!lookActive) return;
+    let acc = 0;
+    let last = 0;
+    let fired = false;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      if (fired) return;
+      if (e.timeStamp - last > 300) acc = 0;
+      last = e.timeStamp;
+      acc += e.deltaY;
+      if (Math.abs(acc) < 80) return;
+      fired = true;
+      leave(acc > 0 ? 1 : -1);
+    };
+    window.addEventListener("wheel", onWheel, { passive: false });
+    return () => {
+      if (fired) window.setTimeout(() => window.removeEventListener("wheel", onWheel), 800);
+      else window.removeEventListener("wheel", onWheel);
+    };
+  }, [lookActive, leave]);
+
   if (mode === "css") return <GalleryFallback />;
 
   const hints: [string, string][] = isTouch
@@ -169,17 +203,19 @@ export default function Gallery3D() {
 
   return (
     <div
-      onPointerDown={phase === "entered" && locked ? onLookDown : undefined}
+      ref={rootRef}
+      onPointerDown={lookActive ? onLookDown : undefined}
       onPointerMove={onLookMove}
       onPointerUp={onLookEnd}
       onPointerCancel={onLookEnd}
+      className="inv-fullh"
       style={{
         position: "relative",
         width: "100%",
-        height: "100svh",
         overflow: "hidden",
         background: "#2a1520",
-        touchAction: "none",
+        // 进入漫游后才接管手势；未进入时放行竖向滑动，否则整屏画廊会把页面滚动卡死
+        touchAction: lookActive ? "none" : "pan-y",
         userSelect: "none",
       }}
     >
@@ -188,7 +224,7 @@ export default function Gallery3D() {
       {mode === "3d" && (
         <canvas
           ref={canvasRef}
-          style={{ display: "block", width: "100%", height: "100%", touchAction: "none" }}
+          style={{ display: "block", width: "100%", height: "100%", touchAction: lookActive ? "none" : "pan-y" }}
         />
       )}
 
@@ -328,7 +364,7 @@ export default function Gallery3D() {
             style={{
               position: "absolute",
               bottom: 26,
-              color: "rgba(245,215,142,0.55)",
+              color: "rgba(242,195,206,0.6)",
               fontSize: 12,
               letterSpacing: 3,
               fontFamily: 'var(--font-serif, Georgia, "Songti SC", serif)',
@@ -378,11 +414,11 @@ export default function Gallery3D() {
             style={{
               marginTop: 26,
               padding: "10px 28px",
-              color: "#e8b84b",
+              color: "#f2c3ce",
               fontSize: 12,
               letterSpacing: 2,
               background: "rgba(120,60,80,0.4)",
-              border: "1px solid rgba(232,184,75,0.4)",
+              border: "1px solid rgba(242,195,206,0.45)",
               borderRadius: 2,
               cursor: "pointer",
               fontFamily: "var(--font-sans, sans-serif)",
@@ -403,7 +439,7 @@ export default function Gallery3D() {
               pointerEvents: "none",
               fontFamily: 'var(--font-serif, Georgia, "Songti SC", serif)',
               fontStyle: "italic",
-              color: "rgba(245,215,142,0.7)",
+              color: "rgba(242,195,206,0.75)",
               fontSize: 15,
               letterSpacing: 2,
             }}
@@ -414,7 +450,7 @@ export default function Gallery3D() {
           <div
             style={{
               position: "absolute",
-              bottom: 22,
+              bottom: 74,
               left: 0,
               right: 0,
               textAlign: "center",
@@ -427,13 +463,37 @@ export default function Gallery3D() {
           >
             {isTouch
               ? "滑动环视 · 点地面或照片走过去"
-              : "拖拽环视 · 单击地面或照片走过去 · W A S D 移动 · Esc 暂停 · T 切换户外"}
+              : "拖拽环视 · 单击地面或照片走过去 · W A S D 移动 · 滚轮翻页 · T 切换户外"}
           </div>
         </>
       )}
 
       {phase === "entered" && locked && (
         <>
+          <button
+            type="button"
+            onClick={() => leave(1)}
+            style={{
+              position: "absolute",
+              bottom: 22,
+              left: "50%",
+              transform: "translateX(-50%)",
+              zIndex: 45,
+              padding: "9px 22px",
+              color: "#f2c3ce",
+              fontSize: 12,
+              letterSpacing: 2,
+              background: "rgba(120,60,80,0.4)",
+              border: "1px solid rgba(242,195,206,0.45)",
+              borderRadius: 999,
+              cursor: "pointer",
+              fontFamily: "var(--font-sans, sans-serif)",
+              touchAction: "manipulation",
+              whiteSpace: "nowrap",
+            }}
+          >
+            继续浏览请帖 ↓
+          </button>
           <button
             type="button"
             onClick={toggleOutdoor}
@@ -443,11 +503,11 @@ export default function Gallery3D() {
               right: 100,
               zIndex: 45,
               padding: "8px 16px",
-              color: "#e8b84b",
+              color: "#f2c3ce",
               fontSize: 12,
               letterSpacing: 1,
               background: "rgba(120,60,80,0.4)",
-              border: "1px solid rgba(232,184,75,0.4)",
+              border: "1px solid rgba(242,195,206,0.45)",
               borderRadius: 2,
               cursor: "pointer",
               fontFamily: "var(--font-sans, sans-serif)",
@@ -465,11 +525,11 @@ export default function Gallery3D() {
               right: 16,
               zIndex: 45,
               padding: "8px 16px",
-              color: "#e8b84b",
+              color: "#f2c3ce",
               fontSize: 12,
               letterSpacing: 1,
               background: "rgba(120,60,80,0.4)",
-              border: "1px solid rgba(232,184,75,0.4)",
+              border: "1px solid rgba(242,195,206,0.45)",
               borderRadius: 2,
               cursor: "pointer",
               fontFamily: "var(--font-sans, sans-serif)",

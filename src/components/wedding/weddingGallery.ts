@@ -39,7 +39,7 @@ export type WeddingGalleryOptions = {
   worldPhotos?: readonly WorldPhoto[];
   /** 画框位置 → 照片编号（从 1 开始），位置名见 photoForSlot；没写的位置按编号顺延补齐 */
   photoLayout?: Readonly<Record<string, number>>;
-  /** 标牌主标题，如「爱的画廊」 */
+  /** 标牌主标题，如「婚礼画廊」 */
   title: string;
   /** 新人姓名，如「徐俊杰 ♡ 鲍阳阳」 */
   namesLine: string;
