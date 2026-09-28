@@ -13,7 +13,7 @@ cd "$(dirname "$0")/.."
 pnpm install --ignore-workspace --frozen-lockfile
 pnpm build
 
-rsync -az --delete \
+rsync -az --delete --no-owner --no-group \
   --exclude node_modules --exclude data --exclude .env --exclude src \
   ./ "$SSH_HOST:$APP_DIR/"
 
@@ -22,10 +22,11 @@ ssh "$SSH_HOST" "set -e
   export COREPACK_NPM_REGISTRY=$REGISTRY npm_config_registry=$REGISTRY
   cd $APP_DIR
   corepack pnpm install --prod --frozen-lockfile --ignore-workspace
-  chmod +x deploy/*.sh
+  chown -R root:root $APP_DIR && chmod +x deploy/*.sh
   mkdir -p data && chown -R invitation:invitation data
+  [ -f .env ] && chown root:invitation .env && chmod 640 .env
   if ! systemctl cat invitation-server >/dev/null 2>&1; then
-    echo '代码已上传；服务尚未安装，请按 README「4. 配置并启动」完成首次配置'
+    echo '代码已上传；服务尚未安装，请按 README「服务器首次安装」完成配置'
     exit 0
   fi
   systemctl restart invitation-server
