@@ -286,6 +286,16 @@ export class WeddingGallery {
   private readonly renderer: THREE.WebGLRenderer;
   private readonly controls: PointerLockControls | null = null;
   private readonly clock = new THREE.Clock();
+  private readonly perfEnabled =
+    typeof window !== "undefined" && new URLSearchParams(window.location.search).get("galleryPerf") === "1";
+  private readonly noGrassDebug =
+    typeof window !== "undefined" && new URLSearchParams(window.location.search).get("galleryNoGrass") === "1";
+  private perfPanel: HTMLPreElement | null = null;
+  private perfLastFrame = 0;
+  private perfLastReport = 0;
+  private perfSamples: { frame: number; update: number; render: number; marker: string }[] = [];
+  private perfMarker = "init";
+  private perfPhoto = "-";
 
   // 大厅尺寸
   private readonly W = 24;
@@ -783,6 +793,16 @@ export class WeddingGallery {
     );
     // 出生在入口拱门内 4m（z=ARCH_Z-4），面朝 -Z，一眼看到远处主灯与后墙
     this.camera.position.set(0, 1.72, this.ARCH_Z - 4);
+
+    if (this.perfEnabled) {
+      const panel = document.createElement("pre");
+      panel.style.cssText =
+        "position:fixed;z-index:2147483647;left:6px;top:6px;margin:0;padding:6px 8px;max-width:calc(100vw - 12px);pointer-events:none;color:#fff;background:rgba(0,0,0,.78);font:11px/1.35 ui-monospace,monospace;white-space:pre-wrap";
+      panel.textContent = "galleryPerf: waiting";
+      document.body.appendChild(panel);
+      this.perfPanel = panel;
+      this.cleanups.push(() => panel.remove());
+    }
 
     // 桌面：指针锁定视角；触屏：不用它，改由摇杆写入 yaw/pitch
     if (!this.touchMode) {
@@ -3473,11 +3493,19 @@ export class WeddingGallery {
   /**
    * 高清档调度（约 5 次/秒）：视野内照片在屏幕上的像素高度超过常驻纹理的 HD_TRIGGER 倍，
    * 就加载长边 2048 的高清图替换；最多同时保留 HD_MAX 张，离开 HD_KEEP_MS 后释放回常驻档。
+   *
+   * 户外画架（lawn/beach）例外：画架长边只有 0.94m，在正常观赏距离（walkToPhoto 停距下限 1.4m）
+   * 处按「放大倍数」评估远达不到按室内 4.4m 大画定的 HD_TRIGGER，高清永远触发不了；
+   * 即使由 walkToPhoto 预载，hdWantedAt 也不会续期，4s 后看着看着就被释放回常驻档。
+   * 因此户外改按「占屏比例」HD_FOCUS_TRIGGER 触发并持续续期——占屏比例等价于「走近了细看」，
+   * 与画框物理尺寸无关，室内策略不受影响。
    */
   private hdTick(now: number) {
     if (now - this.lastHdTick < 200) return;
     this.lastHdTick = now;
     const HD_TRIGGER = 0.85;
+    // 户外画架：照片占屏超过此比例即视为「走近细看」，触发高清并保持到走开，避免远处整排画架抢占高清名额
+    const HD_FOCUS_TRIGGER = 0.35;
     const HD_KEEP_MS = 4000;
     const HD_MAX = 2;
     const cam = this.camera.position;
@@ -3487,8 +3515,10 @@ export class WeddingGallery {
     const center = this.hdVec;
     const screenH = this.renderer.domElement.height;
     let focus = 0;
-    let best: PhotoEntry | null = null;
-    let bestRatio = HD_TRIGGER;
+    let bestIndoor: PhotoEntry | null = null;
+    let bestIndoorMag = HD_TRIGGER;
+    let bestOutdoor: PhotoEntry | null = null;
+    let bestOutdoorFocus = HD_FOCUS_TRIGGER;
     for (const t of this.photoTargets) {
       if (t.zone === "lawn" && !this.lawnGroup.visible) continue;
       if (t.zone === "beach" && !this.beachGroup.visible) continue;
@@ -3498,15 +3528,30 @@ export class WeddingGallery {
       const d = center.length();
       if (d < 0.1 || center.dot(fwd) < d * 0.55) continue;
       const px = (Math.max(t.w, t.h) / d) * pxPerRad;
-      focus = Math.max(focus, px / screenH);
+      const focusRatio = px / screenH;
+      focus = Math.max(focus, focusRatio);
       if (!e.hdUrl) continue;
-      const ratio = px / e.baseLong;
-      if (ratio > bestRatio) {
-        bestRatio = ratio;
-        best = e;
+      // 室内按「屏幕像素 ÷ 常驻纹理长边」的放大倍数判定；户外画架按占屏比例判定，
+      // 两者单位不同，各自组内选优，不跨组比较
+      if (t.zone === "hall") {
+        const mag = px / e.baseLong;
+        if (mag > bestIndoorMag) {
+          bestIndoorMag = mag;
+          bestIndoor = e;
+        }
+      } else if (focusRatio > bestOutdoorFocus) {
+        bestOutdoorFocus = focusRatio;
+        bestOutdoor = e;
       }
     }
     this.photoFocusRatio = focus;
+    // 室内大画是硬需求（近距离放大倍数大），同帧命中时优先于户外画架
+    const outdoors = cam.z > this.ARCH_Z + 0.5;
+    const best = outdoors ? bestOutdoor ?? bestIndoor : bestIndoor ?? bestOutdoor;
+    if (this.perfEnabled) {
+      const zone = bestOutdoor ? "outdoor" : bestIndoor ? "hall" : "none";
+      this.perfPhoto = `${zone} focus ${(focus * 100).toFixed(0)}% ${best?.hd ? "HD" : best?.hdLoading ? "loading" : "base"}`;
+    }
     if (best) {
       best.hdWantedAt = Math.max(best.hdWantedAt, now);
       if (!best.hd && !best.hdLoading && this.hdLoading < 1) this.loadHd(best);
@@ -14033,7 +14078,9 @@ export class WeddingGallery {
         this.idleAcc = 0;
       }
 
+      const frameStart = this.perfEnabled ? performance.now() : 0;
       this.update(dt);
+      const updateMs = this.perfEnabled ? performance.now() - frameStart : 0;
       this.syncOutdoorVisibility();
       if (this.active && !this.idleMode) {
         this.fadeLightCones();
@@ -14044,15 +14091,52 @@ export class WeddingGallery {
       this.verifyCulledInstances();
       this.updateFarMaterials();
       this.applyPortalCull();
+      const renderStart = this.perfEnabled ? performance.now() : 0;
       this.renderer.render(this.scene, this.camera);
+      const renderMs = this.perfEnabled ? performance.now() - renderStart : 0;
       this.restorePortalCull();
       this.framesRendered++;
       this.trackFrameInterval(now);
+      if (this.perfEnabled) this.recordPerf(now, updateMs, renderMs);
       // 漫游中每 250ms 只传 1 张：多张集中上传会在手机上形成可感知的顿挫
       this.warmTick(now, this.idleMode ? (this.touchMode ? 2 : 4) : 1);
     };
     this.animId = requestAnimationFrame(loop);
   };
+
+  private recordPerf(now: number, updateMs: number, renderMs: number) {
+    if (!this.perfPanel) return;
+    const frame = this.perfLastFrame > 0 ? now - this.perfLastFrame : 0;
+    this.perfLastFrame = now;
+    if (!this.active || this.idleMode) {
+      this.perfSamples.length = 0;
+      return;
+    }
+    if (!frame) return;
+    this.perfSamples.push({ frame, update: updateMs, render: renderMs, marker: this.perfMarker });
+    if (this.perfSamples.length > 180) this.perfSamples.shift();
+    if (now - this.perfLastReport < 500) return;
+    this.perfLastReport = now;
+    const sorted = (key: "frame" | "update" | "render") =>
+      this.perfSamples.map((s) => s[key]).sort((a, b) => a - b);
+    const p95 = (key: "frame" | "update" | "render") => {
+      const values = sorted(key);
+      return values[Math.min(values.length - 1, Math.floor(values.length * 0.95))] ?? 0;
+    };
+    const info = this.renderer.info;
+    const programs = info.programs?.length ?? 0;
+    const maxFrame = Math.max(...this.perfSamples.map((s) => s.frame));
+    const slow = this.perfSamples.filter((s) => s.frame > 50).length;
+    let hd = 0;
+    for (const e of this.photoEntries.values()) if (e.hd) hd++;
+    this.perfPanel.textContent = [
+      `frame p95 ${p95("frame").toFixed(1)}ms max ${maxFrame.toFixed(0)}ms >50 ${slow} | update ${p95("update").toFixed(1)}ms | render ${p95("render").toFixed(1)}ms`,
+      `pr ${this.renderer.getPixelRatio().toFixed(2)} | far ${this.farActive} | outdoor ${this.camera.position.z > this.ARCH_Z + 0.5}`,
+      `calls ${info.render.calls} | tris ${Math.round(info.render.triangles / 1000)}k | programs ${programs}`,
+      `geo ${info.memory.geometries} | tex ${info.memory.textures} | hd ${hd} loading ${this.hdLoading}`,
+      `photo ${this.perfPhoto} | marker ${this.perfMarker} | noGrass ${this.noGrassDebug}`,
+    ].join("\n");
+  }
 
   /**
    * 预热：有材质还没编译就整体 compileAsync（支持 KHR_parallel_shader_compile 时不阻塞主线程）；
@@ -14205,6 +14289,7 @@ export class WeddingGallery {
     const want = this.farActive ? z > this.ARCH_Z + 0.5 : z > this.ARCH_Z + 1.5;
     if (want === this.farActive) return;
     this.farActive = want;
+    if (this.perfEnabled) this.perfMarker = want ? "far-on" : "far-off";
     for (const e of this.farMeshes) if (e.warmed) e.mesh.material = want ? e.lo : e.hi;
   }
 
@@ -14493,7 +14578,9 @@ export class WeddingGallery {
     const show = this.outdoorInFrustum();
     if (this.lawnGroup.visible !== (this.outdoor === "lawn" && show)) {
       this.lawnGroup.visible = this.outdoor === "lawn" && show;
+      if (this.perfEnabled) this.perfMarker = this.lawnGroup.visible ? "lawn-visible" : "lawn-hidden";
     }
+    if (this.noGrassDebug) this.grassCardsGroup.visible = false;
     if (this.beachGroup.visible !== (this.outdoor === "beach" && show)) {
       this.beachGroup.visible = this.outdoor === "beach" && show;
     }
