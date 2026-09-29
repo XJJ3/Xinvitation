@@ -390,6 +390,7 @@ export class WeddingGallery {
   private readonly farChecked = new WeakSet<THREE.Object3D>();
   private farPending = false;
   private farActive = false;
+  private farWarmQueue: { mesh: THREE.Mesh; hi: THREE.Material; lo: THREE.MeshStandardMaterial; warmed: boolean }[] | null = null;
   private readonly farWarmSize = new THREE.Vector2();
   /** 视野里照片占屏的最大比例（hdTick 更新），户外只在细看照片时才启用 3 倍渲染 */
   private photoFocusRatio = 0;
@@ -7993,8 +7994,9 @@ export class WeddingGallery {
       true,
       true,
     );
-    add(stem, new THREE.MeshStandardMaterial({ color: "#5f7f4d", roughness: 0.55, metalness: 0 }), false);
-    add(leaf, new THREE.MeshStandardMaterial({ color: "#6f9460", roughness: 0.55, metalness: 0 }), false);
+    // 远处茎叶与花头一样只占很少像素；复用同一套分块 LOD，避免上千支远处玫瑰仍提交高清茎叶。
+    add(stem, new THREE.MeshStandardMaterial({ color: "#5f7f4d", roughness: 0.55, metalness: 0 }), false, target === this.lawnGroup);
+    add(leaf, new THREE.MeshStandardMaterial({ color: "#6f9460", roughness: 0.55, metalness: 0 }), false, target === this.lawnGroup);
   }
 
   /**
@@ -14090,6 +14092,7 @@ export class WeddingGallery {
       this.lodTick(now);
       this.verifyCulledInstances();
       this.updateFarMaterials();
+      this.flushFarWarmQueue();
       this.applyPortalCull();
       const renderStart = this.perfEnabled ? performance.now() : 0;
       this.renderer.render(this.scene, this.camera);
@@ -14241,7 +14244,7 @@ export class WeddingGallery {
    * 只 compile 不画的话，首次出门那帧仍要建绘制管线（实测 CPU 卡 32~43ms），画过一次后降到 2ms。
    */
   private warmFarMaterials() {
-    if (!this.farPending || this.warmCompiling || this.disposed) return;
+    if (!this.farPending || this.warmCompiling || this.farWarmQueue || this.disposed) return;
     this.farPending = false;
     const cold = this.farMeshes.filter((e) => !e.warmed);
     if (cold.length === 0) return;
@@ -14257,30 +14260,45 @@ export class WeddingGallery {
       .finally(() => {
         this.warmCompiling = false;
         if (this.disposed) return;
-        const r = this.renderer;
-        const culled = cold.map((e) => e.mesh.frustumCulled);
-        swap(true);
-        for (const e of cold) e.mesh.frustumCulled = false;
-        const autoClear = r.autoClear;
-        const size = r.getSize(this.farWarmSize);
-        r.autoClear = false;
-        r.setScissorTest(true);
-        r.setScissor(0, 0, 1, 1);
-        r.setViewport(0, 0, 1, 1);
-        r.render(this.scene, this.camera);
-        r.setScissorTest(false);
-        r.setViewport(0, 0, size.x, size.y);
-        r.autoClear = autoClear;
-        const props = r.properties;
-        cold.forEach((e, i) => {
-          e.mesh.frustumCulled = culled[i];
-          // 不可见的子树不会被画到，留待下次再试
-          if ((props.get(e.lo) as { currentProgram?: unknown }).currentProgram !== undefined) e.warmed = true;
-          else this.farPending = true;
-        });
-        swap(false);
-        this.skipFrameSamples = 2;
+        this.farWarmQueue = cold;
       });
+  }
+
+  /** 默认帧缓冲不保留上一帧；预画必须与完整画面在同一个 rAF 回调内，否则帧间的 1×1 绘制会闪黑。 */
+  private flushFarWarmQueue() {
+    const cold = this.farWarmQueue;
+    if (!cold) return;
+    this.farWarmQueue = null;
+    const r = this.renderer;
+    const culled = cold.map((e) => e.mesh.frustumCulled);
+    const autoClear = r.autoClear;
+    const scissorTest = r.getScissorTest();
+    const size = r.getSize(this.farWarmSize);
+    try {
+      for (const e of cold) {
+        e.mesh.material = e.lo;
+        e.mesh.frustumCulled = false;
+      }
+      r.autoClear = false;
+      r.setScissorTest(true);
+      r.setScissor(0, 0, 1, 1);
+      r.setViewport(0, 0, 1, 1);
+      r.render(this.scene, this.camera);
+      const props = r.properties;
+      for (const e of cold) {
+        if ((props.get(e.lo) as { currentProgram?: unknown }).currentProgram !== undefined) e.warmed = true;
+        else this.farPending = true;
+      }
+    } finally {
+      r.setScissorTest(scissorTest);
+      r.setViewport(0, 0, size.x, size.y);
+      r.autoClear = autoClear;
+      cold.forEach((e, i) => {
+        e.mesh.frustumCulled = culled[i];
+        e.mesh.material = this.farActive && e.warmed ? e.lo : e.hi;
+      });
+      this.skipFrameSamples = 2;
+    }
   }
 
   /** 出门 1.5m 换远景材质、回到门内 0.5m 换回（滞回避免门口来回抖动） */
