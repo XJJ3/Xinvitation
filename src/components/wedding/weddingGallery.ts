@@ -370,6 +370,17 @@ export class WeddingGallery {
   private readonly portalSpheres = new WeakMap<THREE.Object3D, THREE.Sphere | null>();
   private readonly indoorRoots: THREE.Object3D[] = [];
   private readonly portalClassified = new WeakSet<THREE.Object3D>();
+  /**
+   * 门外回看的远景材质：厅内 MeshPhysicalMaterial（吊灯水晶清漆+彩虹、双面透明要画两遍，玫瑰 sheen）
+   * 在门外十几米处细节看不出，却占回看画面 GPU 的 ~40%。相机出门后换成同参数的 MeshStandardMaterial，
+   * 进门换回。远景材质须先在 warmTick 里预编译（warmed），否则首次出门会集中编译卡顿。
+   */
+  private readonly farMats = new Map<THREE.Material, THREE.MeshStandardMaterial>();
+  private readonly farMeshes: { mesh: THREE.Mesh; hi: THREE.Material; lo: THREE.MeshStandardMaterial; warmed: boolean }[] = [];
+  private readonly farChecked = new WeakSet<THREE.Object3D>();
+  private farPending = false;
+  private farActive = false;
+  private readonly farWarmSize = new THREE.Vector2();
   /** 视野里照片占屏的最大比例（hdTick 更新），户外只在细看照片时才启用 3 倍渲染 */
   private photoFocusRatio = 0;
   private readonly portalBox = new THREE.Box3();
@@ -8966,8 +8977,9 @@ export class WeddingGallery {
             vec3 lawnPat = lawnPattern(lawnWp);
             vec3 grassCol = diffuseColor.rgb * lawnPat.x * lawnTint(lawnPat.y, lawnPat.z);
             float pathM = lawnPathMask(lawnWp, ${this.ARCH_Z.toFixed(1)});
-            vec3 stone = lawnStoneAlbedo(lawnWp, ${this.ARCH_Z.toFixed(1)});
-            vec3 finalCol = mix(stone, grassCol, pathM);
+            // 石板反照率只在小径及草缘过渡带内计算（整片草地上占比很小，分支在屏幕上高度连贯）
+            vec3 finalCol = grassCol;
+            if (pathM < 0.999) finalCol = mix(lawnStoneAlbedo(lawnWp, ${this.ARCH_Z.toFixed(1)}), grassCol, pathM);
             diffuseColor.rgb = finalCol;
           }`,
         )
@@ -14030,6 +14042,7 @@ export class WeddingGallery {
       this.updateBoost(now);
       this.lodTick(now);
       this.verifyCulledInstances();
+      this.updateFarMaterials();
       this.applyPortalCull();
       this.renderer.render(this.scene, this.camera);
       this.restorePortalCull();
@@ -14068,6 +14081,7 @@ export class WeddingGallery {
       if (uploads >= budget) break;
     }
     if (uploads > 0) this.skipFrameSamples = 2;
+    this.warmFarMaterials();
     if (needCompile && !this.warmCompiling) {
       this.warmCompiling = true;
       this.renderer
@@ -14100,6 +14114,98 @@ export class WeddingGallery {
     });
     this.warmTable = table;
     this.classifyIndoorRoots();
+    this.collectFarSwaps();
+  }
+
+  /** 登记室内根下新出现的 MeshPhysicalMaterial 网格（GLB/花艺异步挂载，随 rebuildWarmTable 每 2s 增量扫描） */
+  private collectFarSwaps() {
+    for (const root of this.indoorRoots) {
+      root.traverse((o) => {
+        if (this.farChecked.has(o)) return;
+        this.farChecked.add(o);
+        const mesh = o as THREE.Mesh;
+        if (!mesh.isMesh || Array.isArray(mesh.material)) return;
+        const hi = mesh.material;
+        // transmission 依赖额外的透射 pass，换材质会明显变样，保持原样
+        if (!(hi instanceof THREE.MeshPhysicalMaterial) || hi.transmission > 0) return;
+        let lo = this.farMats.get(hi);
+        if (!lo) {
+          lo = this.makeFarMaterial(hi);
+          this.farMats.set(hi, lo);
+          this.disposables.push(lo);
+        }
+        this.farMeshes.push({ mesh, hi, lo, warmed: false });
+        this.farPending = true;
+      });
+    }
+  }
+
+  private makeFarMaterial(hi: THREE.MeshPhysicalMaterial): THREE.MeshStandardMaterial {
+    const lo = new THREE.MeshStandardMaterial();
+    lo.copy(hi);
+    lo.name = `${hi.name}#far`;
+    // 双面透明在 three 里拆成背面+正面两遍绘制；门外远看只剩朝外切面可见，单面即可（截图差异 <1.5% 像素）
+    if (hi.transparent && hi.side === THREE.DoubleSide) lo.side = THREE.FrontSide;
+    lo.onBeforeCompile = hi.onBeforeCompile;
+    const hiKey = hi.customProgramCacheKey.bind(hi);
+    lo.customProgramCacheKey = () => `${hiKey()}|far`;
+    return lo;
+  }
+
+  /**
+   * 预编译远景材质：先 compileAsync（有并行编译扩展时不阻塞），再用远景材质往 1×1 视口真实画一帧。
+   * 只 compile 不画的话，首次出门那帧仍要建绘制管线（实测 CPU 卡 32~43ms），画过一次后降到 2ms。
+   */
+  private warmFarMaterials() {
+    if (!this.farPending || this.warmCompiling || this.disposed) return;
+    this.farPending = false;
+    const cold = this.farMeshes.filter((e) => !e.warmed);
+    if (cold.length === 0) return;
+    const swap = (far: boolean) => {
+      for (const e of cold) e.mesh.material = far ? e.lo : this.farActive && e.warmed ? e.lo : e.hi;
+    };
+    swap(true);
+    this.warmCompiling = true;
+    const done = this.renderer.compileAsync(this.scene, this.camera);
+    swap(false);
+    done
+      .catch(() => undefined)
+      .finally(() => {
+        this.warmCompiling = false;
+        if (this.disposed) return;
+        const r = this.renderer;
+        const culled = cold.map((e) => e.mesh.frustumCulled);
+        swap(true);
+        for (const e of cold) e.mesh.frustumCulled = false;
+        const autoClear = r.autoClear;
+        const size = r.getSize(this.farWarmSize);
+        r.autoClear = false;
+        r.setScissorTest(true);
+        r.setScissor(0, 0, 1, 1);
+        r.setViewport(0, 0, 1, 1);
+        r.render(this.scene, this.camera);
+        r.setScissorTest(false);
+        r.setViewport(0, 0, size.x, size.y);
+        r.autoClear = autoClear;
+        const props = r.properties;
+        cold.forEach((e, i) => {
+          e.mesh.frustumCulled = culled[i];
+          // 不可见的子树不会被画到，留待下次再试
+          if ((props.get(e.lo) as { currentProgram?: unknown }).currentProgram !== undefined) e.warmed = true;
+          else this.farPending = true;
+        });
+        swap(false);
+        this.skipFrameSamples = 2;
+      });
+  }
+
+  /** 出门 1.5m 换远景材质、回到门内 0.5m 换回（滞回避免门口来回抖动） */
+  private updateFarMaterials() {
+    const z = this.camera.position.z;
+    const want = this.farActive ? z > this.ARCH_Z + 0.5 : z > this.ARCH_Z + 1.5;
+    if (want === this.farActive) return;
+    this.farActive = want;
+    for (const e of this.farMeshes) if (e.warmed) e.mesh.material = want ? e.lo : e.hi;
   }
 
   /**
@@ -14187,11 +14293,12 @@ export class WeddingGallery {
     const struggling = (this.frameIvEma > 22 && this.frameJitterEma > 3) || this.frameIvEma > 40;
     this.slowFrames = struggling ? this.slowFrames + 1 : 0;
     this.fastFrames = this.frameIvEma < 19 ? this.fastFrames + 1 : 0;
-    if (this.slowFrames > 120 && this.prIdx < this.prLevels.length - 1) {
+    // 连续约 1 秒吃力就降一档（原 2 秒）：手机持续满载发热降频时更早减负
+    if (this.slowFrames > 60 && this.prIdx < this.prLevels.length - 1) {
       // 刚升档不久又撑不住：延长下次升档前的观察期，避免清晰度来回跳
       if (now - this.lastUpgradeTs < 5000) this.prUpgradeHoldMs = Math.min(this.prUpgradeHoldMs * 2, 60000);
       this.prIdx++;
-      this.renderer.setPixelRatio(this.prLevels[this.prIdx]);
+      this.applyPixelRatio();
       this.slowFrames = 0;
       this.fastFrames = 0;
       this.frameIvEma = 16.7;
@@ -14199,7 +14306,7 @@ export class WeddingGallery {
       this.lastDowngradeTs = now;
     } else if (this.fastFrames > 240 && this.prIdx > 0 && now - this.lastDowngradeTs > this.prUpgradeHoldMs) {
       this.prIdx--;
-      this.renderer.setPixelRatio(this.prLevels[this.prIdx]);
+      this.applyPixelRatio();
       this.fastFrames = 0;
       this.lastUpgradeTs = now;
     }
@@ -14220,11 +14327,11 @@ export class WeddingGallery {
   }
 
   private resetAdaptiveResolution() {
-    if ((this.prIdx !== 0 || this.boosted) && this.prLevels.length > 0) this.renderer.setPixelRatio(this.prLevels[0]);
     this.boosted = false;
+    this.prIdx = 0;
+    if (this.prLevels.length > 0) this.applyPixelRatio();
     this.boostBlockedUntil = this.boostFails >= 2 ? Infinity : 0;
     this.stillSince = performance.now() + 800;
-    this.prIdx = 0;
     this.slowFrames = 0;
     this.fastFrames = 0;
     this.frameIvEma = 16.7;
@@ -14261,9 +14368,24 @@ export class WeddingGallery {
 
   private setBoost(on: boolean) {
     this.boosted = on;
-    this.renderer.setPixelRatio(on ? this.boostPr : this.prLevels[this.prIdx] ?? 1);
+    this.applyPixelRatio();
     this.boostEma = 16.7;
     this.boostSlow = 0;
+    this.skipFrameSamples = 3;
+  }
+
+  /**
+   * 不按位置/走停主动切分辨率：实测切换那一帧要重建画布缓冲，CPU 卡 33~43ms（比省下的 GPU 更显眼），
+   * 只在自适应判定持续吃力时才降档。
+   */
+  private effectivePr(): number {
+    return this.boosted ? this.boostPr : (this.prLevels[this.prIdx] ?? 1);
+  }
+
+  private applyPixelRatio() {
+    const pr = this.effectivePr();
+    if (this.renderer.getPixelRatio() === pr) return;
+    this.renderer.setPixelRatio(pr);
     this.skipFrameSamples = 3;
   }
 
