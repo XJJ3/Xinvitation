@@ -3,6 +3,7 @@ import { PointerLockControls } from "three/addons/controls/PointerLockControls.j
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
+import { KTX2Loader } from "three/addons/loaders/KTX2Loader.js";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 
 /**
@@ -25,10 +26,33 @@ export type GalleryPhoto = {
   readonly sub: string;
 };
 
-/** 随机分布到 3D 世界的照片：src 大图（墙面画框），small 小图（户外画架），w/h 为像素尺寸 */
+/** 一张照片（按 URL 共享）的纹理状态：base 常驻档，hd 走近时的高清档 */
+type PhotoEntry = {
+  base: THREE.Texture | null;
+  hdUrl: string | null;
+  hd: THREE.Texture | null;
+  hdLoading: boolean;
+  /** 上次仍需要高清的时间，超过 HD_KEEP_MS 就释放回常驻档 */
+  hdWantedAt: number;
+  /** 常驻档纹理的长边像素，用于判断照片在屏幕上是否已被放大 */
+  baseLong: number;
+  /** 画框比例（照片比例不同时居中裁切），0 = 不裁切 */
+  cover: number;
+  mats: THREE.MeshBasicMaterial[];
+  waiters: (() => void)[];
+  settled: boolean;
+};
+
+/**
+ * 随机分布到 3D 世界的照片，w/h 为 src 的像素尺寸。
+ * ktx2：常驻纹理（显存约为 JPEG 的 1/8），缺省或设备不支持时用 src；
+ * hd：走近照片时按需加载的高清版，远离后释放。
+ */
 export type WorldPhoto = {
   readonly src: string;
   readonly small: string;
+  readonly hd?: string;
+  readonly ktx2?: string;
   readonly w: number;
   readonly h: number;
 };
@@ -334,7 +358,26 @@ export class WeddingGallery {
   private readonly moveInput = { x: 0, y: 0 };
   private readonly lookInput = { x: 0, y: 0 };
   // 点哪走哪：可点击的照片、当前自动行走路径（xz 途经点）与到达后的朝向
-  private readonly photoTargets: { mesh: THREE.Mesh; w: number; h: number; zone: "hall" | "lawn" | "beach" }[] = [];
+  private readonly photoTargets: { mesh: THREE.Mesh; w: number; h: number; zone: "hall" | "lawn" | "beach"; key: string }[] = [];
+  /** 照片纹理按 URL 共享：常驻档（KTX2 / JPEG）+ 走近时换上的高清档，见 usePhoto / hdTick */
+  private readonly photoEntries = new Map<string, PhotoEntry>();
+  private photoPlaceholder: THREE.DataTexture | null = null;
+  private ktx2Loader: KTX2Loader | null = null;
+  private lastHdTick = 0;
+  private hdLoading = 0;
+  private readonly hdFwd = new THREE.Vector3();
+  private readonly hdVec = new THREE.Vector3();
+  private readonly lightCones: { mesh: THREE.Mesh; mat: THREE.MeshBasicMaterial; target: THREE.Vector3; base: number }[] = [];
+  /** 3 倍屏静止时临时提到的渲染像素比（0 = 不启用）；一动就回到自适应档位 */
+  private boostPr = 0;
+  private boosted = false;
+  private stillSince = 0;
+  private boostEma = 16.7;
+  private boostSlow = 0;
+  private boostBlockedUntil = 0;
+  private boostFails = 0;
+  private readonly lastCamPos = new THREE.Vector3();
+  private readonly lastCamQuat = new THREE.Quaternion();
   /** 布局里没写的画框按编号顺延取照片 */
   private photoFallbackIdx = 0;
   private autoPath: THREE.Vector2[] | null = null;
@@ -653,12 +696,15 @@ export class WeddingGallery {
     this.outdoor = opts.outdoor ?? "lawn";
 
     // 构造失败（WebGL 不可用）由调用方 try/catch 回退到 GalleryFallback
+    // 手机 GPU 是分块渲染，4x MSAA 在片上完成、代价很小，画框/栏杆边缘不再锯齿
     this.renderer = new THREE.WebGLRenderer({
       canvas,
-      antialias: !this.touchMode,
+      antialias: true,
       powerPreference: "high-performance",
     });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    const dpr = window.devicePixelRatio || 1;
+    this.renderer.setPixelRatio(Math.min(dpr, 2));
+    this.boostPr = dpr > 2.2 ? Math.min(dpr, 3) : 0;
     // 降档设下限：高分屏最低 1.5，再低在手机上肉眼明显发糊（1 档在 3 倍屏上只剩 1/3 清晰度）
     const prTop = this.renderer.getPixelRatio();
     const prFloor = Math.min(prTop, 1.5);
@@ -1520,8 +1566,8 @@ export class WeddingGallery {
     ];
     const w0 = this.photoForSlot("后墙左");
     const w1 = this.photoForSlot("后墙右");
+    const wps = [w0, w1];
     const srcs = w0 && w1 ? [w0.src, w1.src] : (this.opts.wallPhotos ?? fallback);
-    const loader = new THREE.TextureLoader();
     [-1, 1].forEach((sign, idx) => {
       const cx = sign * photoCX;
 
@@ -1532,24 +1578,12 @@ export class WeddingGallery {
       const src = srcs[idx];
       this.slotTag(idx === 0 ? "后墙左" : "后墙右", new THREE.Vector3(cx, photoY + photoH / 2 + 0.4, EZ + 0.3), this.scene);
       if (src) {
-        const tex = loader.load(src, (t) => this.coverTexture(t, photoW / photoH));
-        tex.colorSpace = THREE.SRGBColorSpace;
-        tex.anisotropy = Math.min(8, this.renderer.capabilities.getMaxAnisotropy());
-        this.reg(tex);
-        const photo = new THREE.Mesh(
-          new THREE.PlaneGeometry(photoW, photoH),
-          new THREE.MeshStandardMaterial({
-            map: tex,
-            emissiveMap: tex,
-            emissive: new THREE.Color("#ffffff"),
-            emissiveIntensity: 0.3,
-            roughness: 0.68,
-            metalness: 0,
-          }),
-        );
+        const photoMat = this.makePhotoMaterial();
+        const key = this.usePhoto(photoMat, w0 && w1 ? wps[idx] : null, src, photoW / photoH);
+        const photo = new THREE.Mesh(new THREE.PlaneGeometry(photoW, photoH), photoMat);
         photo.position.set(cx, photoY, EZ + 0.05);
         this.scene.add(photo);
-        this.photoTargets.push({ mesh: photo, w: photoW, h: photoH, zone: "hall" });
+        this.photoTargets.push({ mesh: photo, w: photoW, h: photoH, zone: "hall", key });
       }
 
       const hw = photoW / 2 + 0.11;
@@ -1665,20 +1699,19 @@ export class WeddingGallery {
     const dist = dir.length();
     if (dist < 1e-4) return;
     dir.normalize();
-    const cone = new THREE.Mesh(
-      new THREE.ConeGeometry(radius, dist, 20, 1, true),
-      new THREE.MeshBasicMaterial({
-        color: "#ffe9cf",
-        transparent: true,
-        opacity,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false,
-        side: THREE.DoubleSide,
-      }),
-    );
+    const coneMat = new THREE.MeshBasicMaterial({
+      color: "#ffe9cf",
+      transparent: true,
+      opacity,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    });
+    const cone = new THREE.Mesh(new THREE.ConeGeometry(radius, dist, 20, 1, true), coneMat);
     cone.position.copy(from).addScaledVector(dir, -dist / 2);
     cone.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
     this.scene.add(cone);
+    this.lightCones.push({ mesh: cone, mat: coneMat, target: to.clone(), base: opacity });
   }
 
   /** 记录一盏射灯的挂载点与照射目标，供 buildTrackLightFixtures 统一实例化 */
@@ -3333,6 +3366,198 @@ export class WeddingGallery {
     t.needsUpdate = true;
   }
 
+  private photoAniso() {
+    return Math.min(16, this.renderer.capabilities.getMaxAnisotropy());
+  }
+
+  /**
+   * 照片材质：不受光、不参与色调映射，按原图色彩显示（受光 + ACES 会把暗部抬灰、压低对比）。
+   * 先挂 1×1 占位纹理，真图到达后只换纹理引用，不触发着色器重编译。
+   */
+  private makePhotoMaterial() {
+    if (!this.photoPlaceholder) {
+      const t = new THREE.DataTexture(new Uint8Array([236, 230, 222, 255]), 1, 1);
+      t.colorSpace = THREE.SRGBColorSpace;
+      t.needsUpdate = true;
+      this.photoPlaceholder = this.reg(t);
+    }
+    return new THREE.MeshBasicMaterial({ map: this.photoPlaceholder, toneMapped: false });
+  }
+
+  private getKtx2Loader() {
+    if (!this.ktx2Loader) {
+      this.ktx2Loader = new KTX2Loader().setTranscoderPath("/basis/").detectSupport(this.renderer);
+      this.disposables.push(this.ktx2Loader);
+    }
+    return this.ktx2Loader;
+  }
+
+  /**
+   * 给材质挂上照片（同一 URL、同一裁切比例全场共用一份纹理），返回共享键。
+   * 精修照片优先加载 KTX2，失败退回 src JPEG；没有精修照片时用 fallbackSrc。
+   * 照片比例与画框（coverAspect）不同时居中裁切铺满，高清档同样裁切。
+   * onSettled 在纹理到达或加载失败后调用一次。
+   */
+  private usePhoto(
+    mat: THREE.MeshBasicMaterial,
+    wp: WorldPhoto | null,
+    fallbackSrc: string,
+    coverAspect: number,
+    onSettled?: () => void,
+  ): string {
+    const src = wp?.src ?? fallbackSrc;
+    const crop = !wp || Math.abs(wp.w / wp.h - coverAspect) > 0.01;
+    const key = crop ? `${src}|${coverAspect.toFixed(3)}` : src;
+    let e = this.photoEntries.get(key);
+    if (!e) {
+      const entry: PhotoEntry = {
+        base: null,
+        hdUrl: wp?.hd ?? null,
+        hd: null,
+        hdLoading: false,
+        hdWantedAt: 0,
+        baseLong: wp ? Math.max(wp.w, wp.h) : 1600,
+        cover: crop ? coverAspect : 0,
+        mats: [],
+        waiters: [],
+        settled: false,
+      };
+      e = entry;
+      this.photoEntries.set(key, entry);
+      const settle = (tex: THREE.Texture | null) => {
+        if (tex) {
+          tex.colorSpace = THREE.SRGBColorSpace;
+          tex.anisotropy = this.photoAniso();
+          if (entry.cover) this.coverTexture(tex, entry.cover);
+          entry.base = this.reg(tex);
+          const img = tex.image as { width?: number; height?: number } | undefined;
+          if (img?.width && img.height) entry.baseLong = Math.max(img.width, img.height);
+          for (const m of entry.mats) if (!entry.hd) m.map = tex;
+        }
+        entry.settled = true;
+        entry.waiters.splice(0).forEach((fn) => fn());
+      };
+      const loadJpeg = (url: string) => {
+        if (!url) return settle(null);
+        new THREE.TextureLoader().load(url, settle, undefined, () => settle(null));
+      };
+      if (wp?.ktx2) {
+        this.getKtx2Loader().load(wp.ktx2, settle, undefined, () => loadJpeg(wp.src));
+      } else {
+        loadJpeg(src);
+      }
+    }
+    e.mats.push(mat);
+    const tex = e.hd ?? e.base;
+    if (tex) mat.map = tex;
+    if (onSettled) {
+      if (e.settled) onSettled();
+      else e.waiters.push(onSettled);
+    }
+    return key;
+  }
+
+  /**
+   * 高清档调度（约 5 次/秒）：视野内照片在屏幕上的像素高度超过常驻纹理的 HD_TRIGGER 倍，
+   * 就加载长边 2048 的高清图替换；最多同时保留 HD_MAX 张，离开 HD_KEEP_MS 后释放回常驻档。
+   */
+  private hdTick(now: number) {
+    if (now - this.lastHdTick < 200) return;
+    this.lastHdTick = now;
+    const HD_TRIGGER = 0.85;
+    const HD_KEEP_MS = 4000;
+    const HD_MAX = 2;
+    const cam = this.camera.position;
+    const fwd = this.hdFwd;
+    this.camera.getWorldDirection(fwd);
+    const pxPerRad = this.renderer.domElement.height / THREE.MathUtils.degToRad(this.camera.fov);
+    const center = this.hdVec;
+    let best: PhotoEntry | null = null;
+    let bestRatio = HD_TRIGGER;
+    for (const t of this.photoTargets) {
+      if (t.zone === "lawn" && !this.lawnGroup.visible) continue;
+      if (t.zone === "beach" && !this.beachGroup.visible) continue;
+      const e = this.photoEntries.get(t.key);
+      if (!e?.hdUrl || !e.base) continue;
+      center.setFromMatrixPosition(t.mesh.matrixWorld).sub(cam);
+      const d = center.length();
+      if (d < 0.1 || center.dot(fwd) < d * 0.55) continue;
+      const ratio = ((Math.max(t.w, t.h) / d) * pxPerRad) / e.baseLong;
+      if (ratio > bestRatio) {
+        bestRatio = ratio;
+        best = e;
+      }
+    }
+    if (best) {
+      best.hdWantedAt = Math.max(best.hdWantedAt, now);
+      if (!best.hd && !best.hdLoading && this.hdLoading < 1) this.loadHd(best);
+    }
+    // 先释放久未需要的；仍超出上限就按「最近被需要」从旧到新淘汰
+    const live: PhotoEntry[] = [];
+    for (const e of this.photoEntries.values()) {
+      if (!e.hd) continue;
+      if (now - e.hdWantedAt > HD_KEEP_MS) this.dropHd(e);
+      else live.push(e);
+    }
+    if (live.length > HD_MAX) {
+      live.sort((a, b) => a.hdWantedAt - b.hdWantedAt);
+      for (const e of live.slice(0, live.length - HD_MAX)) this.dropHd(e);
+    }
+  }
+
+  private loadHd(e: PhotoEntry) {
+    if (!e.hdUrl) return;
+    e.hdLoading = true;
+    this.hdLoading++;
+    new THREE.TextureLoader().load(
+      e.hdUrl,
+      (t) => {
+        e.hdLoading = false;
+        this.hdLoading--;
+        if (this.disposed || performance.now() - e.hdWantedAt > 4000) {
+          t.dispose();
+          return;
+        }
+        t.colorSpace = THREE.SRGBColorSpace;
+        t.anisotropy = this.photoAniso();
+        if (e.cover) this.coverTexture(t, e.cover);
+        // 先单独上传再换上：避免与渲染同帧解码上传；这一帧的耗时不计入自适应分辨率
+        this.renderer.initTexture(t);
+        this.skipFrameSamples = 3;
+        e.hd = t;
+        for (const m of e.mats) m.map = t;
+      },
+      undefined,
+      () => {
+        e.hdLoading = false;
+        this.hdLoading--;
+        e.hdUrl = null;
+      },
+    );
+  }
+
+  private dropHd(e: PhotoEntry) {
+    const t = e.hd;
+    if (!t) return;
+    e.hd = null;
+    for (const m of e.mats) m.map = e.base ?? this.photoPlaceholder;
+    t.dispose();
+    // warmTick 的缓存表里还引用着它，立即重建，避免把已释放的纹理重新上传
+    this.warmTableTs = -Infinity;
+  }
+
+  /** 走近照片时淡出挡在它前面的假光锥（加色半透明，正对照片看会蒙一层雾） */
+  private fadeLightCones() {
+    const cam = this.camera.position;
+    for (const c of this.lightCones) {
+      const d = cam.distanceTo(c.target);
+      const k = THREE.MathUtils.smoothstep(d, 5, 10);
+      const o = c.base * k;
+      if (Math.abs(c.mat.opacity - o) > 0.002) c.mat.opacity = o;
+      c.mesh.visible = o > 0.002;
+    }
+  }
+
   private loadPhotos() {
     const photos = this.opts.photos;
     const worldCount = this.opts.worldPhotos?.length ?? 0;
@@ -3382,28 +3607,14 @@ export class WeddingGallery {
       const a = wp ? wp.w / wp.h : fw / fh;
       const w = a >= 1 ? bigW : bigH * a;
       const h = a >= 1 ? bigW / a : bigH;
-      return { src, w, h, label: meta?.label ?? "", sub: meta?.sub ?? "" };
+      return { wp, src, w, h, label: meta?.label ?? "", sub: meta?.sub ?? "" };
     });
 
-    // 同一张图只加载一次，onReady 按唯一 URL 计数
-    const cache = new Map<string, THREE.Texture>();
-    const uniqueSrcs = new Set<string>();
-    for (const sl of slots) uniqueSrcs.add(sl.src);
-    let loaded = 0;
+    // 全部画框的纹理到达（或失败）后才算就绪
+    let pending = total;
     const onOne = () => {
-      loaded += 1;
-      if (loaded >= uniqueSrcs.size) this.fireReady();
-    };
-    const loader = new THREE.TextureLoader();
-    const getTex = (src: string): THREE.Texture => {
-      const hit = cache.get(src);
-      if (hit) return hit;
-      const tex = loader.load(src, onOne, undefined, onOne);
-      tex.colorSpace = THREE.SRGBColorSpace;
-      tex.anisotropy = Math.min(8, this.renderer.capabilities.getMaxAnisotropy());
-      this.reg(tex);
-      cache.set(src, tex);
-      return tex;
+      pending -= 1;
+      if (pending === 0) this.fireReady();
     };
 
     for (let i = 0; i < total; i++) {
@@ -3445,22 +3656,14 @@ export class WeddingGallery {
       mat.rotation.y = rotY;
       this.scene.add(mat);
 
-      const tex = getTex(photo.src);
-      const photoMesh = new THREE.Mesh(
-        new THREE.PlaneGeometry(pw, ph),
-        new THREE.MeshStandardMaterial({
-          map: tex,
-          emissiveMap: tex,
-          emissive: new THREE.Color("#ffffff"),
-          emissiveIntensity: 0.35,
-          roughness: 0.72,
-        }),
-      );
+      const photoMat = this.makePhotoMaterial();
+      const key = this.usePhoto(photoMat, photo.wp, photo.src, pw / ph, onOne);
+      const photoMesh = new THREE.Mesh(new THREE.PlaneGeometry(pw, ph), photoMat);
       photoMesh.position.set(xPhoto, fy, z);
       photoMesh.rotation.y = rotY;
       this.scene.add(photoMesh);
       this.slotTag(slotName(i), new THREE.Vector3(xPhoto - sign * 0.3, fy + ph / 2 + 0.55, z), this.scene);
-      this.photoTargets.push({ mesh: photoMesh, w: pw, h: ph, zone: "hall" });
+      this.photoTargets.push({ mesh: photoMesh, w: pw, h: ph, zone: "hall", key });
       if (!photo.label) {
         this.addTrackLight(sign * (wallX - 2.2), this.H - 0.42, z, xPhoto, fy, z);
         continue;
@@ -5109,7 +5312,6 @@ export class WeddingGallery {
     const easel = new THREE.InstancedMesh(this.makeEaselGeometry(), easelMat, spots.length);
     const frame = new THREE.InstancedMesh(new THREE.BoxGeometry(FW, FH, 0.05), frameMat, spots.length);
     const board = new THREE.InstancedMesh(new THREE.PlaneGeometry(FW - 0.08, FH - 0.08), boardMat, spots.length);
-    const loader = new THREE.TextureLoader();
     const planeAspect = PW / PH;
     const ledgeTop = (0.6 + 0.0175) * S;
     const local = new THREE.Matrix4();
@@ -5133,21 +5335,13 @@ export class WeddingGallery {
       const wa = wp ? wp.w / wp.h : planeAspect;
       const pw = wa > planeAspect ? PW : PH * wa;
       const ph = wa > planeAspect ? PW / wa : PH;
-      const photoMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0.95, 0.95, 0.95) });
-      if (src) {
-        const tex = loader.load(src, (t) => {
-          if (!wp) this.coverTexture(t, planeAspect);
-        });
-        tex.colorSpace = THREE.SRGBColorSpace;
-        tex.anisotropy = Math.min(8, this.renderer.capabilities.getMaxAnisotropy());
-        this.reg(tex);
-        photoMat.map = tex;
-      }
+      const photoMat = this.makePhotoMaterial();
+      const key = src ? this.usePhoto(photoMat, wp, src, wp ? pw / ph : planeAspect) : "";
       const photo = new THREE.Mesh(new THREE.PlaneGeometry(pw, ph), photoMat);
       photo.matrixAutoUpdate = false;
       photo.matrix.copy(at(0, ledgeTop + FH / 2, 0.09));
       this.scene.add(photo);
-      this.photoTargets.push({ mesh: photo, w: pw, h: ph, zone: "hall" });
+      this.photoTargets.push({ mesh: photo, w: pw, h: ph, zone: "hall", key });
       this.slotTag(slotId, new THREE.Vector3().setFromMatrixPosition(at(0, ledgeTop + FH + 0.35, 0.1)), this.scene);
       this.circles.push({ x: sp.x, z: sp.z, r: 0.5 });
     });
@@ -6622,7 +6816,6 @@ export class WeddingGallery {
     const easel = new THREE.InstancedMesh(this.makeEaselGeometry(), easelMat, spots.length);
     const frame = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 0.05), frameMat, spots.length);
     const board = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), boardMat, spots.length);
-    const loader = new THREE.TextureLoader();
 
     const ledgeTop = (0.6 + 0.0175) * S;
     const local = new THREE.Matrix4();
@@ -6648,23 +6841,15 @@ export class WeddingGallery {
       frame.setMatrixAt(i, scaled.copy(at(0, cy, 0.06)).multiply(sz.makeScale(fw, fh, 1)));
       board.setMatrixAt(i, scaled.copy(at(0, cy, 0.087)).multiply(sz.makeScale(fw - 0.08, fh - 0.08, 1)));
 
-      const photoMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0.94, 0.94, 0.94) });
+      const photoMat = this.makePhotoMaterial();
       // 精修照片按原比例、画框跟着横竖变形；没有时回退到配置照片并裁切铺满
-      const src = wp?.small ?? (photos.length > 0 ? photos[i % photos.length].src : "");
-      if (src) {
-        const tex = loader.load(src, (t) => {
-          if (!wp) this.coverTexture(t, pw / ph);
-        });
-        tex.colorSpace = THREE.SRGBColorSpace;
-        tex.anisotropy = Math.min(8, this.renderer.capabilities.getMaxAnisotropy());
-        this.reg(tex);
-        photoMat.map = tex;
-      }
+      const src = wp?.src ?? (photos.length > 0 ? photos[i % photos.length].src : "");
+      const key = src ? this.usePhoto(photoMat, wp, src, pw / ph) : "";
       const photo = new THREE.Mesh(new THREE.PlaneGeometry(pw, ph), photoMat);
       photo.matrixAutoUpdate = false;
       photo.matrix.copy(at(0, cy, 0.09));
       this.lawnGroup.add(photo);
-      this.photoTargets.push({ mesh: photo, w: pw, h: ph, zone: "lawn" });
+      this.photoTargets.push({ mesh: photo, w: pw, h: ph, zone: "lawn", key });
       this.slotTag(slotId, new THREE.Vector3().setFromMatrixPosition(at(0, ledgeTop + fh + 0.35, 0.1)), this.lawnGroup);
 
       const footTones = ["#fdf8f3", "#f4c9d4", "#ef8fae"];
@@ -10693,7 +10878,6 @@ export class WeddingGallery {
     const easel = new THREE.InstancedMesh(this.makeEaselGeometry(), easelMat, spots.length);
     const frame = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 0.05), frameMat, spots.length);
     const board = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), boardMat, spots.length);
-    const loader = new THREE.TextureLoader();
 
     const ledgeTop = (0.6 + 0.0175) * S;
     const local = new THREE.Matrix4();
@@ -10720,23 +10904,15 @@ export class WeddingGallery {
       frame.setMatrixAt(i, scaled.copy(at(0, cy, 0.06)).multiply(sz.makeScale(fw, fh, 1)));
       board.setMatrixAt(i, scaled.copy(at(0, cy, 0.087)).multiply(sz.makeScale(fw - 0.08, fh - 0.08, 1)));
 
-      const photoMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0.94, 0.94, 0.94) });
+      const photoMat = this.makePhotoMaterial();
       // 精修照片按原比例、画框跟着横竖变形；没有时回退到配置照片并裁切铺满
-      const src = wp?.small ?? (photos.length > 0 ? photos[i % photos.length].src : "");
-      if (src) {
-        const tex = loader.load(src, (t) => {
-          if (!wp) this.coverTexture(t, pw / ph);
-        });
-        tex.colorSpace = THREE.SRGBColorSpace;
-        tex.anisotropy = Math.min(8, this.renderer.capabilities.getMaxAnisotropy());
-        this.reg(tex);
-        photoMat.map = tex;
-      }
+      const src = wp?.src ?? (photos.length > 0 ? photos[i % photos.length].src : "");
+      const key = src ? this.usePhoto(photoMat, wp, src, pw / ph) : "";
       const photo = new THREE.Mesh(new THREE.PlaneGeometry(pw, ph), photoMat);
       photo.matrixAutoUpdate = false;
       photo.matrix.copy(at(0, cy, 0.09));
       this.beachGroup.add(photo);
-      this.photoTargets.push({ mesh: photo, w: pw, h: ph, zone: "beach" });
+      this.photoTargets.push({ mesh: photo, w: pw, h: ph, zone: "beach", key });
       this.slotTag(slotId, new THREE.Vector3().setFromMatrixPosition(at(0, ledgeTop + fh + 0.35, 0.1)), this.beachGroup);
 
       p.set(-toAisle * (fw / 2 - 0.04), ledgeTop + fh - 0.04, 0.12).applyMatrix4(at(0, 0, 0));
@@ -13284,7 +13460,13 @@ export class WeddingGallery {
     return null;
   }
 
-  private walkToPhoto(t: { mesh: THREE.Mesh; w: number; h: number }) {
+  private walkToPhoto(t: { mesh: THREE.Mesh; w: number; h: number; key?: string }) {
+    // 走过去约需 1s，出发时就开始下载高清档，到了正好换上
+    const entry = t.key ? this.photoEntries.get(t.key) : undefined;
+    if (entry?.hdUrl && entry.base) {
+      entry.hdWantedAt = performance.now() + 3000;
+      if (!entry.hd && !entry.hdLoading) this.loadHd(entry);
+    }
     t.mesh.updateMatrixWorld();
     const center = new THREE.Vector3().setFromMatrixPosition(t.mesh.matrixWorld);
     const n = new THREE.Vector3(0, 0, 1).transformDirection(t.mesh.matrixWorld);
@@ -13709,6 +13891,11 @@ export class WeddingGallery {
 
       this.update(dt);
       this.syncOutdoorVisibility();
+      if (this.active && !this.idleMode) {
+        this.fadeLightCones();
+        this.hdTick(now);
+      }
+      this.updateBoost(now);
       this.renderer.render(this.scene, this.camera);
       this.framesRendered++;
       this.trackFrameInterval(now);
@@ -13799,13 +13986,25 @@ export class WeddingGallery {
   private trackFrameInterval(now: number) {
     const iv = now - this.lastFrameTs;
     this.lastFrameTs = now;
-    if (this.idleMode || !this.active || this.prLevels.length < 2) return;
+    if (this.idleMode || !this.active) return;
     // 暂停恢复、偶发编译等超长帧不代表持续负载
     if (iv <= 0 || iv > 100) return;
     if (this.skipFrameSamples > 0) {
       this.skipFrameSamples--;
       return;
     }
+    // 静止高分辨率期间单独计量：低于约 48fps 就退回（30s 后再试，失败两次本次浏览不再尝试），不影响自适应档位
+    if (this.boosted) {
+      this.boostEma += (iv - this.boostEma) * 0.1;
+      this.boostSlow = this.boostEma > 21 ? this.boostSlow + 1 : 0;
+      if (this.boostSlow > 30) {
+        this.setBoost(false);
+        this.boostFails++;
+        this.boostBlockedUntil = this.boostFails >= 2 ? Infinity : now + 30000;
+      }
+      return;
+    }
+    if (this.prLevels.length < 2) return;
     this.frameIvEma += (iv - this.frameIvEma) * 0.05;
     this.frameJitterEma += (Math.abs(iv - this.frameIvEma) - this.frameJitterEma) * 0.05;
     // 稳定的 33ms（iOS 低电量模式把 rAF 锁在 30fps）不是掉帧：只有忽快忽慢，或明显低于 25fps 才算
@@ -13845,7 +14044,10 @@ export class WeddingGallery {
   }
 
   private resetAdaptiveResolution() {
-    if (this.prIdx !== 0 && this.prLevels.length > 0) this.renderer.setPixelRatio(this.prLevels[0]);
+    if ((this.prIdx !== 0 || this.boosted) && this.prLevels.length > 0) this.renderer.setPixelRatio(this.prLevels[0]);
+    this.boosted = false;
+    this.boostBlockedUntil = this.boostFails >= 2 ? Infinity : 0;
+    this.stillSince = performance.now() + 800;
     this.prIdx = 0;
     this.slowFrames = 0;
     this.fastFrames = 0;
@@ -13854,6 +14056,31 @@ export class WeddingGallery {
     this.prUpgradeHoldMs = 8000;
     this.lastDowngradeTs = -Infinity;
     this.lastUpgradeTs = -Infinity;
+  }
+
+  /**
+   * 3 倍屏静止 0.45s 后把渲染像素比从 2 提到设备原生（最高 3），停下来细看照片时更锐；
+   * 镜头一动立即回到自适应档位，走动时仍保持流畅。自适应已降档时不启用。
+   */
+  private updateBoost(now: number) {
+    if (!this.boostPr) return;
+    const cam = this.camera;
+    const moving =
+      cam.position.distanceToSquared(this.lastCamPos) > 1e-8 || 1 - Math.abs(cam.quaternion.dot(this.lastCamQuat)) > 1e-9;
+    this.lastCamPos.copy(cam.position);
+    this.lastCamQuat.copy(cam.quaternion);
+    if (moving) this.stillSince = now;
+    const want =
+      this.active && !this.idleMode && this.prIdx === 0 && now >= this.boostBlockedUntil && now - this.stillSince > 450;
+    if (want !== this.boosted) this.setBoost(want);
+  }
+
+  private setBoost(on: boolean) {
+    this.boosted = on;
+    this.renderer.setPixelRatio(on ? this.boostPr : this.prLevels[this.prIdx] ?? 1);
+    this.boostEma = 16.7;
+    this.boostSlow = 0;
+    this.skipFrameSamples = 3;
   }
 
   /** 室内时整片室外（草坪/沙滩各 ~1.9M 三角形）只能透过大门拱看见；朝向不对就整组不渲染 */
@@ -14148,6 +14375,8 @@ export class WeddingGallery {
 
     for (const t of this.textures) t.dispose();
     this.textures.length = 0;
+    for (const e of this.photoEntries.values()) e.hd?.dispose();
+    this.photoEntries.clear();
 
     this.renderer.dispose();
   }
