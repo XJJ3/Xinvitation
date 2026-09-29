@@ -200,18 +200,31 @@ html { scroll-snap-type: y mandatory; }
 }
 /* Reveal 是唯一子块：铺满剩余高度并垂直居中，把富余空间分给祝福墙列表 */
 .inv-love-sec > .reveal { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; justify-content: center; }
-.inv-love-sec .inv-orbit { width: 158px; height: 158px; margin: 14px auto 8px; }
-.inv-love-sec .inv-love-count { margin-bottom: 14px; }
+/* 轨道不参与 flex 收缩（否则被压成椭圆）；上下外边距给溢出轨道的半张照片留位置 */
+.inv-love-sec .inv-orbit { flex: none; width: 196px; height: 196px; margin: 24px auto 26px; }
+.inv-love-sec .inv-love-count { flex: none; margin-bottom: 14px; }
 /* 祝福墙：自身成纵向 flex，列表吃掉富余高度并可滚动，输入框永远贴底可见 */
 .inv-love-sec .inv-wall { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
-.inv-love-sec .inv-wall-list { max-height: none; flex: 0 1 auto; min-height: 48px; overflow-y: auto; }
-@media (max-height: 640px) {
-  .inv-love-sec { padding-top: 18px; padding-bottom: 10px; }
-  .inv-love-sec .inv-orbit { width: 142px; height: 142px; margin: 8px auto 6px; }
-  .inv-love-sec .inv-title h2 { font-size: 24px; margin: 4px 0 8px; }
-  .inv-love-sec .inv-wall { padding: 14px 20px 10px; }
-  .inv-love-sec .inv-wall-hint { margin-top: 2px; }
+.inv-love-sec .inv-wall-list { max-height: none; flex: 0 1 auto; min-height: 40px; overflow-y: auto; }
+.inv-love-sec .inv-wall-send { flex: none; }
+@media (max-height: 720px) {
+  .inv-love-sec { padding-top: 14px; padding-bottom: 10px; }
+  .inv-love-sec .inv-orbit { --orbit-ph: 46px; --love-btn: 96px; width: 152px; height: 152px; margin: 18px auto 18px; }
+  .inv-love-sec .inv-love-btn { gap: 4px; }
+  .inv-love-sec .inv-title h2 { font-size: 24px; margin: 2px 0 6px; }
+  .inv-love-sec .inv-wall { padding: 12px 14px 10px; }
+  .inv-love-sec .inv-wall-head { margin-bottom: 2px; }
+  .inv-love-sec .inv-wall-send { margin-top: 8px; }
   .inv-love-sec .inv-love-count { margin-bottom: 8px; }
+  .inv-love-sec .inv-wish { padding: 10px 10px 8px 14px; }
+  .inv-love-sec .inv-wish-bar { margin-top: 6px; padding-top: 7px; }
+  .inv-love-sec .inv-wish .dice, .inv-love-sec .inv-wish .send { height: 30px; }
+}
+@media (max-height: 600px) {
+  .inv-love-sec .inv-orbit { --orbit-ph: 38px; --love-btn: 80px; width: 124px; height: 124px; margin: 14px auto 14px; }
+  .inv-love-sec .inv-title > span, .inv-love-sec .inv-wall-head { display: none; }
+  .inv-love-sec .inv-title h2 { font-size: 22px; }
+  .inv-love-sec .inv-wish .wish { font-size: 14px; }
 }
 
 /* ── RSVP 区：恢复整屏吸附，内容本就不足一屏，居中即可 ── */
@@ -265,30 +278,55 @@ html { scroll-snap-type: y mandatory; }
 .inv-title i::after { content: "◆"; position: absolute; top: -8px; left: 12px; padding: 2px; color: var(--rose); font-size: 8px; font-style: normal; background: var(--title-bg, var(--blush-soft)); }
 .inv-lead { margin: 18px 0 0; color: var(--muted); font-size: 13px; text-align: center; }
 
+/* 封面日期：细线夹年份 → 毛笔字渐变大日期 → 星期小徽章 → 英文 / 农历 */
+.inv-cover-date { margin-bottom: 24px; text-align: center; }
+.inv-cover-year { display: flex; align-items: center; justify-content: center; gap: 10px; color: var(--muted); font-size: 11px; letter-spacing: .4em; text-indent: .4em; }
+.inv-cover-year i { width: 26px; height: 1px; background: linear-gradient(90deg, transparent, var(--rose)); }
+.inv-cover-year i:last-child { background: linear-gradient(90deg, var(--rose), transparent); }
+.inv-cover-day {
+  margin: 4px 0 2px; font-family: var(--font-brush); font-size: 38px; line-height: 1.25; letter-spacing: .14em; text-indent: .14em;
+  background: linear-gradient(180deg, #9e4e63 10%, #542d38 90%); -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 2px 6px rgba(158,78,99,.18));
+}
+.inv-cover-week { display: inline-block; padding: 2px 12px; border: 1px solid rgba(198,111,132,.45); border-radius: 999px; color: var(--rose-dark); background: rgba(255,255,255,.55); font-size: 11px; letter-spacing: .3em; text-indent: .3em; }
+.inv-cover-en { margin-top: 8px; color: var(--rose); font-family: var(--en); font-size: 13px; font-style: italic; letter-spacing: .2em; }
+.inv-cover-lunar { margin-top: 2px; color: var(--muted); font-size: 11px; letter-spacing: .2em; }
+
 /* 信件：行高、分段照第 6 版；字号大一号，上下留白收紧以便整块放进一屏 */
 .inv-letter-sec { padding: 22px 24px 18px; background: var(--blush-soft); }
 .inv-letter-sec .inv-title h2 { margin-bottom: 4px; }
 .inv-letter-sec .inv-title i { display: block; margin: 0 auto; }
-.inv-letter { position: relative; margin-top: 8px; padding: 10px 10px 18px; background: var(--paper); border: 1px solid var(--line); box-shadow: 9px 9px 0 var(--blush); }
+.inv-letter { position: relative; margin-top: 8px; padding: 12px 10px 18px; background: var(--paper); border: 1px solid var(--line); box-shadow: 9px 9px 0 var(--blush); }
 .inv-letter::before, .inv-letter::after { content: "❀"; position: absolute; color: var(--line); font-size: 32px; }
 .inv-letter::before { top: 42%; left: -14px; transform: rotate(-22deg); }
 .inv-letter::after { right: -12px; bottom: 38px; transform: rotate(158deg); }
-.inv-letter-photo { position: relative; height: 250px; flex: none; overflow: hidden; border-radius: 150px 150px 3px 3px; background: var(--blush); }
-.inv-letter-photo::after { content: ""; position: absolute; inset: 9px; border: 1px solid rgba(255,255,255,.72); border-radius: 145px 145px 2px 2px; pointer-events: none; }
-/* 进入视口后照片从 1.12 倍缓慢推回原尺寸（参考项目封面的 hero-zoom）；
+/* 照片居中、按原图 3:4 完整显示；两侧竖排小字（OUR PROMISE / 日期）托住拱形照片 */
+.inv-letter-top { display: flex; align-items: flex-end; justify-content: center; gap: 14px; }
+.inv-letter-top > span, .inv-letter-top > i { flex: 0 0 auto; padding-bottom: 6px; color: var(--rose); font-family: var(--en); font-size: 10px; font-style: normal; letter-spacing: .22em; writing-mode: vertical-rl; }
+.inv-letter-top > span { transform: rotate(180deg); }
+.inv-letter-photo { position: relative; height: 300px; width: 225px; flex: none; overflow: hidden; border-radius: 999px 999px 4px 4px; background: var(--blush); box-shadow: 0 12px 28px rgba(92,46,58,.14); }
+.inv-letter-photo::after { content: ""; position: absolute; inset: 7px; border: 1px solid rgba(255,255,255,.75); border-radius: 999px 999px 2px 2px; pointer-events: none; }
+/* 进入视口后照片从 1.06 倍缓慢推回原尺寸，最终停在完整画面；
    悬停放大用独立的 scale 属性，才能和动画的 transform 叠加而不被覆盖 */
-.inv-letter-photo img { display: block; width: 100%; height: 100%; object-fit: cover; transform: scale(1.12); transition: scale 1s ease; }
-.inv-letter-box.visible .inv-letter-photo img { animation: inv-photo-zoom 12s ease-out both; }
+.inv-letter-photo img { display: block; width: 100%; height: 100%; object-fit: cover; transition: scale 1s ease; }
+.inv-letter-box.visible .inv-letter-photo img { animation: inv-photo-zoom 6s ease-out both; }
 .inv-letter:hover .inv-letter-photo img { scale: 1.035; }
-@keyframes inv-photo-zoom { from { transform: scale(1.12); } to { transform: scale(1); } }
-.inv-letter-photo > span, .inv-letter-photo > i { position: absolute; z-index: 1; bottom: 20px; color: #fff; font-family: var(--en); font-size: 11px; font-style: normal; text-shadow: 0 2px 10px rgba(50,25,32,.4); }
-.inv-letter-photo > span { left: 21px; letter-spacing: .22em; }
-.inv-letter-photo > i { right: 20px; letter-spacing: .12em; }
-.inv-letter-paper { position: relative; margin: -18px 12px 0; padding: 28px 18px 18px; background: rgba(255,253,251,.97); border: 1px solid var(--line); box-shadow: 0 10px 30px rgba(87,42,53,.08); }
-.inv-quote { position: absolute; top: 4px; left: 18px; color: var(--blush); font-family: var(--en); font-size: 72px; line-height: 1; }
-.inv-letter-to { position: relative; display: block; margin-bottom: 14px; color: var(--rose); font-family: var(--en); font-size: 10px; letter-spacing: .2em; }
-.inv-letter-paper p { position: relative; margin: 0 0 12px; color: #725e63; font-size: 13px; line-height: 2.15; text-align: justify; }
-.inv-letter-paper blockquote { position: relative; margin: 16px 0 0; padding: 12px 0 0; border-top: 1px solid var(--line); color: var(--rose-dark); font-size: 12px; line-height: 2; text-align: center; }
+@keyframes inv-photo-zoom { from { transform: scale(1.06); } to { transform: scale(1); } }
+.inv-letter-paper { position: relative; margin: 12px 8px 0; padding: 24px 18px 16px; background: rgba(255,253,251,.97); border: 1px solid var(--line); box-shadow: 0 10px 30px rgba(87,42,53,.08); }
+.inv-quote { position: absolute; top: 0; left: 14px; color: var(--blush); font-family: var(--en); font-size: 64px; line-height: 1; }
+.inv-letter-to { position: relative; display: block; margin-bottom: 10px; color: var(--rose); font-family: var(--en); font-size: 10px; letter-spacing: .2em; }
+.inv-letter-paper p { position: relative; margin: 0 0 8px; color: #725e63; font-size: 13px; line-height: 2; text-align: justify; }
+.inv-letter-paper blockquote { position: relative; margin: 12px 0 0; padding: 10px 0 0; border-top: 1px solid var(--line); color: var(--rose-dark); font-size: 12px; line-height: 1.9; text-align: center; }
+@media (max-height: 620px) {
+  .inv-letter-sec { padding-top: 14px; padding-bottom: 10px; }
+  .inv-letter-sec .inv-title h2 { font-size: 24px; margin: 2px 0 2px; }
+  .inv-letter { padding: 8px 8px 12px; }
+  .inv-letter-paper { margin-top: 8px; padding: 16px 12px 10px; }
+  .inv-letter-to { margin-bottom: 6px; }
+  .inv-letter-paper p { margin-bottom: 2px; font-size: 12px; line-height: 1.75; }
+  .inv-letter-paper blockquote { margin-top: 6px; padding-top: 6px; font-size: 11px; line-height: 1.6; }
+  .inv-sign { margin-top: 6px; }
+}
 .inv-sign { position: relative; margin: 12px 18px 0; padding-right: 54px; text-align: right; }
 .inv-sign::after { content: "囍"; position: absolute; right: 0; top: 50%; display: grid; place-items: center; width: 42px; height: 42px; border: 1px solid var(--rose); border-radius: 50%; color: var(--rose); font-size: 15px; transform: translateY(-50%) rotate(-8deg); }
 .inv-sign span { display: block; color: var(--rose); font-family: var(--en); font-size: 10px; letter-spacing: .18em; }
@@ -477,13 +515,13 @@ html { scroll-snap-type: y mandatory; }
 .inv-orbit { position: relative; width: 190px; height: 190px; display: grid; place-items: center; margin: 30px auto 10px; }
 .inv-orbit::before, .inv-orbit::after { content: ""; position: absolute; inset: 9px; border: 1px dashed rgba(198,111,132,.35); border-radius: 50%; animation: spin-slow 18s linear infinite; }
 .inv-orbit::after { inset: 23px; animation-direction: reverse; animation-duration: 12s; }
-/* 三张小圆照片沿外圈轨道公转；照片自身反向同速自转，始终保持正立 */
-.inv-orbit-photos { position: absolute; inset: 9px; z-index: 3; animation: spin-slow 30s linear infinite; }
-.inv-orbit-photos span { position: absolute; width: 38px; height: 38px; margin: -19px 0 0 -19px; }
+/* 三张圆照片沿外圈轨道公转，层级压在按钮之上（不拦截点击）；照片自身反向同速自转，始终保持正立 */
+.inv-orbit-photos { position: absolute; inset: 9px; z-index: 6; pointer-events: none; animation: spin-slow 30s linear infinite; }
+.inv-orbit-photos span { position: absolute; width: var(--orbit-ph, 58px); height: var(--orbit-ph, 58px); margin: calc(var(--orbit-ph, 58px) / -2) 0 0 calc(var(--orbit-ph, 58px) / -2); }
 .inv-orbit-photos .p0 { left: 50%; top: 0; }
 .inv-orbit-photos .p1 { left: 93%; top: 75%; }
 .inv-orbit-photos .p2 { left: 7%; top: 75%; }
-.inv-orbit-photos img { display: block; width: 100%; height: 100%; object-fit: cover; border: 2px solid #fff; border-radius: 50%; box-sizing: border-box; box-shadow: 0 4px 12px rgba(92,46,58,.22); animation: spin-slow 30s linear infinite reverse; }
+.inv-orbit-photos img { display: block; width: 100%; height: 100%; object-fit: cover; border: 2.5px solid #fff; border-radius: 50%; box-sizing: border-box; box-shadow: 0 6px 16px rgba(92,46,58,.28); animation: spin-slow 30s linear infinite reverse; }
 .inv-orbit.lit .inv-orbit-photos span { animation: inv-orbit-pop .9s cubic-bezier(.3,1.6,.5,1); }
 @keyframes inv-orbit-pop { 0%, 100% { transform: scale(1); } 40% { transform: scale(1.4); } }
 
@@ -499,14 +537,14 @@ html { scroll-snap-type: y mandatory; }
 .inv-quote-text { margin-top: 18px; font-family: var(--font-serif); font-size: 26px; font-weight: 500; line-height: 1.8; letter-spacing: 3px; text-shadow: 0 2px 14px rgba(0,0,0,.35); }
 .inv-quote-src { margin-top: 10px; font-family: var(--font-serif); font-size: 12px; letter-spacing: 3px; color: #f2c3ce; }
 .inv-quote-en { margin-top: 22px; font-family: var(--font-en); font-style: italic; font-size: 18px; color: #fbe3e8; }
-.inv-love-btn { position: relative; z-index: 4; width: 128px; height: 128px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; border-radius: 50%; color: #fff; background: var(--rose); box-shadow: 0 12px 35px rgba(158,78,99,.3); transition: transform .3s, background .3s; }
+.inv-love-btn { position: relative; z-index: 4; width: var(--love-btn, 118px); height: var(--love-btn, 118px); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; border-radius: 50%; color: #fff; background: var(--rose); box-shadow: 0 12px 35px rgba(158,78,99,.3); transition: transform .3s, background .3s; }
 .inv-love-btn:active { transform: scale(.92); }
 .inv-love-btn svg.ico { width: 31px; height: 31px; animation: heartbeat 1.8s infinite; }
 .inv-love-btn span { font-size: 12px; }
 .inv-orbit.lit .inv-love-btn { background: var(--rose-dark); }
 .inv-love-btn.bump { animation: inv-love-bump .45s cubic-bezier(.3,1.6,.5,1); }
 .inv-love-burst { position: absolute; inset: 0; z-index: 5; pointer-events: none; }
-.inv-love-ripple { position: absolute; left: 50%; top: 50%; width: 128px; height: 128px; margin: -64px 0 0 -64px; border: 2px solid var(--rose); border-radius: 50%; animation: inv-love-ripple .8s ease-out forwards; }
+.inv-love-ripple { position: absolute; left: 50%; top: 50%; width: var(--love-btn, 118px); height: var(--love-btn, 118px); margin: calc(var(--love-btn, 118px) / -2) 0 0 calc(var(--love-btn, 118px) / -2); border: 2px solid var(--rose); border-radius: 50%; animation: inv-love-ripple .8s ease-out forwards; }
 .inv-love-fly { position: absolute; left: 50%; top: 50%; color: var(--rose); font-size: var(--s, 16px); font-weight: normal; opacity: 0; animation: inv-love-fly 1s ease-out forwards; }
 @keyframes inv-love-bump { 0% { transform: scale(1); } 30% { transform: scale(.86); } 65% { transform: scale(1.08); } 100% { transform: scale(1); } }
 @keyframes inv-love-ripple { from { transform: scale(1); opacity: .7; } to { transform: scale(1.7); opacity: 0; } }
@@ -526,27 +564,46 @@ html { scroll-snap-type: y mandatory; }
 .inv-wall-list p:last-child { border-bottom: 0; }
 .inv-wall-list p.mine { color: var(--rose-dark); }
 .inv-wall-list svg.ico { width: 12px; height: 12px; margin-top: 5px; color: var(--rose); flex: 0 0 auto; }
-/* 输入框：圆角矩形（祝福语换行变高时，全高发送键仍贴合，不留悬空的按钮） */
-.inv-wall-input { display: flex; align-items: stretch; margin-top: 16px; overflow: hidden; border: 1px solid #e4c7ce; border-radius: 16px; background: #fff; }
-.inv-wall-input .wish { flex: 1; min-width: 0; display: flex; align-items: center; padding: 12px 6px 12px 16px; border: 0; color: var(--ink); background: transparent; font-family: var(--cn); font-size: 14px; text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-.inv-wall-input .wish span { display: block; line-height: 1.5; animation: inv-wish-in .35s cubic-bezier(.22,1,.36,1); }
+/* 祝福卡：渐变描边的信笺卡片。上方是祝福语（轻触换一句），下方操作栏：提示 / 换一句 / 送出 */
+.inv-wish {
+  position: relative; padding: 14px 12px 10px 18px; text-align: left;
+  border: 1.5px solid transparent; border-radius: 20px;
+  background:
+    linear-gradient(180deg, #fffefd, #fff6f7) padding-box,
+    linear-gradient(135deg, #f4cdd6, #c66f84 48%, #e9c79f) border-box;
+  box-shadow: 0 12px 28px rgba(158,78,99,.16), 0 2px 6px rgba(158,78,99,.08);
+}
+.inv-wish::before { content: "“"; position: absolute; top: -6px; left: 8px; color: rgba(198,111,132,.22); font-family: var(--en); font-size: 54px; line-height: 1; pointer-events: none; }
+.inv-wish .wish { position: relative; display: block; width: 100%; min-height: 26px; padding: 2px 4px 0 6px; color: var(--wine); background: transparent; font-family: var(--cn); font-size: 15px; line-height: 1.65; letter-spacing: .04em; text-align: left; -webkit-tap-highlight-color: transparent; }
+.inv-wish .wish span { display: block; animation: inv-wish-in .35s cubic-bezier(.22,1,.36,1); }
 @keyframes inv-wish-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-.inv-wall-input .dice { flex: 0 0 auto; align-self: center; width: 38px; height: 38px; display: grid; place-items: center; color: var(--rose); background: transparent; font-size: 17px; transition: transform .4s; }
-.inv-wall-input .dice.roll { transform: rotate(360deg); }
-.inv-wall-input .send { flex: 0 0 auto; align-self: stretch; width: 52px; height: auto; min-height: 46px; display: grid; place-items: center; color: #fff; background: var(--rose); }
-.inv-wall-input .send svg.ico { width: 16px; height: 16px; }
-.inv-wall-hint { margin: 8px 4px 0; color: var(--muted); font-size: 11px; }
+.inv-wish-bar { display: flex; align-items: center; gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 1px dashed rgba(198,111,132,.3); }
+.inv-wish-tag { flex: 1; min-width: 0; overflow: hidden; color: var(--muted); font-size: 11px; letter-spacing: .06em; white-space: nowrap; text-overflow: ellipsis; }
+.inv-wish-tag.err { color: #b8455f; white-space: normal; line-height: 1.4; }
+@media (max-width: 350px) {
+  .inv-wish-tag:not(.err) { visibility: hidden; }
+  .inv-wish .dice { padding: 0 9px; }
+  .inv-wish .send { padding: 0 12px 0 14px; }
+}
+.inv-wish .dice, .inv-wish .send { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 5px; height: 32px; border-radius: 999px; font-size: 12px; letter-spacing: .08em; transition: transform .2s, box-shadow .2s, opacity .2s; }
+.inv-wish .dice { padding: 0 11px; color: var(--rose-dark); background: #fff; border: 1px solid rgba(198,111,132,.35); }
+.inv-wish .dice svg.ico { width: 13px; height: 13px; transition: transform .4s; }
+.inv-wish .dice.roll svg.ico { transform: rotate(360deg); }
+.inv-wish .send { padding: 0 14px 0 16px; color: #fff; background: linear-gradient(135deg, #d98a9c, #9e4e63); box-shadow: 0 6px 16px rgba(158,78,99,.35); }
+.inv-wish .send svg.ico { width: 14px; height: 14px; }
+.inv-wish .dice:active, .inv-wish .send:active { transform: scale(.94); }
+.inv-wish .send:disabled { opacity: .7; }
+.inv-wish button:focus-visible { outline: 2px solid var(--rose); outline-offset: 2px; }
 /* 发送：按钮回弹 + 纸飞机飞出再从左侧飞回 + 三颗小心飘起；新留言从上方滑入并闪一下粉色底 */
 .inv-wall-send { position: relative; margin-top: 16px; }
-.inv-wall-send .inv-wall-input { margin-top: 0; }
-.inv-wall-input .send.go { animation: inv-love-bump .45s cubic-bezier(.3,1.6,.5,1); }
-.inv-wall-input .send.go svg.ico { animation: inv-plane .8s ease-in-out; }
-.inv-send-hearts { position: absolute; z-index: 2; right: 26px; top: 50%; pointer-events: none; }
+.inv-wish .send.go { animation: inv-love-bump .45s cubic-bezier(.3,1.6,.5,1); }
+.inv-wish .send.go svg.ico { animation: inv-plane .8s ease-in-out; }
+.inv-send-hearts { position: absolute; z-index: 2; right: 44px; bottom: 26px; pointer-events: none; }
 .inv-send-hearts b { position: absolute; left: 0; top: 0; color: var(--rose); font-size: 11px; font-weight: normal; opacity: 0; animation: inv-send-heart .9s ease-out forwards; }
 .inv-send-hearts b:nth-child(2) { font-size: 9px; animation-delay: .12s; --dx: -14px; }
 .inv-send-hearts b:nth-child(3) { font-size: 13px; animation-delay: .22s; --dx: 12px; }
 .inv-wall-list p.fresh { animation: inv-wall-in .6s cubic-bezier(.22,1,.36,1) both, inv-wall-glow 1.6s ease .3s; border-radius: 8px; }
-.inv-wall-input.shake { animation: inv-shake .4s ease; border-color: var(--rose); }
+.inv-wish.shake { animation: inv-shake .4s ease; }
 @keyframes inv-plane {
   0% { transform: translate(0, 0) rotate(0); opacity: 1; }
   40% { transform: translate(26px, -22px) rotate(-12deg) scale(.7); opacity: 0; }

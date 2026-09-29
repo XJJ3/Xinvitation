@@ -68,16 +68,17 @@ export const siteConfig = {
       tagEn: "— WEDDING INVITATION —",
       // 封面日期区文案（中文行 + 英文行）
       dateZhYear: "公元二〇二六年",
-      dateZh: "十一月十日 · 星期二",
-      dateEn: "NOVEMBER 10, 2026 · TUESDAY",
+      dateZh: "十一月十日",
+      dateWeekday: "星期二",
+      dateEn: "NOVEMBER 10, 2026",
       venueLine: "📍 温州 · 裕锦大酒店 楠溪厅",
       scrollHint: "向下滑动",
     },
 
     // 头像与画廊照片：public/photos/wedding/（图片内容与设计稿 Unsplash 图一一对应）
     photos: {
-      // 封面圆形头像（1200x1200 方图）
-      coverAvatar: "/photos/wedding/cover-avatar.jpg",
+      // 封面圆形头像：3D 画廊「后墙右」照片（p02）以两人上半身为中心裁成 600 方图
+      coverAvatar: "/photos/wedding/cover-avatar-p02.jpg",
       // 3D 画廊六张（竖幅），label/sub 为画框下方的题字
       gallery: [
         { src: "/photos/wedding/gallery-1.jpg", label: "初次相遇", sub: "相遇是缘" },
@@ -107,11 +108,10 @@ export const siteConfig = {
       photoLabel: "OUR PROMISE",
       to: "TO OUR DEAREST FAMILY & FRIENDS",
       paragraphs: [
-        "展信安。生活中的好消息有很多，而这一次，我们想亲口与你分享：我们决定把未来的每一天，认真写进同一本书里。",
-        "婚礼不只是一场仪式，更像是一次温柔的相聚。那些一路陪伴、关心和祝福过我们的人，都是这段幸福里不可缺少的一页。",
-        "所以，我们想把这一天郑重地留给你。邀请你来到现场，看我们交换承诺、分享喜悦，也一起收藏晚风、花香、笑声与眼泪。",
+        "展信安。这一次的好消息，我们想亲口告诉你：我们决定把未来的每一天，写进同一本书里。",
+        "一路陪伴与祝福我们的你，是这份幸福里不可缺少的一页。诚邀你来见证我们的承诺。",
       ],
-      quote: ["愿这封请柬抵达你手中时，", "也带去我们满满的想念与期待。"],
+      quote: ["愿这封请柬，", "带去我们满满的想念与期待。"],
       signEn: "WITH ALL OUR LOVE",
       signDate: "二〇二六年十一月",
     },

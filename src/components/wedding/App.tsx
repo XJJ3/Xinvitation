@@ -86,9 +86,11 @@ const C = {
 }
 
 /* ── 首屏新人姓名：字号自适应，保证「徐俊杰 ♡ 鲍阳阳」始终单行；窄屏按比例缩小，不低于 NAMES_MIN ──
-   内层用 inline-block + nowrap，scrollWidth 恒等于单行自然宽度，据此与容器可用宽度求比例 */
-const NAMES_MAX = 52
-const NAMES_MIN = 34
+   内层用 inline-block + nowrap，scrollWidth 恒等于单行自然宽度，据此与容器可用宽度求比例；
+   只占容器 NAMES_FILL 的宽度，两侧给拱形边框留出呼吸空间 */
+const NAMES_MAX = 40
+const NAMES_MIN = 28
+const NAMES_FILL = 0.8
 function CoupleNames() {
   const boxRef = useRef<HTMLDivElement>(null)
   const rowRef = useRef<HTMLSpanElement>(null)
@@ -99,7 +101,7 @@ function CoupleNames() {
     const row = rowRef.current
     if (!box || !row) return
     const fit = () => {
-      const avail = box.clientWidth
+      const avail = box.clientWidth * NAMES_FILL
       const natural = row.scrollWidth
       if (!avail || !natural) return
       // 等比缩放并夹在 [NAMES_MIN, NAMES_MAX] 之间；收敛后 next === fontSize 不再触发更新
@@ -116,7 +118,7 @@ function CoupleNames() {
     fontFamily: "var(--font-brush)", fontSize, color: C.wine, textShadow: "0 2px 12px rgba(158,78,99,0.18)",
   }
   return (
-    <div ref={boxRef} style={{ textAlign: "center", overflow: "hidden" }}>
+    <div ref={boxRef} style={{ width: "100%", textAlign: "center", overflow: "hidden" }}>
       <span ref={rowRef} style={{ display: "inline-block", whiteSpace: "nowrap" }}>
         <span style={nameStyle}>{couple.groom.name}</span>
         <span className="animate-heartbeat" style={{ display: "inline-block", fontSize: Math.round((fontSize * 28) / NAMES_MAX), margin: "0 12px", color: C.rose }}>{couple.separator}</span>
@@ -174,12 +176,13 @@ function Petals() {
   )
 }
 
-type IconName = "heart" | "pin" | "send" | "copy"
+type IconName = "heart" | "pin" | "send" | "copy" | "shuffle"
 const ICON_PATHS: Record<IconName, string> = {
   heart: "M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l8.9 8.8 8.8-8.8a5.5 5.5 0 0 0 0-7.8Z",
   pin: "M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0ZM12 7a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z",
   send: "m22 2-7 20-4-9-9-4 20-7ZM11 13l11-11",
   copy: "M9 9h11v11H9zM5 15H4V4h11v1",
+  shuffle: "M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5",
 }
 const Icon = ({ name, filled = false }: { name: IconName; filled?: boolean }) => (
   <svg className="ico" viewBox="0 0 24 24" aria-hidden="true">
@@ -304,9 +307,10 @@ function Countdown() {
   )
 }
 
-/* ── 信件：见字如面（参考第 6 版）── */
-const LETTER_PHOTO_MAX = 250
-const LETTER_PHOTO_MIN = 80
+/* ── 信件：见字如面（参考第 6 版）──
+   照片按原图 3:4 完整显示（宽 = 高 × 3/4，不裁切）；高度在 [MIN, MAX] 内自适应，保证整块放进一屏 */
+const LETTER_PHOTO_MAX = 300
+const LETTER_PHOTO_MIN = 120
 
 function LetterSection() {
   const l = wedding.letter
@@ -315,18 +319,22 @@ function LetterSection() {
   const secRef = useRef<HTMLElement>(null)
   const photoRef = useRef<HTMLDivElement>(null)
 
-  // 整个模块要放进一屏：先按最大照片高度量出内容总高，超出屏幕多少就把照片压矮多少，文字不缩
+  // 整个模块要放进一屏：先按最大照片高度量出内容总高，超出屏幕多少就把照片压矮多少（宽度随之等比缩），文字不缩
   useEffect(() => {
     const sec = secRef.current
     const ph = photoRef.current
     const box = sec?.firstElementChild as HTMLElement | null
     if (!sec || !ph || !box) return
+    const setH = (h: number) => {
+      ph.style.height = `${h}px`
+      ph.style.width = `${Math.round(h * 0.75)}px`
+    }
     const fit = () => {
-      ph.style.height = `${LETTER_PHOTO_MAX}px`
+      setH(LETTER_PHOTO_MAX)
       const cs = getComputedStyle(sec)
       const need = box.offsetHeight + parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom)
       const over = Math.max(0, need - window.innerHeight)
-      ph.style.height = `${Math.max(LETTER_PHOTO_MIN, LETTER_PHOTO_MAX - over)}px`
+      setH(Math.max(LETTER_PHOTO_MIN, LETTER_PHOTO_MAX - over))
     }
     fit()
     document.fonts?.ready.then(fit)
@@ -339,10 +347,12 @@ function LetterSection() {
       <Reveal className="inv-letter-box">
         <InvTitle en={l.en}>{l.title}</InvTitle>
         <div className="inv-letter">
-          <div ref={photoRef} className="inv-letter-photo">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={photo} alt={`${couple.groom.name} & ${couple.bride.name}`} loading="lazy" />
+          <div className="inv-letter-top">
             <span>{l.photoLabel}</span>
+            <div ref={photoRef} className="inv-letter-photo">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={photo} alt={`${couple.groom.name} & ${couple.bride.name}`} loading="lazy" />
+            </div>
             <i>{date}</i>
           </div>
           <div className="inv-letter-paper">
@@ -760,19 +770,23 @@ function LoveSection() {
             ))}
           </div>
           <div className="inv-wall-send">
-          {sent > 0 && <span key={`h-${sent}`} className="inv-send-hearts" aria-hidden><b>♥</b><b>♥</b><b>♥</b></span>}
-          <div key={`in-${shake}`} className={`inv-wall-input ${shake ? "shake" : ""}`}>
-            {/* 不支持自主输入：轻触祝福语随机换一句，满意后发送 */}
-            <button type="button" className="wish" onClick={() => { shuffle(); if (hint) setHint("") }} aria-label={`当前祝福：${wish}，轻触换一句`}>
-              <span key={wish}>{wish}</span>
-            </button>
-            <button type="button" className={`dice ${rolling ? "roll" : ""}`} onClick={() => { shuffle(); if (hint) setHint("") }} aria-label="换一句">🎲</button>
-            <button type="button" key={`s-${sent}`} className={`send ${sent ? "go" : ""}`} onClick={send} aria-label="发送祝福">
-              <Icon name="send" />
-            </button>
+            {sent > 0 && <span key={`h-${sent}`} className="inv-send-hearts" aria-hidden><b>♥</b><b>♥</b><b>♥</b></span>}
+            <div key={`in-${shake}`} className={`inv-wish ${shake ? "shake" : ""}`}>
+              {/* 不支持自主输入：轻触祝福语随机换一句，满意后发送 */}
+              <button type="button" className="wish" onClick={() => { shuffle(); if (hint) setHint("") }} aria-label={`当前祝福：${wish}，轻触换一句`}>
+                <span key={wish}>{wish}</span>
+              </button>
+              <div className="inv-wish-bar">
+                <span className={`inv-wish-tag ${hint ? "err" : ""}`} role={hint ? "alert" : undefined}>{hint || "✦ 我的祝福"}</span>
+                <button type="button" className={`dice ${rolling ? "roll" : ""}`} onClick={() => { shuffle(); if (hint) setHint("") }} aria-label="换一句">
+                  <Icon name="shuffle" />换一句
+                </button>
+                <button type="button" key={`s-${sent}`} className={`send ${sent ? "go" : ""}`} onClick={send} disabled={sending} aria-label="发送祝福">
+                  送出<Icon name="send" />
+                </button>
+              </div>
+            </div>
           </div>
-          </div>
-          <p className="inv-wall-hint" role={hint ? "alert" : undefined}>{hint || "轻触祝福语随机换一句，选好后点发送"}</p>
         </div>
       </Reveal>
     </section>
@@ -938,24 +952,17 @@ export default function WeddingApp() {
           fontFamily: "var(--font-en)", fontSize: 13, letterSpacing: 5, color: C.rose, marginBottom: 14,
         }}>{wedding.cover.tagEn}</div>
 
-        <div className="animate-fade-up delay-300" style={{ textAlign: "center", marginBottom: 18 }}>
+        <div className="animate-fade-up delay-300" style={{ alignSelf: "stretch", textAlign: "center", marginBottom: 18 }}>
           <div style={{ fontFamily: "var(--font-en)", fontStyle: "italic", fontSize: 22, color: C.roseDark, marginBottom: 6 }}>Save our date</div>
           <CoupleNames />
         </div>
 
-        <div className="animate-fade-up delay-400" style={{ textAlign: "center", marginBottom: 24 }}>
-          <div style={{ fontFamily: "var(--font-serif)", fontSize: 12, letterSpacing: 4, color: C.muted, marginBottom: 6 }}>
-            {wedding.cover.dateZhYear}
-          </div>
-          <div style={{ fontFamily: "var(--font-serif)", fontSize: 24, fontWeight: 500, color: C.wine, letterSpacing: 4 }}>
-            {wedding.cover.dateZh}
-          </div>
-          <div style={{ fontFamily: "var(--font-en)", fontSize: 13, letterSpacing: 3, color: C.rose, marginTop: 6 }}>
-            {wedding.cover.dateEn}
-          </div>
-          <div style={{ fontFamily: "var(--font-serif)", fontSize: 12, letterSpacing: 3, color: C.muted, marginTop: 4 }}>
-            {event.lunar}
-          </div>
+        <div className="animate-fade-up delay-400 inv-cover-date">
+          <div className="inv-cover-year"><i />{wedding.cover.dateZhYear}<i /></div>
+          <div className="inv-cover-day">{wedding.cover.dateZh}</div>
+          <div className="inv-cover-week">{wedding.cover.dateWeekday}</div>
+          <div className="inv-cover-en">{wedding.cover.dateEn}</div>
+          <div className="inv-cover-lunar">{event.lunar}</div>
         </div>
 
         <div className="animate-fade-up delay-600" style={{
