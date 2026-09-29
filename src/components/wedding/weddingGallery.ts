@@ -318,7 +318,11 @@ export class WeddingGallery {
   private slowFrames = 0;
   private fastFrames = 0;
   private lastUpgradeTs = -Infinity;
-  private prUpgradeLocked = false;
+  private lastDowngradeTs = -Infinity;
+  /** 降档后至少稳定这么久才尝试升档；升档后很快又掉则翻倍（上限 60s），不再永久锁死 */
+  private prUpgradeHoldMs = 8000;
+  /** 预热上传/编译造成的单帧尖峰不代表持续负载，跳过其后的帧间隔采样 */
+  private skipFrameSamples = 0;
   /** 预热：被剔除/暂停期间提前编译着色器、上传已加载的贴图，避免首次看到时集中卡顿 */
   private lastWarmTs = 0;
   private warmCompiling = false;
@@ -655,8 +659,11 @@ export class WeddingGallery {
       powerPreference: "high-performance",
     });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-    this.prLevels = [...new Set([Math.min(window.devicePixelRatio || 1, 2), 1.5, 1.25, 1])]
-      .filter((v) => v <= this.renderer.getPixelRatio())
+    // 降档设下限：高分屏最低 1.5，再低在手机上肉眼明显发糊（1 档在 3 倍屏上只剩 1/3 清晰度）
+    const prTop = this.renderer.getPixelRatio();
+    const prFloor = Math.min(prTop, 1.5);
+    this.prLevels = [...new Set([prTop, 1.75, 1.5])]
+      .filter((v) => v <= prTop && v >= prFloor)
       .sort((a, b) => b - a);
     this.idleMode = true;
     this.renderer.setSize(canvas.clientWidth || 1, canvas.clientHeight || 1, false);
@@ -13658,6 +13665,7 @@ export class WeddingGallery {
 
   /** 进入画廊：桌面请求指针锁定；触屏直接标记 active */
   enter() {
+    this.resetAdaptiveResolution();
     if (this.touchMode || this.dragMode) {
       this.active = true;
       this.opts.onActiveChange(true);
@@ -13683,7 +13691,8 @@ export class WeddingGallery {
     const loop = (now: number) => {
       this.animId = requestAnimationFrame(loop);
       if (this.renderPaused && this.framesRendered > 0) {
-        this.warmTick(now, 8);
+        // 画廊不在视口时用户正在滚页面，手机上大图上传单张就十几毫秒，预算要克制
+        this.warmTick(now, this.touchMode ? 2 : 4);
         return;
       }
       const dt = Math.min(this.clock.getDelta(), 0.05);
@@ -13692,7 +13701,7 @@ export class WeddingGallery {
         // 封面层不透明度 0.72~0.92，半帧率下的跳变被遮罩吸收，肉眼不可分辨
         this.idleAcc += dt;
         if (this.idleAcc < 1 / 30) {
-          this.warmTick(now, 8);
+          this.warmTick(now, this.touchMode ? 2 : 4);
           return;
         }
         this.idleAcc = 0;
@@ -13703,7 +13712,8 @@ export class WeddingGallery {
       this.renderer.render(this.scene, this.camera);
       this.framesRendered++;
       this.trackFrameInterval(now);
-      this.warmTick(now, this.idleMode ? 8 : 4);
+      // 漫游中每 250ms 只传 1 张：多张集中上传会在手机上形成可感知的顿挫
+      this.warmTick(now, this.idleMode ? (this.touchMode ? 2 : 4) : 1);
     };
     this.animId = requestAnimationFrame(loop);
   };
@@ -13734,6 +13744,7 @@ export class WeddingGallery {
       }
       if (uploads >= budget) break;
     }
+    if (uploads > 0) this.skipFrameSamples = 2;
     if (needCompile && !this.warmCompiling) {
       this.warmCompiling = true;
       this.renderer
@@ -13791,21 +13802,27 @@ export class WeddingGallery {
     if (this.idleMode || !this.active || this.prLevels.length < 2) return;
     // 暂停恢复、偶发编译等超长帧不代表持续负载
     if (iv <= 0 || iv > 100) return;
+    if (this.skipFrameSamples > 0) {
+      this.skipFrameSamples--;
+      return;
+    }
     this.frameIvEma += (iv - this.frameIvEma) * 0.05;
     this.frameJitterEma += (Math.abs(iv - this.frameIvEma) - this.frameJitterEma) * 0.05;
     // 稳定的 33ms（iOS 低电量模式把 rAF 锁在 30fps）不是掉帧：只有忽快忽慢，或明显低于 25fps 才算
     const struggling = (this.frameIvEma > 22 && this.frameJitterEma > 3) || this.frameIvEma > 40;
     this.slowFrames = struggling ? this.slowFrames + 1 : 0;
-    this.fastFrames = this.frameIvEma < 18 ? this.fastFrames + 1 : 0;
-    if (this.slowFrames > 90 && this.prIdx < this.prLevels.length - 1) {
-      // 刚升档 3s 内又撑不住，说明上一档就是极限，之后不再升档，避免清晰度来回跳
-      if (now - this.lastUpgradeTs < 3000) this.prUpgradeLocked = true;
+    this.fastFrames = this.frameIvEma < 19 ? this.fastFrames + 1 : 0;
+    if (this.slowFrames > 120 && this.prIdx < this.prLevels.length - 1) {
+      // 刚升档不久又撑不住：延长下次升档前的观察期，避免清晰度来回跳
+      if (now - this.lastUpgradeTs < 5000) this.prUpgradeHoldMs = Math.min(this.prUpgradeHoldMs * 2, 60000);
       this.prIdx++;
       this.renderer.setPixelRatio(this.prLevels[this.prIdx]);
       this.slowFrames = 0;
+      this.fastFrames = 0;
       this.frameIvEma = 16.7;
       this.frameJitterEma = 0;
-    } else if (this.fastFrames > 600 && this.prIdx > 0 && !this.prUpgradeLocked) {
+      this.lastDowngradeTs = now;
+    } else if (this.fastFrames > 240 && this.prIdx > 0 && now - this.lastDowngradeTs > this.prUpgradeHoldMs) {
       this.prIdx--;
       this.renderer.setPixelRatio(this.prLevels[this.prIdx]);
       this.fastFrames = 0;
@@ -13825,6 +13842,18 @@ export class WeddingGallery {
   setIdleMode(idle: boolean) {
     this.idleMode = idle;
     this.idleAcc = 0;
+  }
+
+  private resetAdaptiveResolution() {
+    if (this.prIdx !== 0 && this.prLevels.length > 0) this.renderer.setPixelRatio(this.prLevels[0]);
+    this.prIdx = 0;
+    this.slowFrames = 0;
+    this.fastFrames = 0;
+    this.frameIvEma = 16.7;
+    this.frameJitterEma = 0;
+    this.prUpgradeHoldMs = 8000;
+    this.lastDowngradeTs = -Infinity;
+    this.lastUpgradeTs = -Infinity;
   }
 
   /** 室内时整片室外（草坪/沙滩各 ~1.9M 三角形）只能透过大门拱看见；朝向不对就整组不渲染 */
