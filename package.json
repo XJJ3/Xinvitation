@@ -23,6 +23,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/three": "^0.186.0",
+    "ktx2-encoder": "0.6.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

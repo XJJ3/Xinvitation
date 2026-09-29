@@ -55,3 +55,6 @@ dev.log
 
 # 原始超大婚纱照（已压缩到 public/photos/，原图不入库不部署）
 .original-photos/
+
+# 照片导出的中间产物（scripts/export-photos.py → encode-ktx2.mjs）
+.ktx2-src/
