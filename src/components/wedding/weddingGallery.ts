@@ -353,6 +353,13 @@ export class WeddingGallery {
   /** warmTick 的缓存扫描表：材质 → 其纹理引用。2s 重建一次，tick 内零分配 */
   private warmTable: { mat: THREE.Material; texs: THREE.Texture[] }[] = [];
   private warmTableTs = -Infinity;
+  /** 已改为按实例包围球剔除的静态 InstancedMesh；矩阵版本或数量一变即视为动态并退回不剔除 */
+  private culledInstances: { mesh: THREE.InstancedMesh; version: number; count: number }[] = [];
+  private readonly cullChecked = new WeakSet<THREE.InstancedMesh>();
+  /** 分块花头的远近 LOD 状态；lodGeos 为原网格 → 简化网格（null 表示生成中或不可简化） */
+  private readonly lodTiles: { mesh: THREE.InstancedMesh; hi: THREE.BufferGeometry; center: THREE.Vector3; radius: number }[] = [];
+  private readonly lodGeos = new Map<THREE.BufferGeometry, THREE.BufferGeometry | null>();
+  private lastLodTick = 0;
   private readonly keys: Record<string, boolean> = {};
   private readonly velocity = new THREE.Vector3();
   private readonly moveInput = { x: 0, y: 0 };
@@ -7022,6 +7029,7 @@ export class WeddingGallery {
       if (list.length === 0 || !tex) return;
       const mesh = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), this.makeImpostorMaterial(tex, sp), list.length);
       mesh.frustumCulled = false;
+      mesh.userData.noAutoCull = true;
       const m = new THREE.Matrix4();
       const q = new THREE.Quaternion();
       const pos = new THREE.Vector3();
@@ -7380,6 +7388,7 @@ export class WeddingGallery {
       quad.translate(0, 0.5, 0);
       const mesh = new THREE.InstancedMesh(quad, mat, list.length);
       mesh.frustumCulled = false;
+      mesh.userData.noAutoCull = true;
       const m = new THREE.Matrix4();
       const q = new THREE.Quaternion();
       const pos = new THREE.Vector3();
@@ -7855,7 +7864,33 @@ export class WeddingGallery {
     this.addStemInstances(nearTpl, nearPl);
   }
 
-  /** 为一个玫瑰模板生成花头/茎/叶三个 InstancedMesh（花头支持逐实例颜色） */
+  /**
+   * 大片实例按 xz 网格分块（目标约 16 块、边长不小于 8m），配合实例包围球视锥剔除，
+   * 身后与视野两侧的花不再提交 GPU；少量实例不分块，避免无谓增加 draw call。
+   */
+  private tilePlacements(placements: StemPlacement[]): StemPlacement[][] {
+    if (placements.length <= 120) return [placements];
+    let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
+    for (const pl of placements) {
+      const e = pl.matrix.elements;
+      x0 = Math.min(x0, e[12]);
+      x1 = Math.max(x1, e[12]);
+      z0 = Math.min(z0, e[14]);
+      z1 = Math.max(z1, e[14]);
+    }
+    const cell = Math.max(8, Math.sqrt(((x1 - x0) * (z1 - z0)) / 16));
+    const tiles = new Map<string, StemPlacement[]>();
+    for (const pl of placements) {
+      const e = pl.matrix.elements;
+      const key = `${Math.floor((e[12] - x0) / cell)},${Math.floor((e[14] - z0) / cell)}`;
+      const list = tiles.get(key);
+      if (list) list.push(pl);
+      else tiles.set(key, [pl]);
+    }
+    return [...tiles.values()];
+  }
+
+  /** 为一个玫瑰模板生成花头/茎/叶 InstancedMesh（花头支持逐实例颜色），大片实例按空间分块 */
   private addStemInstances(
     tpl: GlbTemplate,
     placements: StemPlacement[],
@@ -7870,18 +7905,22 @@ export class WeddingGallery {
     const stem = byName.get("rose_stem");
     const leaf = byName.get("rose_leaf");
 
-    const add = (p: GlbPrimitive | undefined, mat: THREE.Material, tinted: boolean) => {
+    const tiles = this.tilePlacements(placements);
+    const add = (p: GlbPrimitive | undefined, mat: THREE.Material, tinted: boolean, lod = false) => {
       if (!p) return;
       if (lit && mat instanceof THREE.MeshStandardMaterial) this.applyFakeSun(mat);
-      const mesh = new THREE.InstancedMesh(p.geometry, mat, placements.length);
-      mesh.frustumCulled = false;
-      placements.forEach((pl, i) => mesh.setMatrixAt(i, pl.matrix));
-      mesh.instanceMatrix.needsUpdate = true;
-      if (tinted) {
-        placements.forEach((pl, i) => mesh.setColorAt(i, pl.color));
-        if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+      for (const tile of tiles) {
+        const mesh = new THREE.InstancedMesh(p.geometry, mat, tile.length);
+        mesh.frustumCulled = false;
+        tile.forEach((pl, i) => mesh.setMatrixAt(i, pl.matrix));
+        mesh.instanceMatrix.needsUpdate = true;
+        if (tinted) {
+          tile.forEach((pl, i) => mesh.setColorAt(i, pl.color));
+          if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+        }
+        target.add(mesh);
+        if (lod && tiles.length > 1) this.registerLodTile(mesh, p.geometry);
       }
-      target.add(mesh);
     };
     add(
       head,
@@ -7893,9 +7932,56 @@ export class WeddingGallery {
         sheenColor: new THREE.Color("#ff8fa3"),
       }),
       true,
+      true,
     );
     add(stem, new THREE.MeshStandardMaterial({ color: "#5f7f4d", roughness: 0.55, metalness: 0 }), false);
     add(leaf, new THREE.MeshStandardMaterial({ color: "#6f9460", roughness: 0.55, metalness: 0 }), false);
+  }
+
+  /**
+   * 远处花头 LOD：分块花头离相机超过 LOD_FAR 米就换成简化网格（约 1/4 面数），
+   * 回到 LOD_NEAR 以内换回原网格；此距离上花头只有十来个像素，肉眼分不出差别。
+   * 简化器按需动态加载，未就绪前一直用原网格。
+   */
+  private registerLodTile(mesh: THREE.InstancedMesh, hi: THREE.BufferGeometry) {
+    mesh.computeBoundingSphere();
+    const sphere = mesh.boundingSphere;
+    if (!sphere) return;
+    this.lodTiles.push({ mesh, hi, center: sphere.center.clone(), radius: sphere.radius });
+    if (this.lodGeos.has(hi)) return;
+    this.lodGeos.set(hi, null);
+    import("three/addons/modifiers/SimplifyModifier.js")
+      .then(({ SimplifyModifier }) => new SimplifyModifier().modify(hi, Math.floor(hi.getAttribute("position").count * 0.75)))
+      .then((lo) => {
+        const hiTris = (hi.index ? hi.index.count : hi.getAttribute("position").count) / 3;
+        if (this.disposed || !lo.index || lo.index.count / 3 > hiTris * 0.6) {
+          lo.dispose();
+          return;
+        }
+        if (!hi.boundingSphere) hi.computeBoundingSphere();
+        lo.boundingSphere = hi.boundingSphere!.clone();
+        this.disposables.push(lo);
+        this.lodGeos.set(hi, lo);
+      })
+      .catch(() => undefined);
+  }
+
+  private lodTick(now: number) {
+    if (now - this.lastLodTick < 250 || this.lodTiles.length === 0) return;
+    this.lastLodTick = now;
+    const LOD_FAR = 12;
+    const LOD_NEAR = 10;
+    const cam = this.camera.position;
+    for (const t of this.lodTiles) {
+      const lo = this.lodGeos.get(t.hi);
+      if (!lo) continue;
+      const d = cam.distanceTo(t.center) - t.radius;
+      if (t.mesh.geometry === t.hi) {
+        if (d > LOD_FAR) t.mesh.geometry = lo;
+      } else if (d < LOD_NEAR) {
+        t.mesh.geometry = t.hi;
+      }
+    }
   }
 
   // ── 过道花拱真实花艺 ────────────────────────────────────────
@@ -13896,6 +13982,8 @@ export class WeddingGallery {
         this.hdTick(now);
       }
       this.updateBoost(now);
+      this.lodTick(now);
+      this.verifyCulledInstances();
       this.renderer.render(this.scene, this.camera);
       this.framesRendered++;
       this.trackFrameInterval(now);
@@ -13949,6 +14037,7 @@ export class WeddingGallery {
     const table: { mat: THREE.Material; texs: THREE.Texture[] }[] = [];
     const seen = new Set<THREE.Material>();
     this.scene.traverse((o) => {
+      if (o instanceof THREE.InstancedMesh && !this.cullChecked.has(o)) this.enableInstanceCulling(o);
       const mat = (o as THREE.Mesh).material as THREE.Material | THREE.Material[] | undefined;
       if (!mat) return;
       for (const m of Array.isArray(mat) ? mat : [mat]) {
@@ -13962,6 +14051,43 @@ export class WeddingGallery {
       }
     });
     this.warmTable = table;
+  }
+
+  /**
+   * 场景里的 InstancedMesh 构建时一律关了视锥剔除（草坪/大厅合计 3.7M 三角形每帧全画）。
+   * 静态的改用覆盖全部实例的包围球剔除，半径外扩吸收着色器里的风摆位移；
+   * ShaderMaterial 与标记 noAutoCull（顶点着色器整体改写位置，如 billboard）的不动。
+   */
+  private enableInstanceCulling(mesh: THREE.InstancedMesh) {
+    this.cullChecked.add(mesh);
+    const mat = Array.isArray(mesh.material) ? mesh.material[0] : mesh.material;
+    if (
+      mesh.frustumCulled ||
+      mesh.userData.noAutoCull ||
+      mat instanceof THREE.ShaderMaterial ||
+      mesh.instanceMatrix.usage === THREE.DynamicDrawUsage ||
+      mesh.count === 0
+    ) {
+      return;
+    }
+    mesh.computeBoundingSphere();
+    const sphere = mesh.boundingSphere;
+    if (!sphere) return;
+    sphere.radius += Math.max(1.5, sphere.radius * 0.1);
+    mesh.frustumCulled = true;
+    this.culledInstances.push({ mesh, version: mesh.instanceMatrix.version, count: mesh.count });
+  }
+
+  /** 每帧渲染前核对：运行期被改过矩阵/数量的实例退回不剔除，避免包围球过期导致误剔 */
+  private verifyCulledInstances() {
+    const list = this.culledInstances;
+    for (let i = list.length - 1; i >= 0; i--) {
+      const c = list[i];
+      if (c.mesh.instanceMatrix.version === c.version && c.mesh.count === c.count) continue;
+      c.mesh.frustumCulled = false;
+      list[i] = list[list.length - 1];
+      list.pop();
+    }
   }
 
   /** 场景里已就绪（version>0，即图像已加载或为画布贴图）的贴图，含 ShaderMaterial uniforms 里的 */
