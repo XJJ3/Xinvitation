@@ -360,6 +360,21 @@ export class WeddingGallery {
   private readonly lodTiles: { mesh: THREE.InstancedMesh; hi: THREE.BufferGeometry; center: THREE.Vector3; radius: number }[] = [];
   private readonly lodGeos = new Map<THREE.BufferGeometry, THREE.BufferGeometry | null>();
   private lastLodTick = 0;
+  /**
+   * 门洞 portal 剔除：室内与室外只能通过入口拱门互相看见。视锥剔除只看视野不看遮挡，
+   * 厅内朝门时整片草坪、门外回看时整座大厅仍会全画。这里用「相机 + 门洞矩形」构成的四棱锥
+   * 再筛一遍：包围球完全落在锥外的就在本帧渲染前隐藏、渲染后恢复。
+   */
+  private readonly portalPlanes = [new THREE.Plane(), new THREE.Plane(), new THREE.Plane(), new THREE.Plane()];
+  private readonly portalHidden: THREE.Object3D[] = [];
+  private readonly portalSpheres = new WeakMap<THREE.Object3D, THREE.Sphere | null>();
+  private readonly indoorRoots: THREE.Object3D[] = [];
+  private readonly portalClassified = new WeakSet<THREE.Object3D>();
+  /** 视野里照片占屏的最大比例（hdTick 更新），户外只在细看照片时才启用 3 倍渲染 */
+  private photoFocusRatio = 0;
+  private readonly portalBox = new THREE.Box3();
+  private readonly portalCorners = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
+  private readonly portalMid = new THREE.Vector3();
   private readonly keys: Record<string, boolean> = {};
   private readonly velocity = new THREE.Vector3();
   private readonly moveInput = { x: 0, y: 0 };
@@ -405,6 +420,7 @@ export class WeddingGallery {
   private roseBakedMat: THREE.MeshStandardMaterial | null = null;
   private floraBakedMat: THREE.MeshStandardMaterial | null = null;
   private staticFloraParts: THREE.BufferGeometry[] = [];
+  private staticRoseParts: THREE.BufferGeometry[] = [];
   private readonly textures: THREE.Texture[] = [];
   private readonly cleanups: (() => void)[] = [];
   private readonly disposables: { dispose: () => void }[] = [];
@@ -1352,7 +1368,7 @@ export class WeddingGallery {
   /**
    * 后墙整面西式婚礼背景：
    * 粉色缎面渐变墙（CanvasTexture，低透明度蕾丝暗纹 + 柔焦光斑 + 香槟金细边框）
-   * + 中央玫瑰金「囍」与放大姓名（无日期）+ 两侧各一张占满墙高的 3:4 竖幅照片。
+   * + 花环中央上下两行放大姓名（无日期）+ 两侧各一张占满墙高的 3:4 竖幅照片。
    * 背景板略离墙（z=DEPTH_START+0.05），底部让开踢脚线、顶部让开檐口。
    */
   private buildBackEmblem() {
@@ -1428,103 +1444,72 @@ export class WeddingGallery {
     bg.position.set(0, EY, EZ);
     this.scene.add(bg);
 
-    // ── 中央玫瑰金「囍」（金属叠层，字高约 4.2m，中心 y≈6.0）──
-    const xiSize = 5.4;
-    const xiTex = this.reg(
+    // ── 花环中央：两人姓名上下两行（字高约 1.2m），中间一颗粉色小心 ──
+    const NAME_SIZE = 5.6;
+    const NAME_CY = 5.3;
+    const nameTex = this.reg(
       this.makeCanvasTexture((ctx, w, h) => {
         ctx.clearRect(0, 0, w, h);
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        const gold = ctx.createLinearGradient(0, h * 0.1, 0, h * 0.9);
-        gold.addColorStop(0, "#f6dccf");
-        gold.addColorStop(0.5, "#d9a38f");
-        gold.addColorStop(1, "#b98270");
-        ctx.font = `bold ${Math.round(w * 0.78)}px "STKaiti","Kaiti SC","KaiTi","Songti SC","STSong",serif`;
-        ctx.lineJoin = "round";
-        ctx.lineWidth = 12;
-        ctx.strokeStyle = "#a8735f";
-        ctx.strokeText("囍", w / 2, h * 0.5);
-        ctx.fillStyle = gold;
-        ctx.fillText("囍", w / 2, h * 0.5);
-        ctx.lineWidth = 3;
-        ctx.strokeStyle = "#fff0e6";
-        ctx.strokeText("囍", w / 2, h * 0.5);
-      }, 1024, 1024),
-    );
-    xiTex.colorSpace = THREE.SRGBColorSpace;
-    const xiLayer = new THREE.Mesh(
-      new THREE.PlaneGeometry(xiSize, xiSize),
-      new THREE.MeshStandardMaterial({
-        map: xiTex,
-        transparent: true,
-        alphaTest: 0.05,
-        metalness: 0.85,
-        roughness: 0.3,
-        envMapIntensity: 1.6,
-        depthWrite: false,
-      }),
-    );
-    xiLayer.position.set(0, 6.0, EZ + 0.01);
-    this.scene.add(xiLayer);
-
-    // ── 放大姓名（字高约 0.65m，♡ 粉色；后墙不再出现日期）──
-    const NAME_W = 7;
-    const NAME_H = 1.4;
-    const nameTex = this.reg(
-      this.makeCanvasTexture((ctx, w, h) => {
-        ctx.clearRect(0, 0, w, h);
-        ctx.textAlign = "left";
-        ctx.textBaseline = "middle";
-        const gold = ctx.createLinearGradient(0, h * 0.2, 0, h * 0.8);
-        gold.addColorStop(0, "#f8e3d6");
-        gold.addColorStop(0.5, "#dba894");
-        gold.addColorStop(1, "#bd8574");
-        const fs = Math.round((0.65 / NAME_H) * h);
-        ctx.font = `bold ${fs}px "Songti SC","STSong","Noto Serif SC",serif`;
         const sep = "♡";
-        const chunks = namesLine.split(sep).map((c) => c.trim());
-        if (chunks.length >= 2) {
-          const gap = fs * 0.18;
-          const widths = chunks.map((c) => ctx.measureText(c).width);
-          const sepW = ctx.measureText(sep).width;
-          const total =
-            widths.reduce((a, b) => a + b, 0) + (chunks.length - 1) * (sepW + gap * 2);
+        const parts = namesLine.includes(sep)
+          ? namesLine.split(sep).map((c) => c.trim()).filter(Boolean)
+          : [namesLine.trim()];
+        const fs = Math.round((1.2 / NAME_SIZE) * h);
+        const lineGap = (1.15 / NAME_SIZE) * h;
+        const tracking = fs * 0.14;
+        const drawName = (text: string, cy: number) => {
+          const gold = ctx.createLinearGradient(0, cy - fs / 2, 0, cy + fs / 2);
+          gold.addColorStop(0, "#f0c8b2");
+          gold.addColorStop(0.5, "#cf8f78");
+          gold.addColorStop(1, "#a3634f");
+          ctx.font = `bold ${fs}px "STKaiti","Kaiti SC","KaiTi","Songti SC","STSong","Noto Serif SC",serif`;
+          const chars = [...text];
+          const widths = chars.map((c) => ctx.measureText(c).width);
+          const total = widths.reduce((a, b) => a + b, 0) + tracking * (chars.length - 1);
           let x = w / 2 - total / 2;
-          chunks.forEach((c, i) => {
+          chars.forEach((c, i) => {
+            const cx = x + widths[i] / 2;
+            ctx.lineJoin = "round";
+            ctx.lineWidth = fs * 0.05;
+            ctx.strokeStyle = "#a8735f";
+            ctx.strokeText(c, cx, cy);
             ctx.fillStyle = gold;
-            ctx.fillText(c, x, h * 0.5);
-            x += widths[i];
-            if (i < chunks.length - 1) {
-              x += gap;
-              ctx.fillStyle = "#e58fa6";
-              ctx.fillText(sep, x, h * 0.5);
-              x += sepW + gap;
-            }
+            ctx.fillText(c, cx, cy);
+            ctx.lineWidth = fs * 0.012;
+            ctx.strokeStyle = "#fff0e6";
+            ctx.strokeText(c, cx, cy);
+            x += widths[i] + tracking;
           });
+        };
+        if (parts.length >= 2) {
+          drawName(parts[0], h / 2 - lineGap);
+          drawName(parts[1], h / 2 + lineGap);
+          ctx.font = `${Math.round(fs * 0.42)}px "PingFang SC",sans-serif`;
+          ctx.fillStyle = "#e58fa6";
+          ctx.fillText(sep, w / 2, h / 2);
         } else {
-          ctx.textAlign = "center";
-          ctx.fillStyle = gold;
-          ctx.fillText(namesLine, w / 2, h * 0.5);
+          drawName(parts[0] ?? "", h / 2);
         }
-      }, 1024, 220),
+      }, 1024, 1024),
     );
     nameTex.colorSpace = THREE.SRGBColorSpace;
     const nameLayer = new THREE.Mesh(
-      new THREE.PlaneGeometry(NAME_W, NAME_H),
-      new THREE.MeshStandardMaterial({
+      new THREE.PlaneGeometry(NAME_SIZE, NAME_SIZE),
+      // 不受光：墙面射灯 + 色调映射会把玫瑰金冲成白色，按贴图原色显示才读得出金属渐变
+      new THREE.MeshBasicMaterial({
         map: nameTex,
         transparent: true,
         alphaTest: 0.05,
-        metalness: 0.8,
-        roughness: 0.32,
-        envMapIntensity: 1.4,
         depthWrite: false,
+        toneMapped: false,
       }),
     );
-    nameLayer.position.set(0, 3.0, EZ + 0.012);
+    nameLayer.position.set(0, NAME_CY, EZ + 0.012);
     this.scene.add(nameLayer);
 
-    // ── 「囍」+ 姓名外围椭圆玫瑰花环（底部开口的拱形，把两者框住）──
+    // ── 姓名外围椭圆玫瑰花环（底部开口的拱形）──
     const wreathCY = 5.0;
     const wreathRX = 3.1;
     const wreathRY = 4.2;
@@ -1551,7 +1536,7 @@ export class WeddingGallery {
           theta + Math.PI / 2 + (Math.random() - 0.5) * 0.4,
         );
         rose.scale.setScalar(0.95 + Math.random() * 0.35);
-        this.scene.add(rose);
+        this.collectRose(rose);
       }
     }
 
@@ -1615,13 +1600,13 @@ export class WeddingGallery {
     spot.target.position.set(0, 5.2, this.DEPTH_START);
     this.scene.add(spot, spot.target);
 
-    // 后墙两张大照片 + 中央「囍」各配一盏可见射灯
+    // 后墙两张大照片 + 中央姓名各配一盏可见射灯
     const mountY = this.H - 0.42;
     const mountZ = this.DEPTH_START + 2.2;
     [-1, 1].forEach((sign) => {
       this.addTrackLight(sign * photoCX, mountY, mountZ, sign * photoCX, photoY, EZ + 0.05);
     });
-    this.addTrackLight(0, mountY, mountZ, 0, 6.0, EZ + 0.01);
+    this.addTrackLight(0, mountY, mountZ, 0, NAME_CY, EZ + 0.01);
   }
 
   /** 后墙背景的对称卷草蕾丝单元（透明度由调用方设置） */
@@ -1981,7 +1966,7 @@ export class WeddingGallery {
           (Math.random() - 0.5) * 0.3,
           -theta + Math.PI / 2 + (Math.random() - 0.5) * 0.3,
         );
-        this.scene.add(rose);
+        this.collectRose(rose);
       } else {
         const leaf = this.makeLeaf();
         leaf.position.set(x, y, z - 0.02);
@@ -2025,7 +2010,7 @@ export class WeddingGallery {
           (Math.random() - 0.5) * 0.3,
           (Math.random() - 0.5) * 0.3,
         );
-        this.scene.add(rose);
+        this.collectRose(rose);
       } else {
         const leaf = this.makeLeaf();
         leaf.position.set(px, y, z - 0.02);
@@ -2044,7 +2029,7 @@ export class WeddingGallery {
         z + Math.random() * 0.1,
       );
       rose.rotation.set(Math.random() * 0.5, Math.random() * 0.5, Math.random() * Math.PI * 2);
-      this.scene.add(rose);
+      this.collectRose(rose);
     }
     for (let i = 0; i < 6; i++) {
       const leaf = this.makeLeaf();
@@ -2156,7 +2141,17 @@ export class WeddingGallery {
     (mesh.material as THREE.Material).dispose();
   }
 
+  /** 厅内静态程序化玫瑰：按世界变换烘焙进同一份几何，finalizeFlora 时合成 1 个 draw call（原先每朵 1 个，共 85 个） */
+  private collectRose(rose: THREE.Mesh) {
+    rose.updateMatrix();
+    this.staticRoseParts.push(rose.geometry.applyMatrix4(rose.matrix));
+  }
+
   private finalizeFlora() {
+    if (this.staticRoseParts.length > 0 && this.roseBakedMat) {
+      this.scene.add(new THREE.Mesh(this.mergeParts(this.staticRoseParts, "static roses"), this.roseBakedMat));
+      this.staticRoseParts = [];
+    }
     if (this.staticFloraParts.length === 0) return;
     if (!this.floraBakedMat) {
       this.floraBakedMat = new THREE.MeshStandardMaterial({
@@ -2302,7 +2297,7 @@ export class WeddingGallery {
           z + (Math.random() - 0.5) * 0.2,
         );
         r.rotation.set((Math.random() - 0.5) * 0.8, Math.random() * Math.PI * 2, (Math.random() - 0.5) * 0.5);
-        this.scene.add(r);
+        this.collectRose(r);
       }
       for (let i = 0; i < 4; i++) {
         const l = this.makeLeaf();
@@ -3479,22 +3474,28 @@ export class WeddingGallery {
     this.camera.getWorldDirection(fwd);
     const pxPerRad = this.renderer.domElement.height / THREE.MathUtils.degToRad(this.camera.fov);
     const center = this.hdVec;
+    const screenH = this.renderer.domElement.height;
+    let focus = 0;
     let best: PhotoEntry | null = null;
     let bestRatio = HD_TRIGGER;
     for (const t of this.photoTargets) {
       if (t.zone === "lawn" && !this.lawnGroup.visible) continue;
       if (t.zone === "beach" && !this.beachGroup.visible) continue;
       const e = this.photoEntries.get(t.key);
-      if (!e?.hdUrl || !e.base) continue;
+      if (!e?.base) continue;
       center.setFromMatrixPosition(t.mesh.matrixWorld).sub(cam);
       const d = center.length();
       if (d < 0.1 || center.dot(fwd) < d * 0.55) continue;
-      const ratio = ((Math.max(t.w, t.h) / d) * pxPerRad) / e.baseLong;
+      const px = (Math.max(t.w, t.h) / d) * pxPerRad;
+      focus = Math.max(focus, px / screenH);
+      if (!e.hdUrl) continue;
+      const ratio = px / e.baseLong;
       if (ratio > bestRatio) {
         bestRatio = ratio;
         best = e;
       }
     }
+    this.photoFocusRatio = focus;
     if (best) {
       best.hdWantedAt = Math.max(best.hdWantedAt, now);
       if (!best.hd && !best.hdLoading && this.hdLoading < 1) this.loadHd(best);
@@ -6294,17 +6295,19 @@ export class WeddingGallery {
     const color = new THREE.Color();
 
     // A. 花瓣地毯：3 段过渡红毯，沿缓弯路撒双层花瓣
+    // 不走透明排序：alphaToCoverage 借 MSAA 把镂空边缘抗锯齿，远处小花瓣不再闪烁
     const petalMat = new THREE.MeshStandardMaterial({
       map: this.reg(this.petalTexture()),
-      transparent: true,
-      alphaTest: 0.1,
+      alphaTest: 0.35,
+      alphaToCoverage: true,
       side: THREE.DoubleSide,
-      roughness: 0.85,
+      roughness: 0.7,
       metalness: 0,
     });
     this.applyFakeSun(petalMat);
+    const petalGeo = this.makeCuppedPetalGeometry();
     const petalCount = this.touchMode ? 700 : 1200;
-    const petals = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.11, 0.075), petalMat, petalCount);
+    const petals = new THREE.InstancedMesh(petalGeo, petalMat, petalCount);
     petals.frustumCulled = false;
     let pp = 0;
     let guard = 0;
@@ -6445,7 +6448,7 @@ export class WeddingGallery {
 
     // E1. 石板路花瓣：门口一路撒到座椅区，与花瓣地毯相接（中间密两侧疏）
     const pathPetalCount = this.touchMode ? 900 : 2200;
-    const pathPetals = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.11, 0.075), petalMat, pathPetalCount);
+    const pathPetals = new THREE.InstancedMesh(petalGeo, petalMat, pathPetalCount);
     pathPetals.frustumCulled = false;
     let qp = 0;
     let qGuard = 0;
@@ -13384,20 +13387,63 @@ export class WeddingGallery {
   }
 
   /** 椭圆花瓣贴图（软边），用于 instanced 花瓣 */
+  /**
+   * 花瓣贴图：倒卵形瓣身 + 顶端浅凹，瓣根略深、边缘提亮并带几道细脉，
+   * 白底灰度绘制，实际颜色由实例色相乘得到。
+   */
   private petalTexture(): THREE.Texture {
     const tex = this.makeCanvasTexture((ctx, w, h) => {
       ctx.clearRect(0, 0, w, h);
-      const grd = ctx.createRadialGradient(w * 0.5, h * 0.45, 0, w * 0.5, h * 0.5, w * 0.5);
-      grd.addColorStop(0, "#ffffff");
-      grd.addColorStop(0.7, "#f7e2e6");
-      grd.addColorStop(1, "rgba(247,226,230,0)");
-      ctx.fillStyle = grd;
-      ctx.beginPath();
-      ctx.ellipse(w / 2, h / 2, w * 0.46, h * 0.34, 0, 0, Math.PI * 2);
-      ctx.fill();
-    }, 64, 64);
+      const cx = w / 2;
+      const base = h * 0.9;
+      const top = h * 0.1;
+      const half = w * 0.44;
+      const shape = new Path2D();
+      shape.moveTo(cx, base);
+      shape.bezierCurveTo(cx - half * 0.55, base - h * 0.1, cx - half * 1.08, h * 0.42, cx - half * 0.78, h * 0.2);
+      shape.quadraticCurveTo(cx - half * 0.45, top - h * 0.02, cx - half * 0.1, top + h * 0.03);
+      shape.quadraticCurveTo(cx, top + h * 0.08, cx + half * 0.1, top + h * 0.03);
+      shape.quadraticCurveTo(cx + half * 0.45, top - h * 0.02, cx + half * 0.78, h * 0.2);
+      shape.bezierCurveTo(cx + half * 1.08, h * 0.42, cx + half * 0.55, base - h * 0.1, cx, base);
+      shape.closePath();
+      const body = ctx.createRadialGradient(cx, base, 0, cx, h * 0.5, h * 0.62);
+      body.addColorStop(0, "#d9c3c6");
+      body.addColorStop(0.35, "#f1e4e5");
+      body.addColorStop(1, "#ffffff");
+      ctx.fillStyle = body;
+      ctx.fill(shape);
+      ctx.save();
+      ctx.clip(shape);
+      ctx.strokeStyle = "rgba(170,140,145,0.22)";
+      ctx.lineWidth = w * 0.012;
+      for (let i = -2; i <= 2; i++) {
+        ctx.beginPath();
+        ctx.moveTo(cx, base);
+        ctx.quadraticCurveTo(cx + i * half * 0.18, h * 0.55, cx + i * half * 0.34, top + h * 0.12);
+        ctx.stroke();
+      }
+      const rim = ctx.createRadialGradient(cx, h * 0.55, h * 0.2, cx, h * 0.5, h * 0.5);
+      rim.addColorStop(0, "rgba(255,255,255,0)");
+      rim.addColorStop(1, "rgba(255,255,255,0.35)");
+      ctx.fillStyle = rim;
+      ctx.fillRect(0, 0, w, h);
+      ctx.restore();
+    }, 128, 128);
     tex.colorSpace = THREE.SRGBColorSpace;
     return tex;
+  }
+
+  /** 地面散落花瓣：瓣身微微上卷（边缘抬高约 1cm），侧光下有明暗而不是一张平贴片 */
+  private makeCuppedPetalGeometry(): THREE.BufferGeometry {
+    const geo = new THREE.PlaneGeometry(0.11, 0.075, 4, 2);
+    const pos = geo.attributes.position as THREE.BufferAttribute;
+    for (let i = 0; i < pos.count; i++) {
+      const u = pos.getX(i) / 0.055;
+      const v = pos.getY(i) / 0.0375;
+      pos.setZ(i, 0.011 * (u * u * 0.8 + v * v * 0.35));
+    }
+    geo.computeVertexNormals();
+    return geo;
   }
 
   private makeCanvasTexture(
@@ -13984,7 +14030,9 @@ export class WeddingGallery {
       this.updateBoost(now);
       this.lodTick(now);
       this.verifyCulledInstances();
+      this.applyPortalCull();
       this.renderer.render(this.scene, this.camera);
+      this.restorePortalCull();
       this.framesRendered++;
       this.trackFrameInterval(now);
       // 漫游中每 250ms 只传 1 张：多张集中上传会在手机上形成可感知的顿挫
@@ -14051,6 +14099,7 @@ export class WeddingGallery {
       }
     });
     this.warmTable = table;
+    this.classifyIndoorRoots();
   }
 
   /**
@@ -14085,6 +14134,7 @@ export class WeddingGallery {
       const c = list[i];
       if (c.mesh.instanceMatrix.version === c.version && c.mesh.count === c.count) continue;
       c.mesh.frustumCulled = false;
+      for (let p: THREE.Object3D | null = c.mesh; p; p = p.parent) this.portalSpheres.delete(p);
       list[i] = list[list.length - 1];
       list.pop();
     }
@@ -14185,19 +14235,27 @@ export class WeddingGallery {
   }
 
   /**
-   * 3 倍屏静止 0.45s 后把渲染像素比从 2 提到设备原生（最高 3），停下来细看照片时更锐；
+   * 3 倍屏静止 0.6s 后把渲染像素比从 2 提到设备原生（最高 3），停下来细看照片时更锐；
    * 镜头一动立即回到自适应档位，走动时仍保持流畅。自适应已降档时不启用。
+   * 户外整屏都是草地/花海，3 倍渲染 GPU 开销涨约 1/3 且看不出差别，只在照片占屏 ≥22% 时才启用，
+   * 避免在户外一停一走反复切换分辨率、手机持续满负荷发热降频。
    */
   private updateBoost(now: number) {
     if (!this.boostPr) return;
-    const cam = this.camera;
+    const cam = this.camera.position;
     const moving =
-      cam.position.distanceToSquared(this.lastCamPos) > 1e-8 || 1 - Math.abs(cam.quaternion.dot(this.lastCamQuat)) > 1e-9;
-    this.lastCamPos.copy(cam.position);
-    this.lastCamQuat.copy(cam.quaternion);
+      cam.distanceToSquared(this.lastCamPos) > 1e-8 || 1 - Math.abs(this.camera.quaternion.dot(this.lastCamQuat)) > 1e-9;
+    this.lastCamPos.copy(cam);
+    this.lastCamQuat.copy(this.camera.quaternion);
     if (moving) this.stillSince = now;
+    const outdoors = cam.z > this.ARCH_Z + 0.5;
     const want =
-      this.active && !this.idleMode && this.prIdx === 0 && now >= this.boostBlockedUntil && now - this.stillSince > 450;
+      this.active &&
+      !this.idleMode &&
+      this.prIdx === 0 &&
+      now >= this.boostBlockedUntil &&
+      now - this.stillSince > 600 &&
+      (!outdoors || this.photoFocusRatio >= 0.22);
     if (want !== this.boosted) this.setBoost(want);
   }
 
@@ -14207,6 +14265,104 @@ export class WeddingGallery {
     this.boostEma = 16.7;
     this.boostSlow = 0;
     this.skipFrameSamples = 3;
+  }
+
+  /** 把 scene 根下完全落在大厅内（门洞平面以内）的对象记为室内根，供门外回看时做门洞剔除 */
+  private classifyIndoorRoots() {
+    const box = this.portalBox;
+    for (const o of this.scene.children) {
+      if (this.portalClassified.has(o)) continue;
+      this.portalClassified.add(o);
+      if (o === this.lawnGroup || o === this.beachGroup || (o as THREE.Light).isLight) continue;
+      box.makeEmpty().expandByObject(o);
+      if (box.isEmpty()) continue;
+      if (
+        box.max.z < this.ARCH_Z - 0.2 &&
+        box.min.z > this.DEPTH_START - 1 &&
+        Math.abs(box.min.x) < this.W / 2 + 0.5 &&
+        Math.abs(box.max.x) < this.W / 2 + 0.5
+      ) {
+        this.indoorRoots.push(o);
+      }
+    }
+  }
+
+  /**
+   * 对象的门洞剔除包围球（世界坐标，外扩 1m 兜住摆动/风动）。含灯光的子树不参与（隐藏灯会改光源数、触发重编译）；
+   * 子树里的 InstancedMesh 须已被 enableInstanceCulling 判定为静态，否则暂不参与，下次再试。
+   */
+  private portalEntry(o: THREE.Object3D): THREE.Sphere | null {
+    const cached = this.portalSpheres.get(o);
+    if (cached !== undefined) return cached;
+    let ok = true;
+    let pending = false;
+    o.traverse((c) => {
+      if ((c as THREE.Light).isLight) ok = false;
+      if (c instanceof THREE.InstancedMesh) {
+        if (!this.cullChecked.has(c)) pending = true;
+        else if (!c.frustumCulled) ok = false;
+      }
+    });
+    if (pending && ok) return null;
+    let sphere: THREE.Sphere | null = null;
+    if (ok) {
+      const box = this.portalBox.makeEmpty().expandByObject(o);
+      if (!box.isEmpty()) {
+        sphere = box.getBoundingSphere(new THREE.Sphere());
+        sphere.radius += 1;
+      }
+    }
+    this.portalSpheres.set(o, sphere);
+    return sphere;
+  }
+
+  /** 渲染前：相机在门洞一侧时，把另一侧完全看不到的对象临时隐藏（restorePortalCull 在渲染后恢复） */
+  private applyPortalCull() {
+    const cam = this.camera.position;
+    const dz = cam.z - this.ARCH_Z;
+    if (!this.active || Math.abs(dz) < 0.6) return;
+    const outside = dz > 0;
+    let roots: THREE.Object3D[];
+    if (outside) {
+      roots = this.indoorRoots;
+    } else {
+      const g = this.lawnGroup.visible ? this.lawnGroup : this.beachGroup.visible ? this.beachGroup : null;
+      if (!g) return;
+      roots = g.children;
+    }
+    const hw = this.ARCH_R + 0.3;
+    const top = this.ARCH_PH + this.ARCH_R + 0.3;
+    const z = this.ARCH_Z;
+    const c = this.portalCorners;
+    c[0].set(-hw, -0.2, z);
+    c[1].set(hw, -0.2, z);
+    c[2].set(hw, top, z);
+    c[3].set(-hw, top, z);
+    const mid = this.portalMid.set(0, top / 2, z);
+    for (let i = 0; i < 4; i++) {
+      const p = this.portalPlanes[i];
+      p.setFromCoplanarPoints(cam, c[i], c[(i + 1) % 4]);
+      if (p.distanceToPoint(mid) < 0) p.negate();
+    }
+    for (const o of roots) {
+      if (!o.visible) continue;
+      const s = this.portalEntry(o);
+      if (!s) continue;
+      // 门洞平面同侧（相机这一侧）的东西不归门洞管，交给普通视锥剔除
+      if (outside ? s.center.z - s.radius > z : s.center.z + s.radius < z) continue;
+      for (const p of this.portalPlanes) {
+        if (p.distanceToPoint(s.center) < -s.radius) {
+          o.visible = false;
+          this.portalHidden.push(o);
+          break;
+        }
+      }
+    }
+  }
+
+  private restorePortalCull() {
+    for (const o of this.portalHidden) o.visible = true;
+    this.portalHidden.length = 0;
   }
 
   /** 室内时整片室外（草坪/沙滩各 ~1.9M 三角形）只能透过大门拱看见；朝向不对就整组不渲染 */
