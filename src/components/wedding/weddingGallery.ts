@@ -296,6 +296,18 @@ export class WeddingGallery {
   private perfSamples: { frame: number; update: number; render: number; marker: string }[] = [];
   private perfMarker = "init";
   private perfPhoto = "-";
+  private perfEvents: string[] = [];
+  private perfSlowest = { frame: 0, marker: "-" };
+  private perfContextLost = false;
+  private perfFrameNote = "";
+
+  private notePerfEvent(label: string) {
+    if (!this.perfEnabled) return;
+    const event = `${(performance.now() / 1000).toFixed(1)}s ${label}`;
+    this.perfEvents.push(event);
+    if (this.perfEvents.length > 4) this.perfEvents.shift();
+    this.perfFrameNote = label;
+  }
 
   // 大厅尺寸
   private readonly W = 24;
@@ -803,6 +815,19 @@ export class WeddingGallery {
       document.body.appendChild(panel);
       this.perfPanel = panel;
       this.cleanups.push(() => panel.remove());
+      const lost = (event: Event) => {
+        event.preventDefault();
+        this.perfContextLost = true;
+        this.notePerfEvent("context-lost");
+      };
+      const restored = () => {
+        this.perfContextLost = false;
+        this.notePerfEvent("context-restored");
+      };
+      canvas.addEventListener("webglcontextlost", lost);
+      canvas.addEventListener("webglcontextrestored", restored);
+      this.cleanups.push(() => canvas.removeEventListener("webglcontextlost", lost));
+      this.cleanups.push(() => canvas.removeEventListener("webglcontextrestored", restored));
     }
 
     // 桌面：指针锁定视角；触屏：不用它，改由摇杆写入 yaw/pitch
@@ -13565,6 +13590,9 @@ export class WeddingGallery {
   private handleResize() {
     const w = this.canvas.clientWidth || 1;
     const h = this.canvas.clientHeight || 1;
+    const size = this.renderer.getSize(this.farWarmSize);
+    if (size.x === w && size.y === h) return;
+    this.notePerfEvent(`resize ${size.x}x${size.y}->${w}x${h}`);
     this.camera.aspect = w / h;
     this.camera.fov = w / h < 1 ? 74 : 70;
     this.camera.updateProjectionMatrix();
@@ -14113,11 +14141,15 @@ export class WeddingGallery {
     this.perfLastFrame = now;
     if (!this.active || this.idleMode) {
       this.perfSamples.length = 0;
+      this.perfSlowest = { frame: 0, marker: "-" };
       return;
     }
     if (!frame) return;
-    this.perfSamples.push({ frame, update: updateMs, render: renderMs, marker: this.perfMarker });
+    const marker = this.perfFrameNote || this.perfMarker;
+    this.perfFrameNote = "";
+    this.perfSamples.push({ frame, update: updateMs, render: renderMs, marker });
     if (this.perfSamples.length > 180) this.perfSamples.shift();
+    if (frame > this.perfSlowest.frame) this.perfSlowest = { frame, marker };
     if (now - this.perfLastReport < 500) return;
     this.perfLastReport = now;
     const sorted = (key: "frame" | "update" | "render") =>
@@ -14138,6 +14170,8 @@ export class WeddingGallery {
       `calls ${info.render.calls} | tris ${Math.round(info.render.triangles / 1000)}k | programs ${programs}`,
       `geo ${info.memory.geometries} | tex ${info.memory.textures} | hd ${hd} loading ${this.hdLoading}`,
       `photo ${this.perfPhoto} | marker ${this.perfMarker} | noGrass ${this.noGrassDebug}`,
+      `slowest ${this.perfSlowest.frame.toFixed(0)}ms ${this.perfSlowest.marker} | context ${this.perfContextLost ? "LOST" : "ok"}`,
+      `events ${this.perfEvents.join(" / ") || "none"}`,
     ].join("\n");
   }
 
@@ -14167,7 +14201,10 @@ export class WeddingGallery {
       }
       if (uploads >= budget) break;
     }
-    if (uploads > 0) this.skipFrameSamples = 2;
+    if (uploads > 0) {
+      this.skipFrameSamples = 2;
+      this.notePerfEvent(`texture-upload ${uploads}`);
+    }
     this.warmFarMaterials();
     if (needCompile && !this.warmCompiling) {
       this.warmCompiling = true;
@@ -14269,6 +14306,7 @@ export class WeddingGallery {
     const cold = this.farWarmQueue;
     if (!cold) return;
     this.farWarmQueue = null;
+    this.notePerfEvent(`far-warm ${cold.length}`);
     const r = this.renderer;
     const culled = cold.map((e) => e.mesh.frustumCulled);
     const autoClear = r.autoClear;
@@ -14488,6 +14526,7 @@ export class WeddingGallery {
   private applyPixelRatio() {
     const pr = this.effectivePr();
     if (this.renderer.getPixelRatio() === pr) return;
+    this.notePerfEvent(`pixel-ratio ${this.renderer.getPixelRatio().toFixed(2)}->${pr.toFixed(2)}`);
     this.renderer.setPixelRatio(pr);
     this.skipFrameSamples = 3;
   }
