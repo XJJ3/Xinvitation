@@ -495,7 +495,14 @@ export class WeddingGallery {
     root: THREE.Group;
     sparkles: THREE.Group;
     bulbs: { mat: THREE.MeshStandardMaterial; phase: number; base: number }[];
+    /** 灯泡光晕（数量少，保持独立 Sprite） */
     sparkleList: { spr: THREE.Sprite; phase: number; speed: number }[];
+    /** 62 颗闪光点合并成一个 billboard InstancedMesh：闪烁在着色器里按实例相位/速度算，单 draw call */
+    glints: {
+      mesh: THREE.InstancedMesh;
+      /** 每颗的尺寸，GLB 替换重定位时保持原尺寸 */
+      size: Float32Array;
+    };
     /** 三种水晶形状各一个 InstancedMesh，逐帧轮流刷新亮度 */
     crystals: { mesh: THREE.InstancedMesh; count: number; phase: number }[];
     color: THREE.Color;
@@ -4148,6 +4155,8 @@ export class WeddingGallery {
 
   /** 大吊灯专用的亮水晶时间，室内每帧推进（windUniform 只在室外走） */
   private readonly crystalTimeU = { value: 0 };
+  /** 大吊灯闪光的共享时间 uniform：62 颗的相位/速度在 GPU 里算，每帧只写一次 */
+  private readonly sparkleTimeU = { value: 0 };
 
   /**
    * 吊灯水晶：在 crystalMaterial 基础上加「被灯芯照亮的内发光 + 随视角跳动的切面火彩」。
@@ -4226,6 +4235,73 @@ export class WeddingGallery {
     );
     tex.colorSpace = THREE.SRGBColorSpace;
     return tex;
+  }
+
+  /**
+   * 大吊灯闪光点批次：原本 62 个独立 THREE.Sprite（62 次 draw call）合并为一个 InstancedMesh
+   * billboard。位置/尺寸烘焙进 instanceMatrix，相位/速度写成实例属性交给着色器，逐帧只更新一个
+   * 时间 uniform，闪烁完全在 GPU 完成，观感与逐 sprite 版本一致。
+   */
+  private makeGrandGlints(tex: THREE.Texture, beads: readonly { p: THREE.Vector3 }[]) {
+    const COUNT = 62;
+    const geo = new THREE.PlaneGeometry(1, 1);
+    const mat = new THREE.MeshBasicMaterial({
+      map: tex,
+      color: "#fff2dd",
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      side: THREE.FrontSide,
+    });
+    const phase = new Float32Array(COUNT);
+    const speed = new Float32Array(COUNT);
+    const size = new Float32Array(COUNT);
+    const mesh = new THREE.InstancedMesh(geo, mat, COUNT);
+    const dummy = new THREE.Object3D();
+    for (let i = 0; i < COUNT; i++) {
+      const b = beads[(i * 7) % beads.length];
+      dummy.position.set(
+        b.p.x + (Math.random() - 0.5) * 0.14,
+        b.p.y + (Math.random() - 0.5) * 0.14,
+        b.p.z + (Math.random() - 0.5) * 0.14,
+      );
+      size[i] = 0.1 + Math.random() * 0.14;
+      dummy.scale.set(size[i], size[i], 1);
+      dummy.updateMatrix();
+      mesh.setMatrixAt(i, dummy.matrix);
+      phase[i] = Math.random() * Math.PI * 2;
+      speed[i] = 1.6 + Math.random() * 3.2;
+    }
+    mesh.instanceMatrix.needsUpdate = true;
+    geo.setAttribute("aPhase", new THREE.InstancedBufferAttribute(phase, 1));
+    geo.setAttribute("aSpeed", new THREE.InstancedBufferAttribute(speed, 1));
+    // 顶点着色器重写位置做屏幕对齐 billboard，包围球不可信；批次只有 1 次 draw call，无需剔除
+    mesh.frustumCulled = false;
+    mesh.userData.noAutoCull = true;
+    mat.onBeforeCompile = (shader) => {
+      shader.uniforms.uSparkleTime = this.sparkleTimeU;
+      shader.vertexShader = shader.vertexShader
+        .replace(
+          "#include <common>",
+          "#include <common>\nattribute float aPhase;\nattribute float aSpeed;\nuniform float uSparkleTime;\nvarying float vSparkleAlpha;",
+        )
+        .replace(
+          "#include <project_vertex>",
+          `
+          vec4 sparkleCenter = modelMatrix * (instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0));
+          vec4 mvPosition = viewMatrix * sparkleCenter;
+          mvPosition.xy += position.xy * vec2(length(instanceMatrix[0].xyz), length(instanceMatrix[1].xyz));
+          gl_Position = projectionMatrix * mvPosition;
+          float sparklePulse = 0.5 + 0.5 * sin(uSparkleTime * aSpeed + aPhase);
+          vSparkleAlpha = pow(sparklePulse, 6.0);
+          `,
+        );
+      shader.fragmentShader = shader.fragmentShader
+        .replace("#include <common>", "#include <common>\nvarying float vSparkleAlpha;")
+        .replace("#include <color_fragment>", "#include <color_fragment>\ndiffuseColor.a *= vSparkleAlpha;");
+    };
+    mat.customProgramCacheKey = () => "grandGlints";
+    return { mesh, size };
   }
 
   /**
@@ -4738,29 +4814,10 @@ export class WeddingGallery {
     }
 
     const sparkleTex = this.makeSparkleTexture();
+    // 62 颗闪光合并为一个 billboard 批次（62 次 draw call → 1 次）
+    const glints = this.makeGrandGlints(sparkleTex, beadParts);
+    sparkles.add(glints.mesh);
     const sparkleList: { spr: THREE.Sprite; phase: number; speed: number }[] = [];
-    for (let i = 0; i < 62; i++) {
-      const b = beadParts[(i * 7) % beadParts.length];
-      const spr = new THREE.Sprite(
-        new THREE.SpriteMaterial({
-          map: sparkleTex,
-          color: "#fff2dd",
-          transparent: true,
-          opacity: 0,
-          blending: THREE.AdditiveBlending,
-          depthWrite: false,
-        }),
-      );
-      spr.position.set(
-        b.p.x + (Math.random() - 0.5) * 0.14,
-        b.p.y + (Math.random() - 0.5) * 0.14,
-        b.p.z + (Math.random() - 0.5) * 0.14,
-      );
-      const s = 0.1 + Math.random() * 0.14;
-      spr.scale.set(s, s, 1);
-      sparkles.add(spr);
-      sparkleList.push({ spr, phase: Math.random() * Math.PI * 2, speed: 1.6 + Math.random() * 3.2 });
-    }
 
     // 灯泡光晕：每个灯位叠一片加色光晕，远看就能认出「这是亮着的吊灯」
     const glowTex = this.getGlowTexture();
@@ -4803,6 +4860,7 @@ export class WeddingGallery {
       sparkles,
       bulbs,
       sparkleList,
+      glints,
       crystals: [
         { mesh: beadMesh, count: beadParts.length, phase: 0 },
         { mesh: smallBeadMesh, count: smallParts.length, phase: 1.1 },
@@ -5037,13 +5095,23 @@ export class WeddingGallery {
         // 闪光挂到 GLB 包围盒内随机点继续工作
         const halfW = Math.max(size.x * scale, 1.2) * 0.8;
         const halfD = Math.max(size.z * scale, 1.2) * 0.8;
-        this.grand.sparkleList.forEach((s) => {
-          s.spr.position.set(
+        const randomSpot = (obj: THREE.Object3D) => {
+          obj.position.set(
             (Math.random() - 0.5) * halfW,
             -0.2 - Math.random() * 3.4,
             (Math.random() - 0.5) * halfD,
           );
-        });
+        };
+        const gl = this.grand.glints;
+        const dummy = new THREE.Object3D();
+        for (let i = 0; i < gl.size.length; i++) {
+          randomSpot(dummy);
+          dummy.scale.set(gl.size[i], gl.size[i], 1);
+          dummy.updateMatrix();
+          gl.mesh.setMatrixAt(i, dummy.matrix);
+        }
+        gl.mesh.instanceMatrix.needsUpdate = true;
+        this.grand.sparkleList.forEach((s) => randomSpot(s.spr));
         console.info("[WeddingGallery] 已切换 GLB 水晶吊灯 /models/crystal-chandelier.glb");
       },
       undefined,
@@ -8650,6 +8718,7 @@ export class WeddingGallery {
     if (!gr) return;
     const t = this.clock.elapsedTime;
     this.crystalTimeU.value = t;
+    this.sparkleTimeU.value = t;
     for (const b of gr.bulbs) {
       b.mat.emissiveIntensity =
         b.base *
