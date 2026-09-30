@@ -293,6 +293,9 @@ export class WeddingGallery {
   /** 保留小径花带，默认不生成分散的草甸玫瑰；可用参数对照原场景。 */
   private readonly showMeadowRoses =
     typeof window !== "undefined" && new URLSearchParams(window.location.search).get("galleryShowMeadowRoses") === "1";
+  /** 手机默认压低小径花带密度；仅用于 A/B 的完整花带开关。 */
+  private readonly fullLawnFlowers =
+    typeof window !== "undefined" && new URLSearchParams(window.location.search).get("galleryFullLawnFlowers") === "1";
   /** 正常模式不构建厅内吊灯模型；仅用显式参数恢复，保留原有照明。 */
   private readonly showChandeliers =
     typeof window !== "undefined" && new URLSearchParams(window.location.search).get("galleryShowChandeliers") === "1";
@@ -6611,10 +6614,12 @@ export class WeddingGallery {
       const s = Math.round(z / 3) % 2 === 0 ? 1 : -1;
       lanternXZ.push({ x: s * 1.52 + pathCurve(z), z });
     }
-    const bankRows = this.touchMode
-      ? [{ d: 1.52, hMin: 0.32, hMax: 0.42 }, { d: 1.86, hMin: 0.48, hMax: 0.62 }]
+    const bankRows = this.touchMode && !this.fullLawnFlowers
+      ? [{ d: 1.52, hMin: 0.34, hMax: 0.46 }]
+      : this.touchMode
+        ? [{ d: 1.52, hMin: 0.32, hMax: 0.42 }, { d: 1.86, hMin: 0.48, hMax: 0.62 }]
       : [{ d: 1.5, hMin: 0.3, hMax: 0.4 }, { d: 1.8, hMin: 0.44, hMax: 0.58 }, { d: 2.1, hMin: 0.6, hMax: 0.78 }];
-    const bankStep = this.touchMode ? 0.36 : 0.22;
+    const bankStep = this.touchMode && !this.fullLawnFlowers ? 0.52 : this.touchMode ? 0.36 : 0.22;
     [-1, 1].forEach((side) => {
       bankRows.forEach((row, ri) => {
         for (let z = this.ARCH_Z + 1.0 + ri * bankStep * 0.5; z <= 43.6; z += bankStep) {
@@ -14277,7 +14282,7 @@ export class WeddingGallery {
       `pr ${this.renderer.getPixelRatio().toFixed(2)} | far ${this.farActive} | outdoor ${this.camera.position.z > this.ARCH_Z + 0.5}`,
       `calls ${info.render.calls} | tris ${Math.round(info.render.triangles / 1000)}k | programs ${programs}`,
       `geo ${info.memory.geometries} | tex ${info.memory.textures} | hd ${hd} loading ${this.hdLoading}`,
-      `photo ${this.perfPhoto} | marker ${this.perfMarker} | noGrass ${this.noGrassDebug} | meadowRoses ${this.showMeadowRoses} | chandeliers ${this.showChandeliers}`,
+      `photo ${this.perfPhoto} | marker ${this.perfMarker} | noGrass ${this.noGrassDebug} | meadowRoses ${this.showMeadowRoses} | lawnFlowers ${this.fullLawnFlowers} | chandeliers ${this.showChandeliers}`,
       `slowest ${this.perfSlowest.frame.toFixed(0)}ms ${this.perfSlowest.marker} | context ${this.perfContextLost ? "LOST" : "ok"}`,
       `events ${this.perfEvents.join(" / ") || "none"}`,
     ].join("\n");
