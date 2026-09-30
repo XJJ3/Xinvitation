@@ -290,6 +290,8 @@ export class WeddingGallery {
     typeof window !== "undefined" && new URLSearchParams(window.location.search).get("galleryPerf") === "1";
   private readonly noGrassDebug =
     typeof window !== "undefined" && new URLSearchParams(window.location.search).get("galleryNoGrass") === "1";
+  private readonly noGrandDebug =
+    typeof window !== "undefined" && new URLSearchParams(window.location.search).get("galleryNoGrand") === "1";
   private perfPanel: HTMLPreElement | null = null;
   private perfLastFrame = 0;
   private perfLastReport = 0;
@@ -495,8 +497,12 @@ export class WeddingGallery {
     root: THREE.Group;
     sparkles: THREE.Group;
     bulbs: { mat: THREE.MeshStandardMaterial; phase: number; base: number }[];
-    /** 灯泡光晕（数量少，保持独立 Sprite） */
-    sparkleList: { spr: THREE.Sprite; phase: number; speed: number }[];
+    /** 16 个灯罩光晕合并成一个 billboard InstancedMesh：与闪光点同款着色器，单 draw call */
+    halos: {
+      mesh: THREE.InstancedMesh;
+      /** 每个光晕的尺寸，GLB 替换重定位时保持原尺寸 */
+      size: Float32Array;
+    };
     /** 62 颗闪光点合并成一个 billboard InstancedMesh：闪烁在着色器里按实例相位/速度算，单 draw call */
     glints: {
       mesh: THREE.InstancedMesh;
@@ -4238,39 +4244,41 @@ export class WeddingGallery {
   }
 
   /**
-   * 大吊灯闪光点批次：原本 62 个独立 THREE.Sprite（62 次 draw call）合并为一个 InstancedMesh
-   * billboard。位置/尺寸烘焙进 instanceMatrix，相位/速度写成实例属性交给着色器，逐帧只更新一个
+   * 闪光/光晕批次：N 个加色 billboard 合并成一个 InstancedMesh（N 次 draw call → 1 次）。
+   * 位置/尺寸由 place 回调烘焙进 instanceMatrix，相位/速度写成实例属性交给着色器，逐帧只更新一个
    * 时间 uniform，闪烁完全在 GPU 完成，观感与逐 sprite 版本一致。
+   * alpha 用 pow(0.5+0.5*sin(t*speed+phase), 6) 乘进 diffuseColor.a，等价于原 Sprite 的
+   * material.opacity = pow(v,6)（初始 0.5 每帧都会被改写，故此处基值取 1 即可）。
    */
-  private makeGrandGlints(tex: THREE.Texture, beads: readonly { p: THREE.Vector3 }[]) {
-    const COUNT = 62;
+  private makeSparkleBatch(
+    tex: THREE.Texture,
+    count: number,
+    color: string,
+    cacheKey: string,
+    speedMin: number,
+    speedMax: number,
+    place: (i: number, dummy: THREE.Object3D) => number,
+  ): { mesh: THREE.InstancedMesh; size: Float32Array } {
     const geo = new THREE.PlaneGeometry(1, 1);
     const mat = new THREE.MeshBasicMaterial({
       map: tex,
-      color: "#fff2dd",
+      color,
       transparent: true,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
       side: THREE.FrontSide,
     });
-    const phase = new Float32Array(COUNT);
-    const speed = new Float32Array(COUNT);
-    const size = new Float32Array(COUNT);
-    const mesh = new THREE.InstancedMesh(geo, mat, COUNT);
+    const phase = new Float32Array(count);
+    const speed = new Float32Array(count);
+    const size = new Float32Array(count);
+    const mesh = new THREE.InstancedMesh(geo, mat, count);
     const dummy = new THREE.Object3D();
-    for (let i = 0; i < COUNT; i++) {
-      const b = beads[(i * 7) % beads.length];
-      dummy.position.set(
-        b.p.x + (Math.random() - 0.5) * 0.14,
-        b.p.y + (Math.random() - 0.5) * 0.14,
-        b.p.z + (Math.random() - 0.5) * 0.14,
-      );
-      size[i] = 0.1 + Math.random() * 0.14;
-      dummy.scale.set(size[i], size[i], 1);
+    for (let i = 0; i < count; i++) {
+      size[i] = place(i, dummy);
       dummy.updateMatrix();
       mesh.setMatrixAt(i, dummy.matrix);
       phase[i] = Math.random() * Math.PI * 2;
-      speed[i] = 1.6 + Math.random() * 3.2;
+      speed[i] = speedMin + Math.random() * (speedMax - speedMin);
     }
     mesh.instanceMatrix.needsUpdate = true;
     geo.setAttribute("aPhase", new THREE.InstancedBufferAttribute(phase, 1));
@@ -4300,8 +4308,38 @@ export class WeddingGallery {
         .replace("#include <common>", "#include <common>\nvarying float vSparkleAlpha;")
         .replace("#include <color_fragment>", "#include <color_fragment>\ndiffuseColor.a *= vSparkleAlpha;");
     };
-    mat.customProgramCacheKey = () => "grandGlints";
+    mat.customProgramCacheKey = () => cacheKey;
     return { mesh, size };
+  }
+
+  /** 大吊灯 62 颗闪光点：位置带 ±0.07 抖动、尺寸 0.1~0.24，闪烁速度 1.6~4.8Hz */
+  private makeGrandGlints(tex: THREE.Texture, beads: readonly { p: THREE.Vector3 }[]) {
+    const COUNT = 62;
+    return this.makeSparkleBatch(tex, COUNT, "#fff2dd", "grandGlints", 1.6, 4.8, (i, dummy) => {
+      const b = beads[(i * 7) % beads.length];
+      dummy.position.set(
+        b.p.x + (Math.random() - 0.5) * 0.14,
+        b.p.y + (Math.random() - 0.5) * 0.14,
+        b.p.z + (Math.random() - 0.5) * 0.14,
+      );
+      const s = 0.1 + Math.random() * 0.14;
+      dummy.scale.set(s, s, 1);
+      return s;
+    });
+  }
+
+  /**
+   * 大吊灯 16 个灯罩光晕：烘焙灯罩位置 +0.2 与 0.95*灯罩尺寸，颜色 #ffcf9a、共享 glowTex、
+   * 加色混合与逐 Sprite 版一致，闪烁速度 0.7~1.5Hz。
+   */
+  private makeGrandHalos(tex: THREE.Texture, shades: readonly { p: THREE.Vector3; s: THREE.Vector3 }[]) {
+    return this.makeSparkleBatch(tex, shades.length, "#ffcf9a", "grandHalos", 0.7, 1.5, (i, dummy) => {
+      const part = shades[i];
+      dummy.position.set(part.p.x, part.p.y + 0.2, part.p.z);
+      const hs = 0.95 * (part.s.x || 1);
+      dummy.scale.set(hs, hs, 1);
+      return hs;
+    });
   }
 
   /**
@@ -4488,6 +4526,9 @@ export class WeddingGallery {
     };
 
     // 主臂 12 条 + 副臂 8 条：S 形灯臂、珠链缠臂、末端灯罩/灯盘/灯芯/迷你珠环
+    // 灯臂 tube 几何先累积，两个循环结束后按材质合并为 2 个 mesh（省 ~14 draw calls/盏）
+    const mainArmGeos: THREE.BufferGeometry[] = [];
+    const secArmGeos: THREE.BufferGeometry[] = [];
     for (let i = 0; i < 12; i++) {
       const a = (i / 12) * Math.PI * 2;
       const cos = Math.cos(a);
@@ -4498,7 +4539,7 @@ export class WeddingGallery {
         new THREE.Vector3(cos * 1.7, -2.1, sin * 1.7),
         new THREE.Vector3(cos * R_ARM, Y_ARM, sin * R_ARM),
       ]);
-      g.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 26, 0.03, 8, false), goldMat));
+      mainArmGeos.push(new THREE.TubeGeometry(curve, 26, 0.03, 8, false));
 
       for (let k = 0; k < 7; k++) {
         const p = curve.getPointAt(0.24 + (k / 6) * 0.66);
@@ -4529,7 +4570,7 @@ export class WeddingGallery {
         new THREE.Vector3(cos * 1.05, -1.55, sin * 1.05),
         new THREE.Vector3(cos * R_ARM2, Y_ARM2, sin * R_ARM2),
       ]);
-      g.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 20, 0.024, 8, false), goldLightMat));
+      secArmGeos.push(new THREE.TubeGeometry(curve, 20, 0.024, 8, false));
 
       push(shadeParts, cos * R_ARM2, Y_ARM2, sin * R_ARM2, 0.85, qId());
       push(bobecheParts, cos * R_ARM2, Y_ARM2 - 0.015, sin * R_ARM2, 1.1, qId());
@@ -4542,6 +4583,10 @@ export class WeddingGallery {
         q: new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.7, a, 0)),
       });
     }
+
+    // 12 条主臂合并为 1 个 goldMat mesh、4 条副臂合并为 1 个 goldLightMat mesh
+    g.add(new THREE.Mesh(this.mergeParts(mainArmGeos, "grand main arms"), goldMat));
+    g.add(new THREE.Mesh(this.mergeParts(secArmGeos, "grand secondary arms"), goldLightMat));
 
     // 金色卷草花饰：主环 12 + 上环 8，末端一颗小金球
     const voluteGeo = new THREE.TubeGeometry(
@@ -4817,28 +4862,11 @@ export class WeddingGallery {
     // 62 颗闪光合并为一个 billboard 批次（62 次 draw call → 1 次）
     const glints = this.makeGrandGlints(sparkleTex, beadParts);
     sparkles.add(glints.mesh);
-    const sparkleList: { spr: THREE.Sprite; phase: number; speed: number }[] = [];
 
-    // 灯泡光晕：每个灯位叠一片加色光晕，远看就能认出「这是亮着的吊灯」
+    // 灯泡光晕：16 个灯位各一片加色光晕，合并为一个 billboard 批次（16 次 draw call → 1 次）
     const glowTex = this.getGlowTexture();
-    for (const part of shadeParts) {
-      const halo = new THREE.Sprite(
-        new THREE.SpriteMaterial({
-          map: glowTex,
-          color: "#ffcf9a",
-          transparent: true,
-          opacity: 0.5,
-          blending: THREE.AdditiveBlending,
-          depthWrite: false,
-        }),
-      );
-      halo.position.copy(part.p);
-      halo.position.y += 0.2;
-      const hs = 0.95 * (part.s.x || 1);
-      halo.scale.set(hs, hs, 1);
-      sparkles.add(halo);
-      sparkleList.push({ spr: halo, phase: Math.random() * Math.PI * 2, speed: 0.7 + Math.random() * 0.8 });
-    }
+    const halos = this.makeGrandHalos(glowTex, shadeParts);
+    sparkles.add(halos.mesh);
 
     const glow = new THREE.Sprite(
       new THREE.SpriteMaterial({
@@ -4859,7 +4887,7 @@ export class WeddingGallery {
       root: g,
       sparkles,
       bulbs,
-      sparkleList,
+      halos,
       glints,
       crystals: [
         { mesh: beadMesh, count: beadParts.length, phase: 0 },
@@ -4896,6 +4924,12 @@ export class WeddingGallery {
     });
     this.scene.add(root, sparkles);
     this.grandCopies = [{ root, sparkles }];
+    if (this.noGrandDebug) {
+      gr.root.visible = false;
+      gr.sparkles.visible = false;
+      root.visible = false;
+      sparkles.visible = false;
+    }
   }
 
   /** 大吊灯花艺兜底：程序化花头（模板就绪后整体替换） */
@@ -5111,7 +5145,15 @@ export class WeddingGallery {
           gl.mesh.setMatrixAt(i, dummy.matrix);
         }
         gl.mesh.instanceMatrix.needsUpdate = true;
-        this.grand.sparkleList.forEach((s) => randomSpot(s.spr));
+        const gh = this.grand.halos;
+        for (let i = 0; i < gh.size.length; i++) {
+          randomSpot(dummy);
+          dummy.scale.set(gh.size[i], gh.size[i], 1);
+          dummy.updateMatrix();
+          gh.mesh.setMatrixAt(i, dummy.matrix);
+        }
+        gh.mesh.instanceMatrix.needsUpdate = true;
+        if (this.noGrandDebug) holder.visible = false;
         console.info("[WeddingGallery] 已切换 GLB 水晶吊灯 /models/crystal-chandelier.glb");
       },
       undefined,
@@ -8723,10 +8765,6 @@ export class WeddingGallery {
       b.mat.emissiveIntensity =
         b.base *
         (1 + 0.09 * Math.sin(t * 12.7 + b.phase) + 0.05 * Math.sin(t * 7.3 + b.phase * 1.7));
-    }
-    for (const s of gr.sparkleList) {
-      const v = 0.5 + 0.5 * Math.sin(t * s.speed + s.phase);
-      s.spr.material.opacity = Math.pow(v, 6);
     }
     // 每帧轮流刷新 1/3 实例的亮度，控制 CPU
     this.grandCursor = (this.grandCursor + 1) % 3;
@@ -14238,7 +14276,7 @@ export class WeddingGallery {
       `pr ${this.renderer.getPixelRatio().toFixed(2)} | far ${this.farActive} | outdoor ${this.camera.position.z > this.ARCH_Z + 0.5}`,
       `calls ${info.render.calls} | tris ${Math.round(info.render.triangles / 1000)}k | programs ${programs}`,
       `geo ${info.memory.geometries} | tex ${info.memory.textures} | hd ${hd} loading ${this.hdLoading}`,
-      `photo ${this.perfPhoto} | marker ${this.perfMarker} | noGrass ${this.noGrassDebug}`,
+      `photo ${this.perfPhoto} | marker ${this.perfMarker} | noGrass ${this.noGrassDebug} | noGrand ${this.noGrandDebug}`,
       `slowest ${this.perfSlowest.frame.toFixed(0)}ms ${this.perfSlowest.marker} | context ${this.perfContextLost ? "LOST" : "ok"}`,
       `events ${this.perfEvents.join(" / ") || "none"}`,
     ].join("\n");
