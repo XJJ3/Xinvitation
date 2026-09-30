@@ -290,6 +290,9 @@ export class WeddingGallery {
     typeof window !== "undefined" && new URLSearchParams(window.location.search).get("galleryPerf") === "1";
   private readonly noGrassDebug =
     typeof window !== "undefined" && new URLSearchParams(window.location.search).get("galleryNoGrass") === "1";
+  /** 保留小径花带，默认不生成分散的草甸玫瑰；可用参数对照原场景。 */
+  private readonly showMeadowRoses =
+    typeof window !== "undefined" && new URLSearchParams(window.location.search).get("galleryShowMeadowRoses") === "1";
   /** 正常模式不构建厅内吊灯模型；仅用显式参数恢复，保留原有照明。 */
   private readonly showChandeliers =
     typeof window !== "undefined" && new URLSearchParams(window.location.search).get("galleryShowChandeliers") === "1";
@@ -947,7 +950,9 @@ export class WeddingGallery {
               this.buildGround();
             },
             () => this.buildGrassCards(),
-            () => this.buildLawnFlowers(),
+            () => {
+              if (this.showMeadowRoses) this.buildLawnFlowers();
+            },
             () => this.buildLawnRotunda(),
             () => this.buildLawnAisle(),
             () => this.buildLawnTrees(),
@@ -8827,7 +8832,7 @@ export class WeddingGallery {
       this.lawnBuilt = true;
       this.buildGround();
       this.buildGrassCards();
-      this.buildLawnFlowers();
+      if (this.showMeadowRoses) this.buildLawnFlowers();
       this.buildLawnRotunda();
       this.buildLawnAisle();
       this.buildLawnTrees();
@@ -14272,7 +14277,7 @@ export class WeddingGallery {
       `pr ${this.renderer.getPixelRatio().toFixed(2)} | far ${this.farActive} | outdoor ${this.camera.position.z > this.ARCH_Z + 0.5}`,
       `calls ${info.render.calls} | tris ${Math.round(info.render.triangles / 1000)}k | programs ${programs}`,
       `geo ${info.memory.geometries} | tex ${info.memory.textures} | hd ${hd} loading ${this.hdLoading}`,
-      `photo ${this.perfPhoto} | marker ${this.perfMarker} | noGrass ${this.noGrassDebug} | chandeliers ${this.showChandeliers}`,
+      `photo ${this.perfPhoto} | marker ${this.perfMarker} | noGrass ${this.noGrassDebug} | meadowRoses ${this.showMeadowRoses} | chandeliers ${this.showChandeliers}`,
       `slowest ${this.perfSlowest.frame.toFixed(0)}ms ${this.perfSlowest.marker} | context ${this.perfContextLost ? "LOST" : "ok"}`,
       `events ${this.perfEvents.join(" / ") || "none"}`,
     ].join("\n");
