@@ -290,8 +290,9 @@ export class WeddingGallery {
     typeof window !== "undefined" && new URLSearchParams(window.location.search).get("galleryPerf") === "1";
   private readonly noGrassDebug =
     typeof window !== "undefined" && new URLSearchParams(window.location.search).get("galleryNoGrass") === "1";
-  private readonly noGrandDebug =
-    typeof window !== "undefined" && new URLSearchParams(window.location.search).get("galleryNoGrand") === "1";
+  /** 正常模式不构建厅内吊灯模型；仅用显式参数恢复，保留原有照明。 */
+  private readonly showChandeliers =
+    typeof window !== "undefined" && new URLSearchParams(window.location.search).get("galleryShowChandeliers") === "1";
   private perfPanel: HTMLPreElement | null = null;
   private perfLastFrame = 0;
   private perfLastReport = 0;
@@ -926,7 +927,7 @@ export class WeddingGallery {
       () => this.loadRoseModels(),
       () => this.buildPetals(),
       () => this.buildLightDust(),
-      () => this.buildGrandChandelier(),
+      () => { if (this.showChandeliers) this.buildGrandChandelier(); },
       () => this.buildWallWash(),
       () => this.finalizeFlora(),
     ];
@@ -971,7 +972,9 @@ export class WeddingGallery {
           pt.shadow.bias = -0.0015;
           this.scene.add(pt);
           // 门口往里第 2 盏换成大吊灯的复制品（buildGrandChandelier 之后由 syncGrandCopies 生成）
-          if (z !== this.GRAND_COPY_Z) this.scene.add(this.makeChandelier(0, this.H - 0.5, z));
+          if (this.showChandeliers && z !== this.GRAND_COPY_Z) {
+            this.scene.add(this.makeChandelier(0, this.H - 0.5, z));
+          }
         });
 
         const grandLight = new THREE.PointLight("#ffe9e4", 2.2, 40, 1.7);
@@ -4924,12 +4927,6 @@ export class WeddingGallery {
     });
     this.scene.add(root, sparkles);
     this.grandCopies = [{ root, sparkles }];
-    if (this.noGrandDebug) {
-      gr.root.visible = false;
-      gr.sparkles.visible = false;
-      root.visible = false;
-      sparkles.visible = false;
-    }
   }
 
   /** 大吊灯花艺兜底：程序化花头（模板就绪后整体替换） */
@@ -5153,7 +5150,6 @@ export class WeddingGallery {
           gh.mesh.setMatrixAt(i, dummy.matrix);
         }
         gh.mesh.instanceMatrix.needsUpdate = true;
-        if (this.noGrandDebug) holder.visible = false;
         console.info("[WeddingGallery] 已切换 GLB 水晶吊灯 /models/crystal-chandelier.glb");
       },
       undefined,
@@ -14276,7 +14272,7 @@ export class WeddingGallery {
       `pr ${this.renderer.getPixelRatio().toFixed(2)} | far ${this.farActive} | outdoor ${this.camera.position.z > this.ARCH_Z + 0.5}`,
       `calls ${info.render.calls} | tris ${Math.round(info.render.triangles / 1000)}k | programs ${programs}`,
       `geo ${info.memory.geometries} | tex ${info.memory.textures} | hd ${hd} loading ${this.hdLoading}`,
-      `photo ${this.perfPhoto} | marker ${this.perfMarker} | noGrass ${this.noGrassDebug} | noGrand ${this.noGrandDebug}`,
+      `photo ${this.perfPhoto} | marker ${this.perfMarker} | noGrass ${this.noGrassDebug} | chandeliers ${this.showChandeliers}`,
       `slowest ${this.perfSlowest.frame.toFixed(0)}ms ${this.perfSlowest.marker} | context ${this.perfContextLost ? "LOST" : "ok"}`,
       `events ${this.perfEvents.join(" / ") || "none"}`,
     ].join("\n");
