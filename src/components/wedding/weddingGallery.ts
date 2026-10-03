@@ -296,9 +296,12 @@ export class WeddingGallery {
   /** 手机默认压低小径花带密度；仅用于 A/B 的完整花带开关。 */
   private readonly fullLawnFlowers =
     typeof window !== "undefined" && new URLSearchParams(window.location.search).get("galleryFullLawnFlowers") === "1";
-  /** 正常模式不构建厅内吊灯模型；仅用显式参数恢复，保留原有照明。 */
+  /** 默认恢复画廊中央两盏大吊灯；设为 0 可临时关闭，便于手机性能对照。 */
   private readonly showChandeliers =
-    typeof window !== "undefined" && new URLSearchParams(window.location.search).get("galleryShowChandeliers") === "1";
+    typeof window !== "undefined" && new URLSearchParams(window.location.search).get("galleryShowChandeliers") !== "0";
+  /** 三盏小吊灯不默认恢复；仅用于完整灯具的性能与观感对照。 */
+  private readonly showSmallChandeliers =
+    typeof window !== "undefined" && new URLSearchParams(window.location.search).get("galleryShowSmallChandeliers") === "1";
   private perfPanel: HTMLPreElement | null = null;
   private perfLastFrame = 0;
   private perfLastReport = 0;
@@ -980,7 +983,7 @@ export class WeddingGallery {
           pt.shadow.bias = -0.0015;
           this.scene.add(pt);
           // 门口往里第 2 盏换成大吊灯的复制品（buildGrandChandelier 之后由 syncGrandCopies 生成）
-          if (this.showChandeliers && z !== this.GRAND_COPY_Z) {
+          if (this.showChandeliers && this.showSmallChandeliers && z !== this.GRAND_COPY_Z) {
             this.scene.add(this.makeChandelier(0, this.H - 0.5, z));
           }
         });
@@ -14282,7 +14285,7 @@ export class WeddingGallery {
       `pr ${this.renderer.getPixelRatio().toFixed(2)} | far ${this.farActive} | outdoor ${this.camera.position.z > this.ARCH_Z + 0.5}`,
       `calls ${info.render.calls} | tris ${Math.round(info.render.triangles / 1000)}k | programs ${programs}`,
       `geo ${info.memory.geometries} | tex ${info.memory.textures} | hd ${hd} loading ${this.hdLoading}`,
-      `photo ${this.perfPhoto} | marker ${this.perfMarker} | noGrass ${this.noGrassDebug} | meadowRoses ${this.showMeadowRoses} | lawnFlowers ${this.fullLawnFlowers} | chandeliers ${this.showChandeliers}`,
+      `photo ${this.perfPhoto} | marker ${this.perfMarker} | noGrass ${this.noGrassDebug} | meadowRoses ${this.showMeadowRoses} | lawnFlowers ${this.fullLawnFlowers} | chandeliers ${this.showChandeliers} | smallChandeliers ${this.showSmallChandeliers}`,
       `slowest ${this.perfSlowest.frame.toFixed(0)}ms ${this.perfSlowest.marker} | context ${this.perfContextLost ? "LOST" : "ok"}`,
       `events ${this.perfEvents.join(" / ") || "none"}`,
     ].join("\n");
