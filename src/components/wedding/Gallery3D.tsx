@@ -41,7 +41,52 @@ function isTouchDevice(): boolean {
 const GLOBAL_CSS = `
 @keyframes xinv-dot { 0%,100% { transform: translateY(0); opacity:.45 } 50% { transform: translateY(-6px); opacity:1 } }
 @keyframes xinv-glow { 0%,100% { opacity:.75 } 50% { opacity:1 } }
+@keyframes xinv-guide-in { from { opacity:0; transform:translate(-50%,14px) } to { opacity:1; transform:translate(-50%,0) } }
 `;
+
+// 首次进入引导的持久化：localStorage → sessionStorage → 内存，逐级安全降级。
+// 隐私模式/存储被禁用时 getItem/setItem 可能抛错，全部 try/catch 兜住，绝不影响画廊本身。
+const GUIDE_KEY = "xinv-gallery-guide-v1";
+let guideSeenMemory = false;
+
+function hasSeenGuide(): boolean {
+  if (guideSeenMemory) return true;
+  if (typeof window === "undefined") return false;
+  try {
+    if (window.localStorage.getItem(GUIDE_KEY) === "1") {
+      guideSeenMemory = true;
+      return true;
+    }
+  } catch {
+    /* 存储不可用，忽略 */
+  }
+  try {
+    if (window.sessionStorage.getItem(GUIDE_KEY) === "1") {
+      guideSeenMemory = true;
+      return true;
+    }
+  } catch {
+    /* 存储不可用，忽略 */
+  }
+  return false;
+}
+
+function markGuideSeen(): void {
+  guideSeenMemory = true;
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(GUIDE_KEY, "1");
+  } catch {
+    /* 存储不可用，忽略 */
+  }
+  try {
+    window.sessionStorage.setItem(GUIDE_KEY, "1");
+  } catch {
+    /* 存储不可用，忽略 */
+  }
+}
+
+type GuideStep = { title: string; desc: string };
 
 /** buildNow：首屏空闲后由外层置 true，不等滚到附近就提前在后台构建场景 */
 export default function Gallery3D({ buildNow = false }: { buildNow?: boolean }) {
@@ -52,6 +97,8 @@ export default function Gallery3D({ buildNow = false }: { buildNow?: boolean }) 
   const [locked, setLocked] = useState(false);
   const [isTouch, setIsTouch] = useState(false);
   const [outdoor, setOutdoor] = useState<"lawn" | "beach">("lawn");
+  // 首次进入后弹出的操作引导卡片；关闭后写入存储，不再自动重复弹出
+  const [guideOpen, setGuideOpen] = useState(false);
   // 画廊接近视口（约 1.5 屏内）才开始构建场景；离屏/后台则暂停渲染循环
   const [near, setNear] = useState(false);
   // 画廊当前是否在视口（含 20% 余量）内：IO 回调可能早于场景构建触发，必须记下来，构建完成与切回前台时按它决定是否暂停
@@ -148,11 +195,20 @@ export default function Gallery3D({ buildNow = false }: { buildNow?: boolean }) 
     setPhase("entered");
     galleryRef.current?.setIdleMode(false);
     galleryRef.current?.enter();
+    if (!hasSeenGuide()) setGuideOpen(true);
   }, []);
+
+  const dismissGuide = useCallback(() => {
+    markGuideSeen();
+    setGuideOpen(false);
+  }, []);
+
+  const openGuide = useCallback(() => setGuideOpen(true), []);
 
   const exit = useCallback(() => {
     galleryRef.current?.exit();
     galleryRef.current?.setIdleMode(true);
+    setGuideOpen(false);
     setPhase("ready");
     setLocked(false);
   }, []);
@@ -237,17 +293,17 @@ export default function Gallery3D({ buildNow = false }: { buildNow?: boolean }) 
 
   if (mode === "css") return <GalleryFallback />;
 
-  const hints: [string, string][] = isTouch
-    ? [
-        ["滑动屏幕", "环视"],
-        ["点地面", "走过去"],
-        ["点照片", "走到照片前"],
-      ]
-    : [
-        ["单击地面/照片", "走过去"],
-        ["拖拽鼠标", "环视"],
-        ["Esc", "暂停"],
-      ];
+  const hints: [string, string][] = [
+    ["滑动屏幕", "环视"],
+    ["点地面", "走过去"],
+    ["点照片", "走到照片前"],
+  ];
+
+  const guideSteps: GuideStep[] = [
+    { title: "滑动屏幕", desc: "单指拖动，环视四周" },
+    { title: "轻点地面", desc: "点想去的位置，走过去" },
+    { title: "轻点照片", desc: "走到照片前，驻足欣赏" },
+  ];
 
   return (
     <div
@@ -387,6 +443,20 @@ export default function Gallery3D({ buildNow = false }: { buildNow?: boolean }) 
             </button>
           )}
 
+          {phase === "ready" && isTouch && (
+            <span
+              style={{
+                marginTop: 14,
+                color: "#8a6070",
+                fontSize: 10,
+                letterSpacing: 2,
+                fontFamily: "var(--font-sans, sans-serif)",
+              }}
+            >
+              轻触「步入画廊」开始
+            </span>
+          )}
+
           <div
             style={{
               marginTop: 34,
@@ -495,24 +565,24 @@ export default function Gallery3D({ buildNow = false }: { buildNow?: boolean }) 
             {TITLE}
           </div>
 
-          <div
-            style={{
-              position: "absolute",
-              bottom: 74,
-              left: 0,
-              right: 0,
-              textAlign: "center",
-              pointerEvents: "none",
-              color: "rgba(245,192,206,0.6)",
-              fontSize: 10,
-              letterSpacing: 4,
-              fontFamily: "var(--font-sans, sans-serif)",
-            }}
-          >
-            {isTouch
-              ? "滑动环视 · 点地面或照片走过去"
-              : "拖拽环视 · 单击地面或照片走过去 · W A S D 移动 · 滚轮翻页 · T 切换户外"}
-          </div>
+          {!guideOpen && (
+            <div
+              style={{
+                position: "absolute",
+                bottom: 74,
+                left: 0,
+                right: 0,
+                textAlign: "center",
+                pointerEvents: "none",
+                color: "rgba(245,192,206,0.6)",
+                fontSize: 10,
+                letterSpacing: 4,
+                fontFamily: "var(--font-sans, sans-serif)",
+              }}
+            >
+              滑动环视 · 点地面或照片走过去
+            </div>
+          )}
         </>
       )}
 
@@ -587,6 +657,143 @@ export default function Gallery3D({ buildNow = false }: { buildNow?: boolean }) 
             退出画廊
           </button>
         </>
+      )}
+
+      {phase === "entered" && !guideOpen && (
+        <button
+          type="button"
+          onClick={openGuide}
+          aria-label="查看操作指引"
+          style={{
+            position: "absolute",
+            left: 16,
+            bottom: 22,
+            zIndex: 45,
+            width: 44,
+            height: 44,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "#f2c3ce",
+            fontSize: 17,
+            background: "rgba(120,60,80,0.4)",
+            border: "1px solid rgba(242,195,206,0.45)",
+            borderRadius: "50%",
+            cursor: "pointer",
+            fontFamily: "var(--font-sans, sans-serif)",
+            touchAction: "manipulation",
+          }}
+        >
+          ?
+        </button>
+      )}
+
+      {phase === "entered" && guideOpen && (
+        <div
+          onPointerDown={(e) => e.stopPropagation()}
+          role="dialog"
+          aria-label="画廊操作指引"
+          style={{
+            position: "absolute",
+            left: "50%",
+            bottom: 76,
+            transform: "translateX(-50%)",
+            zIndex: 46,
+            width: "min(340px, calc(100% - 32px))",
+            boxSizing: "border-box",
+            padding: "16px 18px 14px",
+            textAlign: "left",
+            background: "rgba(30,10,18,0.86)",
+            border: "1px solid rgba(201,132,154,0.4)",
+            borderRadius: 6,
+            boxShadow: "0 12px 34px rgba(0,0,0,0.4)",
+            backdropFilter: "blur(6px)",
+            WebkitBackdropFilter: "blur(6px)",
+            animation: "xinv-guide-in .35s ease both",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+            <div style={{ flex: 1, height: 1, background: "rgba(201,132,154,0.4)" }} />
+            <span
+              style={{
+                color: "#c9849a",
+                fontSize: 11,
+                letterSpacing: 4,
+                textIndent: 4,
+                fontFamily: "var(--font-sans, sans-serif)",
+                whiteSpace: "nowrap",
+              }}
+            >
+              操作指引
+            </span>
+            <div style={{ flex: 1, height: 1, background: "rgba(201,132,154,0.4)" }} />
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {guideSteps.map((s, i) => (
+              <div key={s.title} style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+                <span
+                  style={{
+                    flex: "none",
+                    width: 20,
+                    height: 20,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    marginTop: 1,
+                    color: "#f5c0ce",
+                    fontSize: 11,
+                    borderRadius: "50%",
+                    border: "1px solid rgba(201,132,154,0.55)",
+                    fontFamily: "var(--font-sans, sans-serif)",
+                  }}
+                >
+                  {i + 1}
+                </span>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ color: "#f5c0ce", fontSize: 13, letterSpacing: 1, fontFamily: "var(--font-sans, sans-serif)" }}>{s.title}</div>
+                  <div style={{ marginTop: 2, color: "#a08090", fontSize: 11, letterSpacing: 1, fontFamily: "var(--font-sans, sans-serif)" }}>{s.desc}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <button
+            type="button"
+            onClick={dismissGuide}
+            style={{
+              display: "block",
+              width: "100%",
+              marginTop: 16,
+              padding: "11px 0",
+              color: "#f5c0ce",
+              fontSize: 12,
+              letterSpacing: 4,
+              textIndent: 4,
+              fontFamily: "var(--font-sans, sans-serif)",
+              background: "rgba(201,132,154,0.16)",
+              border: "1px solid rgba(201,132,154,0.5)",
+              borderRadius: 2,
+              cursor: "pointer",
+              touchAction: "manipulation",
+            }}
+          >
+            知道了
+          </button>
+
+          <div
+            style={{
+              marginTop: 9,
+              textAlign: "center",
+              color: "#6a4050",
+              fontSize: 10,
+              letterSpacing: 1,
+              fontFamily: "var(--font-sans, sans-serif)",
+            }}
+          >
+            右上角可退出或切换户外 · 左下角「?」可再看一次
+          </div>
+        </div>
       )}
     </div>
   );
