@@ -296,9 +296,9 @@ export class WeddingGallery {
   /** 手机默认压低小径花带密度；仅用于 A/B 的完整花带开关。 */
   private readonly fullLawnFlowers =
     typeof window !== "undefined" && new URLSearchParams(window.location.search).get("galleryFullLawnFlowers") === "1";
-  /** 默认恢复画廊中央两盏大吊灯；设为 0 可临时关闭，便于手机性能对照。 */
+  /** 默认隐藏画廊中央两盏大吊灯；设为 1 才恢复，便于手机性能对照。 */
   private readonly showChandeliers =
-    typeof window !== "undefined" && new URLSearchParams(window.location.search).get("galleryShowChandeliers") !== "0";
+    typeof window !== "undefined" && new URLSearchParams(window.location.search).get("galleryShowChandeliers") === "1";
   /** 三盏小吊灯不默认恢复；仅用于完整灯具的性能与观感对照。 */
   private readonly showSmallChandeliers =
     typeof window !== "undefined" && new URLSearchParams(window.location.search).get("galleryShowSmallChandeliers") === "1";
