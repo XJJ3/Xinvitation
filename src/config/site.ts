@@ -149,7 +149,7 @@ export const siteConfig = {
     fortune: {
       en: "A LITTLE SURPRISE",
       title: "摇一支今日幸福签",
-      bg: "/photos/world/p21.jpg",
+      bg: "/photos/world/p37.jpg",
       lead: "轻触竹筒，摇一支属于你的幸福签",
       signs: [
         ["上上签", "今天的你，会被双倍的幸福拥抱", "LUCKY IN LOVE"],
