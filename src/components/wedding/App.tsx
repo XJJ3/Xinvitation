@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import confetti from "canvas-confetti";
 import { siteConfig } from "@/config/site";
 import { PHOTO_LAYOUT, WORLD_PHOTOS } from "@/config/worldPhotos";
-import { openInWeChat, isWeChat, openWebMap, jumpToMap, MAP_PROVIDERS, type MapProvider, type MapPoint } from "@/lib/openMap";
+import { isWeChat, openWebMap, jumpToMap, MAP_PROVIDERS, type MapProvider, type MapPoint } from "@/lib/openMap";
 import { track, fetchLove, sendLove, fetchBlessings, sendBlessing, sendRsvp, type Blessing } from "@/lib/api";
 
 /* 3D 画廊是纯客户端模块（three / WebGL），关闭 SSR 预渲染避免服务端执行 */
@@ -448,7 +448,7 @@ function MomentsSection() {
   )
 }
 
-/* ── 地址：照片背景 + 毛玻璃卡片；导航沿用 openMap（微信内 wx.openLocation，外部 App/网页兜底）── */
+/* ── 地址：照片背景 + 毛玻璃卡片；微信内直接打开腾讯地图网页版，外部按设备唤起地图 ── */
 function VenueSection({ toast }: { toast: (m: string) => void }) {
   const v = event.venue
   const [tip, setTip] = useState<string | null>(null)
@@ -457,8 +457,7 @@ function VenueSection({ toast }: { toast: (m: string) => void }) {
   const navigate = () => {
     setTip(null)
     if (isWeChat()) {
-      if (openInWeChat(point, () => setTip("微信地图打开失败，请稍后再试"))) return
-      setTip("微信地图加载中，请稍候…")
+      openWebMap("tencent", point)
       return
     }
     const provider: MapProvider = "amap"
@@ -1029,27 +1028,9 @@ export default function WeddingApp() {
         <Reveal>
           <DarkHead script={wedding.rsvp.script} zh={wedding.rsvp.zh} />
           <p style={{ fontFamily: "var(--font-serif)", fontSize: 13, color: "rgba(255,248,248,0.85)", textAlign: "center", lineHeight: 2, marginBottom: 28 }}>
-            {wedding.rsvp.introPre}<br />
-            <strong style={{ color: C.roseLight }}>{wedding.rsvp.deadline}</strong> {wedding.rsvp.deadlineSuffix}
+            {wedding.rsvp.introPre}
           </p>
           <RSVP />
-        </Reveal>
-        <Reveal delay={200}>
-          <div style={{ marginTop: 40, textAlign: "center" }}>
-            <div style={{ fontFamily: "var(--font-serif)", fontSize: 12, letterSpacing: 4, color: C.roseLight, marginBottom: 16 }}>
-              {wedding.rsvp.contactsTitle}
-            </div>
-            <div style={{ display: "flex", justifyContent: "center", gap: 40 }}>
-              {wedding.rsvp.contacts.map(c => (
-                <div key={c.name} style={{ textAlign: "center" }}>
-                  <div style={{ fontFamily: "var(--font-serif)", fontSize: 16, color: "#fff8f8", marginBottom: 4 }}>{c.name}</div>
-                  <a href={`tel:${c.phone.replace(/-/g, "")}`} style={{
-                    fontFamily: "var(--font-en)", fontSize: 16, color: C.roseLight, textDecoration: "none",
-                  }}>{c.phone}</a>
-                </div>
-              ))}
-            </div>
-          </div>
         </Reveal>
       </section>
 

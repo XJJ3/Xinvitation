@@ -24,9 +24,9 @@ export const siteConfig = {
       label: "婚宴",
       time: "18:30",
       name: "裕锦大酒店",
-      hall: "楠溪厅",
+      hall: "百合厅",
       city: "温州",
-      address: "温州市永嘉县上塘镇 裕锦大酒店楠溪厅",
+      address: "温州市永嘉县上塘镇 裕锦大酒店百合厅",
       mapName: "裕锦大酒店", // 地图气泡显示名
       lat: 28.142787, // 裕锦大酒店真实纬度（GCJ-02）
       lng: 120.677977, // 裕锦大酒店真实经度（GCJ-02）
@@ -71,7 +71,7 @@ export const siteConfig = {
       dateZh: "十一月十日",
       dateWeekday: "星期二",
       dateEn: "NOVEMBER 10, 2026",
-      venueLine: "📍 温州 · 裕锦大酒店 楠溪厅",
+      venueLine: "📍 温州 · 裕锦大酒店 百合厅",
       scrollHint: "向下滑动",
     },
 
@@ -216,15 +216,6 @@ export const siteConfig = {
       script: "敬请回复",
       zh: "RSVP · 期待您的出席",
       introPre: "您的出席是我们最珍贵的礼物",
-      // TODO(占位)：回复截止日期，上线前确认
-      deadline: "请于 2026年10月20日前",
-      deadlineSuffix: "告知是否赴宴",
-      contactsTitle: "— 联系新人 —",
-      // TODO(占位)：以下为占位电话，上线前替换为真实号码
-      contacts: [
-        { name: "新郎 俊杰", phone: "138-0000-0001" },
-        { name: "新娘 阳阳", phone: "138-0000-0002" },
-      ],
     },
 
     // 页脚（新 UI 自带的装饰页脚；ICP 合规页脚由 SiteFooter 组件负责）
