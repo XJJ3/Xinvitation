@@ -122,7 +122,7 @@ export const siteConfig = {
       title: "属于我们的画面",
       // 填 3D 画廊的画框位置名，照片跟随 worldPhotos.ts 的 PHOTO_LAYOUT，改那边这里自动同步
       photos: [
-        { slot: "后墙左", note: "YOU ARE MY TODAY" },
+        { slot: "左墙5", note: "YOU ARE MY TODAY" },
         { slot: "后墙右", note: "AND ALL OF MY TOMORROWS" },
         { slot: "舞台左", note: "FOREVER STARTS HERE" },
         { slot: "舞台右", note: "A DAY TO REMEMBER" },
