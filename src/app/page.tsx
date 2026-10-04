@@ -12,7 +12,7 @@ export default function Home() {
       <SiteFooter />
       {/* 背景音乐：右上角金色唱片开关（尝试自动播 + 交互兜底补播 + 循环） */}
       <BgMusic />
-      {/* 微信分享配置（仅微信内生效）+ 分享提示按钮 */}
+      {/* 微信分享配置（仅微信内生效） */}
       <WxShare />
     </main>
   );

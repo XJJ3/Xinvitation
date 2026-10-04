@@ -644,22 +644,6 @@ html { scroll-snap-type: y mandatory; }
   animation: petalFall linear infinite;
 }
 
-/* ══════════ 保留：WxShare 分享按钮呼吸动画 ══════════ */
-@keyframes share-breathe {
-  0%,
-  100% {
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25),
-      0 0 4px rgba(227, 200, 138, 0.25);
-  }
-  50% {
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25),
-      0 0 14px rgba(227, 200, 138, 0.6);
-  }
-}
-.share-breathe {
-  animation: share-breathe 3.2s ease-in-out infinite;
-}
-
 /* ══════════ 保留：全局降级（无障碍）══════════ */
 @media (prefers-reduced-motion: reduce) {
   html {
