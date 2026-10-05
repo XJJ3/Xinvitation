@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type SyntheticEvent } from "react";
+import { createPortal } from "react-dom";
 import dynamic from "next/dynamic";
 import confetti from "canvas-confetti";
 import { siteConfig } from "@/config/site";
@@ -70,6 +71,12 @@ function GalleryLazy() {
 }
 
 const { wedding, couple, event } = siteConfig;
+
+function hideBrokenImage(event: SyntheticEvent<HTMLImageElement>) {
+  const image = event.currentTarget;
+  image.classList.add("image-failed");
+  image.parentElement?.classList.add("image-error");
+}
 
 const C = {
   blush: "#f7e3e7",
@@ -351,7 +358,7 @@ function LetterSection() {
             <span>{l.photoLabel}</span>
             <div ref={photoRef} className="inv-letter-photo">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={photo} alt={`${couple.groom.name} & ${couple.bride.name}`} loading="lazy" />
+              <img src={photo} alt={`${couple.groom.name} & ${couple.bride.name}`} loading="lazy" onError={hideBrokenImage} />
             </div>
             <i>{date}</i>
           </div>
@@ -372,78 +379,120 @@ function LetterSection() {
   )
 }
 
-/* ── 属于我们的画面：自动轮播 + 左右滑动 ── */
+/* ── 属于我们的画面：纵向铺展画册，照片直接展开给宾客浏览 ── */
 function MomentsSection() {
   const m = wedding.moments
-  // 轮播框在手机上约占 1000×1200 物理像素，必须用原图（小图会被放大近 2 倍发虚）
-  const photos = m.photos.map(p => ({ src: WORLD_PHOTOS[PHOTO_LAYOUT[p.slot] - 1].src, note: p.note }))
-  const [idx, setIdx] = useState(0)
-  const [paused, setPaused] = useState(false)
-  const [onScreen, setOnScreen] = useState(false)
-  // 只给看过的和下一张设置 src：12 张原图不会在进入本屏时一次性下载
-  const [shown, setShown] = useState<Set<number>>(() => new Set([0, 1]))
-  const secRef = useRef<HTMLElement>(null)
-  const touchX = useRef<number | null>(null)
-  const go = (n: number) => setIdx((n + photos.length) % photos.length)
+  const photos = m.photos.map(p => {
+    const photo = WORLD_PHOTOS[PHOTO_LAYOUT[p.slot] - 1]
+    return { src: photo.src, small: photo.small, note: p.note }
+  })
+  const [openIndex, setOpenIndex] = useState<number | null>(null)
+  const [dragX, setDragX] = useState(0)
+  const closeRef = useRef<HTMLButtonElement>(null)
+  const openerRef = useRef<HTMLButtonElement>(null)
+  const dragStartRef = useRef<number | null>(null)
 
   useEffect(() => {
-    const el = secRef.current
-    if (!el) return
-    const io = new IntersectionObserver(es => setOnScreen(es[0].isIntersecting))
-    io.observe(el)
-    return () => io.disconnect()
-  }, [])
+    if (openIndex === null) return
+    const html = document.documentElement
+    const page = document.querySelector<HTMLElement>(".inv")
+    const oldOverflow = html.style.overflow
+    const oldSnap = html.style.scrollSnapType
+    const wasInert = page?.inert ?? false
+    html.style.overflow = "hidden"
+    html.style.scrollSnapType = "none"
+    if (page) page.inert = true
+    closeRef.current?.focus()
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpenIndex(null)
+      if (event.key === "ArrowRight") setOpenIndex(i => i === null ? null : (i + 1) % photos.length)
+      if (event.key === "ArrowLeft") setOpenIndex(i => i === null ? null : (i - 1 + photos.length) % photos.length)
+    }
+    window.addEventListener("keydown", onKeyDown)
+    return () => {
+      html.style.overflow = oldOverflow
+      html.style.scrollSnapType = oldSnap
+      if (page) page.inert = wasInert
+      window.removeEventListener("keydown", onKeyDown)
+      openerRef.current?.focus()
+    }
+  // 只在开关展览时运行，翻页不重置焦点或页面滚动状态。
+  }, [openIndex === null, photos.length])
 
-  useEffect(() => {
-    const next = (idx + 1) % photos.length
-    setShown(s => (s.has(idx) && s.has(next) ? s : new Set([...s, idx, next])))
-  }, [idx, photos.length])
-
-  // 不在屏幕上时不自动翻页：否则打开页面后在别处停留，会在后台把原图一张张下载完
-  useEffect(() => {
-    if (paused || !onScreen) return
-    const id = window.setInterval(() => setIdx(i => (i + 1) % photos.length), 5000)
-    return () => window.clearInterval(id)
-  }, [paused, onScreen, photos.length])
-
-  const pad = (n: number) => String(n).padStart(2, "0")
+  const openPhoto = (index: number, trigger: HTMLButtonElement) => {
+    openerRef.current = trigger
+    setOpenIndex(index)
+  }
+  const shiftPhoto = (offset: number) => setOpenIndex(i => i === null ? null : (i + offset + photos.length) % photos.length)
+  const onViewerPointerDown = (event: React.PointerEvent<HTMLElement>) => {
+    if (event.pointerType === "mouse" && event.button !== 0) return
+    if ((event.target as HTMLElement).closest("button")) return
+    dragStartRef.current = event.clientX
+    event.currentTarget.setPointerCapture(event.pointerId)
+  }
+  const onViewerPointerMove = (event: React.PointerEvent<HTMLElement>) => {
+    if (dragStartRef.current === null) return
+    setDragX(Math.max(-120, Math.min(120, event.clientX - dragStartRef.current)))
+  }
+  const onViewerPointerUp = (event: React.PointerEvent<HTMLElement>) => {
+    if (dragStartRef.current === null) return
+    const distance = event.clientX - dragStartRef.current
+    dragStartRef.current = null
+    setDragX(0)
+    if (Math.abs(distance) > 54) shiftPhoto(distance < 0 ? 1 : -1)
+  }
+  const onViewerPointerCancel = () => { dragStartRef.current = null; setDragX(0) }
   return (
-    <section ref={secRef} className="inv-section inv-screen inv-fullh inv-moments-sec">
+    <section className="inv-section inv-moments-sec">
       <Reveal>
         <InvTitle en={m.en}>{m.title}</InvTitle>
       </Reveal>
-      <Reveal className="inv-moments">
-        <div
-          className="inv-photo"
-          onTouchStart={e => { touchX.current = e.touches[0].clientX; setPaused(true) }}
-          onTouchEnd={e => {
-            const start = touchX.current
-            touchX.current = null
-            setPaused(false)
-            if (start === null) return
-            const dx = e.changedTouches[0].clientX - start
-            if (Math.abs(dx) > 40) go(idx + (dx < 0 ? 1 : -1))
-          }}
-        >
-          {photos.map((p, i) => (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img key={p.src} src={shown.has(i) ? p.src : undefined} alt={p.note} className={i === idx ? "on" : ""} loading="lazy" />
-          ))}
-          <span className="inv-count">{pad(idx + 1)} / {pad(photos.length)}</span>
-          <span className="inv-note">{photos[idx].note}</span>
+      <Reveal className="inv-moments-book">
+        <div className="inv-moments-intro">
+          <span className="inv-moments-rule" />
+          <span>翻开我们的每一帧</span>
+          <span className="inv-moments-rule" />
         </div>
-        <div className="inv-ctrl">
-          <button type="button" aria-label="上一张" onClick={() => go(idx - 1)}>←</button>
-          <div className="inv-dots">
-            {photos.map((p, i) => (
-              <button type="button" key={p.src} aria-label={`第 ${i + 1} 张`} className={i === idx ? "on" : ""} onClick={() => go(i)}>
-                <span />
+        <div className="inv-moments-spread">
+          {photos.map((p, i) => (
+            <figure key={p.src} className={`inv-moment-card ${i === 0 ? "is-lead" : i % 3 === 0 ? "is-tall" : ""}`}>
+              <button type="button" className="inv-moment-open" aria-label={`展开第 ${i + 1} 张照片`} onClick={e => openPhoto(i, e.currentTarget)}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={p.src} alt={p.note || `婚礼照片 ${i + 1}`} loading="lazy" decoding="async" onError={hideBrokenImage} />
+                <span className="inv-moment-zoom" aria-hidden="true"><i>✦</i></span>
+                <span className="inv-moment-caption"><span>{String(i + 1).padStart(2, "0")}</span>{p.note}</span>
+              </button>
+            </figure>
+          ))}
+        </div>
+        <div className="inv-moments-endmark" aria-hidden="true"><span>WITH ALL OUR LOVE</span><i>✦</i></div>
+      </Reveal>
+      {openIndex !== null && createPortal(
+        <div className="inv-moment-viewer" role="dialog" aria-modal="true" aria-label="婚礼照片查看器" onClick={e => { if (e.target === e.currentTarget) setOpenIndex(null) }}>
+          <div className="inv-moment-viewer-top">
+            <span>OUR MOMENTS <span className="inv-moment-viewer-number" aria-live="polite">{String(openIndex + 1).padStart(2, "0")} / {String(photos.length).padStart(2, "0")}</span></span>
+            <button ref={closeRef} type="button" className="inv-moment-close" aria-label="关闭照片" onClick={() => setOpenIndex(null)}>×</button>
+          </div>
+          <div className="inv-moment-viewer-stage" onPointerDown={onViewerPointerDown} onPointerMove={onViewerPointerMove} onPointerUp={onViewerPointerUp} onPointerCancel={onViewerPointerCancel}>
+            <button type="button" className="inv-moment-viewer-arrow" aria-label="上一张照片" onClick={() => shiftPhoto(-1)}>‹</button>
+            <figure className="inv-moment-viewer-photo" key={photos[openIndex].src} style={{ transform: `translateX(${dragX}px) rotate(${dragX / 28}deg)` }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={photos[openIndex].src} alt={photos[openIndex].note || `婚礼照片 ${openIndex + 1}`} onError={hideBrokenImage} />
+              <figcaption>{photos[openIndex].note}</figcaption>
+            </figure>
+            <button type="button" className="inv-moment-viewer-arrow" aria-label="下一张照片" onClick={() => shiftPhoto(1)}>›</button>
+          </div>
+          <div className="inv-moment-thumb-rail" aria-label="照片缩略图导航">
+            {photos.map((photo, index) => (
+              <button key={photo.src} type="button" className={index === openIndex ? "is-active" : ""} aria-label={`打开第 ${index + 1} 张`} onClick={() => setOpenIndex(index)}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={photo.small} alt="" loading="lazy" />
               </button>
             ))}
           </div>
-          <button type="button" aria-label="下一张" onClick={() => go(idx + 1)}>→</button>
-        </div>
-      </Reveal>
+          <p className="inv-moment-viewer-foot">拖动照片翻页 · 缩略图可快速跳转</p>
+        </div>, document.body,
+      )}
     </section>
   )
 }
@@ -482,12 +531,19 @@ function VenueSection({ toast }: { toast: (m: string) => void }) {
   return (
     <section className="inv-venue inv-fullh">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={wedding.venue.bg} alt={v.name} loading="lazy" />
+      <img src={wedding.venue.bg} alt={v.name} loading="lazy" onError={hideBrokenImage} />
       <div className="inv-venue-shade" />
       <Reveal className="inv-venue-card">
-        <span>{wedding.venue.en}</span>
-        <h2>{v.name}</h2>
-        <p>{v.address}</p>
+        <div className="inv-venue-video-frame">
+          <video className="inv-venue-video" autoPlay muted loop playsInline preload="metadata" poster={wedding.venue.bg} aria-label="酒店现场视频" onError={event => { event.currentTarget.hidden = true }}>
+            <source src="/videos/venue-bg.m4v" type="video/mp4" />
+          </video>
+          <div className="inv-venue-video-caption">
+            <span>{wedding.venue.en}</span>
+            <h2>{v.name}</h2>
+          </div>
+        </div>
+        <p className="inv-venue-address">{v.address}</p>
         <div className="inv-venue-info">
           <div><small>{wedding.venue.hallLabel}</small><strong>{v.hall}</strong></div>
           <div><small>{wedding.venue.timeLabel}</small><strong>{v.time}</strong></div>
@@ -553,7 +609,7 @@ function FortuneSection() {
     <section className="inv-section inv-screen inv-fullh inv-fortune-sec">
       <div className={`inv-fortune-arch ${phase === "dropped" ? `glow g${draws % 2}` : ""}`} aria-hidden>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={f.bg} alt="" loading="lazy" />
+        <img src={f.bg} alt="" loading="lazy" onError={hideBrokenImage} />
       </div>
       {[0, 1, 2, 3, 4, 5].map(i => <span key={i} className={`inv-spark s${i}`} aria-hidden>✦</span>)}
       <Reveal>
@@ -635,6 +691,8 @@ function LoveSection() {
   const [hint, setHint] = useState("")
   const [wish, setWish] = useState<string>(presets[0])
   const [rolling, setRolling] = useState(false)
+  const [backgroundPhoto, setBackgroundPhoto] = useState(0)
+  const backgroundPhotos = WORLD_PHOTOS.slice(0, 30).map(photo => photo.small)
 
   useEffect(() => {
     try { setLit(localStorage.getItem(LOVE_KEY) === "1") } catch {}
@@ -654,6 +712,7 @@ function LoveSection() {
   const [bump, setBump] = useState(0)
   const [pops, setPops] = useState<number[]>([])
   const light = () => {
+    setBackgroundPhoto(i => (i + 1) % backgroundPhotos.length)
     setBump(b => b + 1)
     const id = Date.now() + Math.random()
     setPops(p => [...p, id])
@@ -730,19 +789,15 @@ function LoveSection() {
     return { ...w, key: `${w.base}-${n}` }
   })
   const shownCount = l.baseCount + (count ?? (lit ? 1 : 0))
+  const backgroundImage = backgroundPhotos[backgroundPhoto]
   return (
-    <section className="inv-section inv-love-sec">
+    <section
+      className="inv-section inv-love-sec"
+      style={{ backgroundImage: `linear-gradient(180deg, rgba(84,45,56,.22), rgba(84,45,56,.74)), url("${backgroundImage}")` }}
+    >
       <Reveal>
         <InvTitle en={l.en}>{l.title}</InvTitle>
         <div className={`inv-orbit ${lit ? "lit" : ""}`}>
-          <div className="inv-orbit-photos" aria-hidden>
-            {l.orbitPhotos.map((src, k) => (
-              <span key={src} className={`p${k}`}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={src} alt="" loading="lazy" />
-              </span>
-            ))}
-          </div>
           {pops.map(id => (
             <span key={id} className="inv-love-burst" aria-hidden>
               <span className="inv-love-ripple" />
@@ -751,7 +806,12 @@ function LoveSection() {
               ))}
             </span>
           ))}
-          <button type="button" key={bump} className={`inv-love-btn ${bump ? "bump" : ""}`} onClick={light}>
+          <button
+            type="button"
+            key={bump}
+            className={`inv-love-btn ${bump ? "bump" : ""}`}
+            onClick={light}
+          >
             <Icon name="heart" filled />
             <span>{lit ? "已收到你的爱" : "轻触送出祝福"}</span>
           </button>
@@ -761,7 +821,7 @@ function LoveSection() {
         <div className="inv-wall">
           <div className="inv-wall-head">
             <h3>{l.wallTitle}</h3>
-            <small>{list.length} 条祝福</small>
+            <small>最新 {Math.min(list.length, 6)} 条</small>
           </div>
           <div className="inv-wall-list" ref={listRef}>
             {list.map((w, i) => (
@@ -846,7 +906,7 @@ function RSVP() {
         <div style={{ display: "flex", gap: 8 }}>
           {[1, 2, 3, 4, 5].map(n => (
             <button key={n} onClick={() => setGuests(n)} style={{
-              width: 36, height: 36, borderRadius: "50%",
+              width: 36, height: 36, minHeight: 0, borderRadius: "50%",
               background: guests === n ? "#fff8f8" : "rgba(255,255,255,0.08)",
               border: `1px solid ${guests === n ? "#fff8f8" : "rgba(242,195,206,0.45)"}`,
               color: guests === n ? C.wine : C.roseLight,
@@ -915,7 +975,7 @@ export default function WeddingApp() {
       <div className={`inv-toast ${toastMsg ? "show" : ""}`}>{toastMsg}</div>
 
       {/* ══════════ COVER ══════════ */}
-      <section style={{
+       <section className="inv-cover-sec" style={{
         minHeight: "100svh",
         background: `linear-gradient(175deg, ${C.blushSoft} 0%, ${C.blush} 55%, #efc4ce 100%)`,
         display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
@@ -926,19 +986,19 @@ export default function WeddingApp() {
         <div style={{ position: "absolute", top: 90, left: -24, color: C.line, fontSize: 90, transform: "rotate(18deg)", pointerEvents: "none" }}>✦</div>
         <div style={{ position: "absolute", bottom: 120, right: -20, color: C.line, fontSize: 80, transform: "rotate(-22deg)", pointerEvents: "none" }}>❀</div>
 
-        <div className="animate-fade-up" style={{ marginBottom: 22, position: "relative" }}>
+        <div className="animate-fade-up inv-cover-avatar-wrap" style={{ marginBottom: 22, position: "relative" }}>
           <div style={{
-            width: 156, height: 156, borderRadius: "50%",
+            width: 176, height: 176, borderRadius: "50%",
             border: `1px solid ${C.rose}`, padding: 6,
             background: "rgba(255,255,255,0.5)",
           }}>
-            <div style={{ width: "100%", height: "100%", borderRadius: "50%", overflow: "hidden", background: C.blush, boxShadow: "0 12px 30px rgba(92,46,58,0.18)" }}>
+            <div className="inv-cover-avatar" style={{ width: "100%", height: "100%", borderRadius: "50%", overflow: "hidden", background: C.blush, boxShadow: "0 12px 30px rgba(92,46,58,0.18)" }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={wedding.photos.coverAvatar} alt="新人合影" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+              <img src={wedding.photos.coverAvatar} alt="新人合影" onError={hideBrokenImage} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
             </div>
           </div>
           <div style={{
-            position: "absolute", bottom: 6, right: -2,
+            position: "absolute", bottom: 8, right: -8,
             width: 36, height: 36, borderRadius: "50%",
             background: C.roseDark, border: "2px solid #fff8f8",
             display: "flex", alignItems: "center", justifyContent: "center",
@@ -997,9 +1057,6 @@ export default function WeddingApp() {
       {/* ══════════ 属于我们的画面 ══════════ */}
       <MomentsSection />
 
-      {/* ══════════ 3D GALLERY ══════════ */}
-      <GalleryLazy />
-
       {/* ══════════ 地址 ══════════ */}
       <VenueSection toast={toast} />
 
@@ -1012,7 +1069,7 @@ export default function WeddingApp() {
       {/* ══════════ QUOTE：满屏婚纱照 + 底部酒红渐变，引言压在照片下方 ══════════ */}
       <section className="inv-screen inv-fullh inv-quote-sec">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={wedding.quote.bg} alt={`${couple.groom.name} & ${couple.bride.name}`} loading="lazy" />
+        <img src={wedding.quote.bg} alt={`${couple.groom.name} & ${couple.bride.name}`} loading="lazy" onError={hideBrokenImage} />
         <div className="inv-quote-shade" />
         <Reveal className="inv-quote-body">
           <div className="inv-quote-rule"><i /><span>◆</span><i /></div>
@@ -1033,6 +1090,9 @@ export default function WeddingApp() {
           <RSVP />
         </Reveal>
       </section>
+
+      {/* ══════════ 3D GALLERY：所有婚礼正事完成后再进入沉浸体验 ══════════ */}
+      <GalleryLazy />
 
       {/* ══════════ FOOTER ══════════ */}
       <footer style={{ padding: "56px 28px 40px", textAlign: "center", background: C.wine, position: "relative", overflow: "hidden" }}>
