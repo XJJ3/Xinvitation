@@ -55,7 +55,6 @@
 /* ══════════ 全局基础 ══════════ */
 html {
   background: #542d38;
-  scroll-behavior: smooth;
   overflow-x: clip;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
@@ -182,19 +181,7 @@ body {
   opacity: 1;
 }
 
-/* ══════════ 模块吸附：每次滑动都停在下一个模块的顶部 ══════════
-   mandatory：松手后一定吸到某个模块；比屏幕高的模块内部仍可自由滚动，到边缘才吸附。
-   3D 画廊加 scroll-snap-stop: always，快速甩动也不会越过它，一定先停在全屏画廊。 */
-html { scroll-snap-type: y mandatory; }
-.inv > section, .inv > footer { scroll-snap-align: start; }
-.inv-gallery-sec { scroll-snap-stop: always; }
-
-/* 高于一屏的模块取消强制吸附：金色祝福墙与 RSVP 表单都比一屏高，
-   强制吸附会把模块顶部钉在视口顶，下方输入框被截断够不到；取消后宾客可自然滚动查看 */
-
-/* ── 点亮祝福区：整屏吸附展示（恢复 snap），内容压进一屏 ──
-   mandatory 吸附下该区不能缺席：没有吸附点会被惯性滚动直接越过，宾客根本停不住。
-   所以改为把内容压回一屏：矮视口时祝福墙列表自动变矮（flex 收缩），输入框始终可见 */
+/* ── 点亮祝福区：内容压进一屏，矮视口时祝福墙列表自动变矮（flex 收缩），输入框始终可见 */
 .inv-love-sec {
   display: flex; flex-direction: column; justify-content: center; box-sizing: border-box;
   height: var(--inv-vh, 100dvh);

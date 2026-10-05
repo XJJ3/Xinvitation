@@ -930,9 +930,92 @@ function useViewportHeight() {
   }, [])
 }
 
+/* ── 自动持续下滑：requestAnimationFrame 每帧按时间差滚动（约每秒 60px）；
+   每到一个模块顶部停留 5 秒后继续；触控按下时暂停，释放后继续 ── */
+const AUTO_SCROLL_SPEED = 60
+const AUTO_SCROLL_DWELL_MS = 5000
+
+function useAutoScroll() {
+  useEffect(() => {
+    if ("scrollRestoration" in history) history.scrollRestoration = "manual"
+    window.scrollTo(0, 0)
+    const sections = Array.from(document.querySelectorAll<HTMLElement>(".inv > section, .inv > footer"))
+    if (sections.length < 2) return
+    const tops = sections.map(s => s.offsetTop)
+
+    let raf = 0
+    let last = 0
+    let paused = false
+    let dwelling = false
+    let lastIdx = -1
+    let dwellTimer = 0
+    let wheelTimer = 0
+
+    const currentIndex = () => {
+      const y = window.scrollY
+      let idx = 0
+      for (let i = 0; i < tops.length; i++) if (tops[i] <= y) idx = i
+      return idx
+    }
+
+    const step = (now: number) => {
+      const dt = last ? Math.min((now - last) / 1000, 0.1) : 0
+      last = now
+      if (paused || dwelling) {
+        raf = requestAnimationFrame(step)
+        return
+      }
+      const idx = currentIndex()
+      if (idx !== lastIdx) {
+        lastIdx = idx
+        dwelling = true
+        dwellTimer = window.setTimeout(() => { dwelling = false; last = 0 }, AUTO_SCROLL_DWELL_MS)
+        raf = requestAnimationFrame(step)
+        return
+      }
+      const max = document.documentElement.scrollHeight - window.innerHeight
+      if (window.scrollY < max && dt > 0) window.scrollBy(0, AUTO_SCROLL_SPEED * dt)
+      raf = requestAnimationFrame(step)
+    }
+
+    const pause = () => {
+      paused = true
+      dwelling = false
+      last = 0
+      window.clearTimeout(dwellTimer)
+    }
+    const resume = () => {
+      paused = false
+      last = 0
+      lastIdx = currentIndex()
+    }
+    const onWheel = () => {
+      pause()
+      window.clearTimeout(wheelTimer)
+      wheelTimer = window.setTimeout(resume, 300)
+    }
+
+    window.addEventListener("touchstart", pause, { passive: true })
+    window.addEventListener("touchend", resume)
+    window.addEventListener("wheel", onWheel, { passive: true })
+
+    raf = requestAnimationFrame(step)
+
+    return () => {
+      cancelAnimationFrame(raf)
+      window.clearTimeout(dwellTimer)
+      window.clearTimeout(wheelTimer)
+      window.removeEventListener("touchstart", pause)
+      window.removeEventListener("touchend", resume)
+      window.removeEventListener("wheel", onWheel)
+    }
+  }, [])
+}
+
 /* ════════════════════════════════ MAIN ════════════════════════════════ */
 export default function WeddingApp() {
   useViewportHeight()
+  useAutoScroll()
   useEffect(() => { track("visit", document.referrer) }, [])
   const [toastMsg, toast] = useToast()
   const darkBg = `linear-gradient(160deg, ${C.wine} 0%, ${C.roseDark} 55%, ${C.wine} 100%)`
