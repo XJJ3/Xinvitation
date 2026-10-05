@@ -122,13 +122,13 @@ function CoupleNames() {
   }, [fontSize])
 
   const nameStyle: React.CSSProperties = {
-    fontFamily: "var(--font-brush)", fontSize, color: C.wine, textShadow: "0 2px 12px rgba(158,78,99,0.18)",
+    fontFamily: "var(--font-brush)", fontSize, color: C.wine, textShadow: "0 1px 3px rgba(255,255,255,.9), 0 2px 10px rgba(255,255,255,.7)",
   }
   return (
     <div ref={boxRef} style={{ width: "100%", textAlign: "center", overflow: "hidden" }}>
       <span ref={rowRef} style={{ display: "inline-block", whiteSpace: "nowrap" }}>
         <span style={nameStyle}>{couple.groom.name}</span>
-        <span className="animate-heartbeat" style={{ display: "inline-block", fontSize: Math.round((fontSize * 28) / NAMES_MAX), margin: "0 12px", color: C.rose }}>{couple.separator}</span>
+        <span className="animate-heartbeat" style={{ display: "inline-block", fontSize: Math.round((fontSize * 28) / NAMES_MAX), margin: "0 12px", color: C.rose, textShadow: "0 1px 3px rgba(255,255,255,.9)" }}>{couple.separator}</span>
         <span style={nameStyle}>{couple.bride.name}</span>
       </span>
     </div>
@@ -945,59 +945,38 @@ export default function WeddingApp() {
        <section className="inv-cover-sec" style={{
         height: "100svh",
         background: `linear-gradient(175deg, ${C.blushSoft} 0%, ${C.blush} 55%, #efc4ce 100%)`,
-        display: "flex", flexDirection: "column", alignItems: "center",
+        display: "flex", flexDirection: "column",
         position: "relative", overflow: "hidden",
       }}>
-        <div style={{ position: "absolute", inset: 14, border: `1px solid ${C.line}`, borderRadius: "170px 170px 12px 12px", pointerEvents: "none" }} />
-        <div style={{ position: "absolute", inset: 20, border: "1px dotted rgba(198,111,132,0.35)", borderRadius: "164px 164px 8px 8px", pointerEvents: "none" }} />
-        <div style={{ position: "absolute", top: 90, left: -24, color: C.line, fontSize: 90, transform: "rotate(18deg)", pointerEvents: "none" }}>✦</div>
-        <div style={{ position: "absolute", bottom: 120, right: -20, color: C.line, fontSize: 80, transform: "rotate(-22deg)", pointerEvents: "none" }}>❀</div>
+        {/* 全屏照片背景 */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img className="inv-cover-photo" src={wedding.photos.coverPhoto} alt="新人合影" onError={hideBrokenImage} />
 
-        {/* 中间内容区：头像、名字、日期占满剩余高度并垂直居中 */}
-        <div style={{ flex: 1, minHeight: 0, width: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-          <div className="animate-fade-up inv-cover-avatar-wrap" style={{ marginBottom: "var(--inv-avatar-gap)", position: "relative" }}>
-            <div style={{
-              width: "var(--inv-avatar)", height: "var(--inv-avatar)", borderRadius: "50%",
-              border: `1px solid ${C.rose}`, padding: 6,
-              background: "rgba(255,255,255,0.5)",
-            }}>
-              <div className="inv-cover-avatar" style={{ width: "100%", height: "100%", borderRadius: "50%", overflow: "hidden", background: C.blush, boxShadow: "0 12px 30px rgba(92,46,58,0.18)" }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={wedding.photos.coverAvatar} alt="新人合影" onError={hideBrokenImage} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-              </div>
+        {/* 文字叠加：名字、日期居中，倒计时贴底部 */}
+        <div className="inv-cover-body">
+          <div className="inv-cover-body-main">
+            <div className="animate-fade-up delay-200" style={{
+              fontFamily: "var(--font-brush)", fontSize: 24, color: "#4d2f1f", lineHeight: 1, marginBottom: 2, letterSpacing: ".08em", textShadow: "0 1px 3px rgba(255,255,255,.9), 0 2px 8px rgba(255,255,255,.7)",
+            }}>好久不见</div>
+
+            <div className="animate-fade-up delay-300" style={{
+              fontFamily: "var(--font-brush)", fontSize: 52, color: "#4d2f1f", lineHeight: 1.05, marginBottom: 16, letterSpacing: ".08em", textShadow: "0 2px 5px rgba(255,255,255,.9), 0 2px 14px rgba(255,255,255,.7)",
+            }}>婚礼见</div>
+
+            <div className="animate-fade-up delay-400" style={{ alignSelf: "stretch", textAlign: "center", marginBottom: 12, marginTop: "auto" }}>
+              <CoupleNames />
             </div>
-            <div style={{
-              position: "absolute", bottom: 8, right: -8,
-              width: 36, height: 36, borderRadius: "50%",
-              background: C.roseDark, border: "2px solid #fff8f8",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontFamily: "var(--font-serif)", fontSize: 15, color: "#fff8f8",
-              boxShadow: "0 4px 12px rgba(113,53,69,0.27)",
-            }}>囍</div>
-          </div>
-
-          <div className="animate-fade-up delay-200" style={{
-            fontFamily: "var(--font-en)", fontSize: 13, letterSpacing: 5, color: C.rose, marginBottom: 14,
-          }}>{wedding.cover.tagEn}</div>
-
-          <div className="animate-fade-up delay-300" style={{ alignSelf: "stretch", textAlign: "center", marginBottom: 18 }}>
-            <div style={{ fontFamily: "var(--font-en)", fontStyle: "italic", fontSize: 22, color: C.roseDark, marginBottom: 6 }}>Save our date</div>
-            <CoupleNames />
-          </div>
 
           <div className="animate-fade-up delay-400 inv-cover-date">
-            <div className="inv-cover-year"><i />{wedding.cover.dateZhYear}<i /></div>
-            <div className="inv-cover-day">{wedding.cover.dateZh}</div>
-            <div className="inv-cover-week">{wedding.cover.dateWeekday}</div>
-            <div className="inv-cover-en">{wedding.cover.dateEn}</div>
+            <div className="inv-cover-day">{wedding.cover.dateEn} · {wedding.cover.dateWeekday}</div>
             <div className="inv-cover-lunar">{event.lunar}</div>
           </div>
-        </div>
+          </div>
 
-        {/* 倒计时固定在底部 */}
-        <div className="animate-fade-up delay-600 inv-cover-countdown">
-          <div className="inv-cover-countdown-label">距婚礼还有</div>
-          <Countdown />
+          <div className="animate-fade-up delay-600 inv-cover-countdown">
+            <div className="inv-cover-countdown-label">距婚礼还有</div>
+            <Countdown />
+          </div>
         </div>
 
       </section>

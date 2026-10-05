@@ -277,7 +277,6 @@ html { scroll-snap-type: y mandatory; }
 .inv img.image-failed { visibility: hidden; }
 .inv svg.ico { display: block; width: 1.25em; height: 1.25em; }
 .inv-section { padding: 76px 24px; background-color: #f7e3e7; }
-.inv-cover-avatar.image-error::before { content: "囍"; display: grid; place-items: center; width: 100%; height: 100%; color: var(--rose-dark); font-family: var(--font-serif); font-size: 34px; }
 
 .inv-title { text-align: center; }
 .inv-title > span { color: var(--rose); font-family: var(--en); font-size: 13px; letter-spacing: .28em; }
@@ -292,13 +291,11 @@ html { scroll-snap-type: y mandatory; }
 .inv-cover-year i { width: 26px; height: 1px; background: linear-gradient(90deg, transparent, var(--rose)); }
 .inv-cover-year i:last-child { background: linear-gradient(90deg, var(--rose), transparent); }
 .inv-cover-day {
-  margin: 4px 0 2px; font-family: var(--font-brush); font-size: 38px; line-height: 1.25; letter-spacing: .14em; text-indent: .14em;
+  margin: 4px 0 2px; font-family: var(--font-serif); font-size: 30px; line-height: 1.25; letter-spacing: .06em;
   background: linear-gradient(180deg, #9e4e63 10%, #542d38 90%); -webkit-background-clip: text; background-clip: text; color: transparent;
-  filter: drop-shadow(0 2px 6px rgba(158,78,99,.18));
+  filter: drop-shadow(0 1px 2px rgba(255,255,255,.9)) drop-shadow(0 2px 8px rgba(255,255,255,.6));
 }
-.inv-cover-week { display: inline-block; padding: 2px 12px; border: 1px solid rgba(198,111,132,.45); border-radius: 999px; color: var(--rose-dark); background: rgba(255,255,255,.55); font-size: 11px; letter-spacing: .3em; text-indent: .3em; }
-.inv-cover-en { margin-top: 8px; color: var(--rose); font-family: var(--en); font-size: 13px; font-style: italic; letter-spacing: .2em; }
-.inv-cover-lunar { margin-top: 2px; color: var(--muted); font-size: 11px; letter-spacing: .2em; }
+.inv-cover-lunar { margin-top: 2px; color: var(--muted); font-size: 11px; letter-spacing: .2em; text-shadow: 0 1px 3px rgba(255,255,255,.85); }
 
 /* 信件：行高、分段照第 6 版；字号大一号，上下留白收紧以便整块放进一屏 */
 .inv-letter-sec { padding: 42px 24px 30px; background: linear-gradient(145deg, #f9e8eb 0%, #f4d9df 100%); }
@@ -406,27 +403,18 @@ html { scroll-snap-type: y mandatory; }
 .inv-venue-btns .ghost { color: #fff; background: transparent; border: 1px solid rgba(255,255,255,.55); }
 .inv-venue-tip { margin-top: 12px; color: #f2c3ce; font-size: 12px; line-height: 1.6; }
 
-/* 首屏与普通卡片的新版婚礼画册层次：照片感、金线和不对称留白比单纯换色更明显。
-   头像尺寸与日期字号绑定 svh，让首屏在任意屏幕高度上都刚好占满一屏、元素完整可见 */
-.inv-cover-sec {
-  --inv-avatar: clamp(150px, 24svh, 220px);
-  --inv-avatar-gap: clamp(14px, 2.6svh, 22px);
-  padding: clamp(40px, 8svh, 64px) 24px clamp(14px, 3svh, 24px);
-}
-.inv-cover-sec::before { content: ""; position: absolute; inset: 7% 9% auto; height: 70%; border: 1px solid rgba(198,111,132,.3); border-radius: 48% 48% 18px 18px; background: linear-gradient(135deg, rgba(255,255,255,.22), transparent 60%); pointer-events: none; }
-.inv-cover-sec::after { content: "WEDDING INVITATION"; position: absolute; right: 18px; top: 50%; color: rgba(158,78,99,.26); font-family: var(--font-en); font-size: 10px; letter-spacing: .32em; writing-mode: vertical-rl; pointer-events: none; }
-.inv-cover-sec > * { position: relative; z-index: 1; }
-.inv-cover-sec .inv-cover-avatar { position: relative; }
-.inv-cover-avatar-wrap { transform: translateY(-2px); }
-.inv-cover-sec .inv-cover-avatar::after { content: ""; position: absolute; inset: -11px; border: 1px solid rgba(202,164,118,.7); border-radius: 50%; transform: rotate(14deg); pointer-events: none; }
+/* 首屏：上半屏为新人合影照片，下半屏为名字、日期与倒计时；照片区高度绑定 svh 保证一屏 */
+.inv-cover-photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: calc(50% + 54px) 25%; }
+.inv-cover-body { position: relative; z-index: 1; flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; padding: 12px 24px 20px; }
+.inv-cover-body-main { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; width: 100%; }
 .inv-cover-sec .inv-cover-date { position: relative; padding: 10px 20px 12px; border-top: 1px solid rgba(198,111,132,.28); border-bottom: 1px solid rgba(198,111,132,.28); background: linear-gradient(90deg, transparent, rgba(255,255,255,.16), transparent); }
-.inv-cover-sec .inv-cover-day { font-size: clamp(34px, 6.5svh, 58px); }
+.inv-cover-sec .inv-cover-day { font-size: clamp(22px, 7vw, 32px); }
 .inv-cover-countdown { width: 100%; max-width: 340px; padding: 14px 18px; border: 1px solid var(--line); border-radius: 2px 20px 2px 20px; background: linear-gradient(145deg, rgba(255,253,251,.92), rgba(248,229,231,.9)); box-shadow: 8px 8px 0 rgba(198,111,132,.16), 0 14px 30px rgba(92,46,58,.12); }
 .inv-cover-countdown-label { font-family: var(--font-serif); font-size: 12px; letter-spacing: 3px; color: var(--rose); text-align: center; margin-bottom: 10px; }
 
 @media (max-height: 640px) {
-  .inv-cover-sec { --inv-avatar: 138px; --inv-avatar-gap: 10px; padding-top: 24px; padding-bottom: 8px; }
-  .inv-cover-sec .inv-cover-day { font-size: 32px; }
+  .inv-cover-sec .inv-cover-day { font-size: 22px; }
+  .inv-cover-body { padding-top: 10px; padding-bottom: 8px; }
   .inv-cover-countdown { padding: 9px 14px; }
   .inv-cover-countdown-label { margin-bottom: 6px; }
 }
@@ -551,8 +539,6 @@ html { scroll-snap-type: y mandatory; }
   .inv-venue-btns button { width: 100%; }
 
   .inv-venue-video { object-position: 50% 38%; transform: scale(1.03); transform-origin: center 38%; }
-
-  .inv-cover-avatar-wrap > div:last-child { right: -5px; bottom: 6px; }
 }
 
 @media (min-width: 361px) {

@@ -22,7 +22,7 @@ export const siteConfig = {
     // 百度地图跳转时由 src/lib/openMap.ts 自动转 BD-09，无需在此另存百度坐标。
     venue: {
       label: "婚宴",
-      time: "18:30",
+      time: "18:00",
       name: "裕锦大酒店",
       hall: "百合厅",
       city: "温州",
@@ -65,20 +65,20 @@ export const siteConfig = {
   wedding: {
     // 封面屏
     cover: {
-      tagEn: "— WEDDING INVITATION —",
+      tagEn: "— 婚礼邀请函 —",
       // 封面日期区文案（中文行 + 英文行）
       dateZhYear: "公元二〇二六年",
-      dateZh: "十一月十日",
+      dateZh: "11月10日",
       dateWeekday: "星期二",
-      dateEn: "NOVEMBER 10, 2026",
+      dateEn: "2026.11.10",
       venueLine: "📍 温州 · 裕锦大酒店 百合厅",
       scrollHint: "向下滑动",
     },
 
     // 头像与画廊照片：public/photos/wedding/（图片内容与设计稿 Unsplash 图一一对应）
     photos: {
-      // 封面圆形头像：3D 画廊「后墙右」照片（p02）以两人上半身为中心裁成 600 方图
-      coverAvatar: "/photos/wedding/cover-avatar-p02.jpg",
+      // 封面大照片：3D 画廊「后墙右」照片（p02）的完整竖版原图
+      coverPhoto: "/photos/world/p02.jpg",
       // 3D 画廊六张（竖幅），label/sub 为画框下方的题字
       gallery: [
         { src: "/photos/wedding/gallery-1.jpg", label: "初次相遇", sub: "相遇是缘" },
