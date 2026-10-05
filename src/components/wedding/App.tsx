@@ -941,6 +941,9 @@ function useAutoScroll() {
     window.scrollTo(0, 0)
     const sections = Array.from(document.querySelectorAll<HTMLElement>(".inv > section, .inv > footer"))
     if (sections.length < 2) return
+    const page = document.querySelector<HTMLElement>(".inv")
+    const invTop = page ? page.getBoundingClientRect().top + window.scrollY : 0
+    const tops = sections.map(s => s.offsetTop)
 
     let raf = 0
     let last = 0
@@ -951,15 +954,16 @@ function useAutoScroll() {
     let wheelTimer = 0
 
     const currentIndex = () => {
+      const y = window.scrollY - invTop
       let idx = 0
-      for (let i = 0; i < sections.length; i++) if (sections[i].getBoundingClientRect().top <= 1) idx = i
+      for (let i = 0; i < tops.length; i++) if (tops[i] <= y) idx = i
       return idx
     }
 
     const step = (now: number) => {
       const dt = last ? Math.min((now - last) / 1000, 0.1) : 0
       last = now
-      if (paused || dwelling) {
+      if (paused || dwelling || (page && page.inert)) {
         raf = requestAnimationFrame(step)
         return
       }
