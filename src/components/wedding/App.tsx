@@ -314,53 +314,20 @@ function Countdown() {
   )
 }
 
-/* ── 信件：见字如面（参考第 6 版）──
-   照片按原图 3:4 完整显示（宽 = 高 × 3/4，不裁切）；高度在 [MIN, MAX] 内自适应，保证整块放进一屏 */
-const LETTER_PHOTO_MAX = 300
-const LETTER_PHOTO_MIN = 120
-
+/* ── 信件：见字如面 ──
+   上半部分为照片背景区（留白，纯照片），下半部分为信内容 */
 function LetterSection() {
   const l = wedding.letter
   const photo = WORLD_PHOTOS[PHOTO_LAYOUT[l.photoSlot] - 1].src
-  const date = event.date.slice(0, 10).replace(/-/g, ".")
-  const secRef = useRef<HTMLElement>(null)
-  const photoRef = useRef<HTMLDivElement>(null)
-
-  // 整个模块要放进一屏：先按最大照片高度量出内容总高，超出屏幕多少就把照片压矮多少（宽度随之等比缩），文字不缩
-  useEffect(() => {
-    const sec = secRef.current
-    const ph = photoRef.current
-    const box = sec?.firstElementChild as HTMLElement | null
-    if (!sec || !ph || !box) return
-    const setH = (h: number) => {
-      ph.style.height = `${h}px`
-      ph.style.width = `${Math.round(h * 0.75)}px`
-    }
-    const fit = () => {
-      setH(LETTER_PHOTO_MAX)
-      const cs = getComputedStyle(sec)
-      const need = box.offsetHeight + parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom)
-      const over = Math.max(0, need - window.innerHeight)
-      setH(Math.max(LETTER_PHOTO_MIN, LETTER_PHOTO_MAX - over))
-    }
-    fit()
-    document.fonts?.ready.then(fit)
-    window.addEventListener("resize", fit)
-    return () => window.removeEventListener("resize", fit)
-  }, [])
 
   return (
-    <section ref={secRef} className="inv-section inv-screen inv-letter-sec">
+    <section className="inv-section inv-screen inv-letter-sec">
       <Reveal className="inv-letter-box">
         <InvTitle en={l.en}>{l.title}</InvTitle>
         <div className="inv-letter">
-          <div className="inv-letter-top">
-            <span>{l.photoLabel}</span>
-            <div ref={photoRef} className="inv-letter-photo">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={photo} alt={`${couple.groom.name} & ${couple.bride.name}`} loading="lazy" onError={hideBrokenImage} />
-            </div>
-            <i>{date}</i>
+          <div className="inv-letter-cover">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img className="inv-letter-bg" src={photo} alt="" loading="lazy" onError={hideBrokenImage} />
           </div>
           <div className="inv-letter-paper">
             <span className="inv-quote">“</span>
@@ -976,79 +943,63 @@ export default function WeddingApp() {
 
       {/* ══════════ COVER ══════════ */}
        <section className="inv-cover-sec" style={{
-        minHeight: "100svh",
+        height: "100svh",
         background: `linear-gradient(175deg, ${C.blushSoft} 0%, ${C.blush} 55%, #efc4ce 100%)`,
-        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-        position: "relative", overflow: "hidden", padding: "60px 24px 80px",
+        display: "flex", flexDirection: "column", alignItems: "center",
+        position: "relative", overflow: "hidden",
       }}>
         <div style={{ position: "absolute", inset: 14, border: `1px solid ${C.line}`, borderRadius: "170px 170px 12px 12px", pointerEvents: "none" }} />
         <div style={{ position: "absolute", inset: 20, border: "1px dotted rgba(198,111,132,0.35)", borderRadius: "164px 164px 8px 8px", pointerEvents: "none" }} />
         <div style={{ position: "absolute", top: 90, left: -24, color: C.line, fontSize: 90, transform: "rotate(18deg)", pointerEvents: "none" }}>✦</div>
         <div style={{ position: "absolute", bottom: 120, right: -20, color: C.line, fontSize: 80, transform: "rotate(-22deg)", pointerEvents: "none" }}>❀</div>
 
-        <div className="animate-fade-up inv-cover-avatar-wrap" style={{ marginBottom: 22, position: "relative" }}>
-          <div style={{
-            width: 176, height: 176, borderRadius: "50%",
-            border: `1px solid ${C.rose}`, padding: 6,
-            background: "rgba(255,255,255,0.5)",
-          }}>
-            <div className="inv-cover-avatar" style={{ width: "100%", height: "100%", borderRadius: "50%", overflow: "hidden", background: C.blush, boxShadow: "0 12px 30px rgba(92,46,58,0.18)" }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={wedding.photos.coverAvatar} alt="新人合影" onError={hideBrokenImage} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+        {/* 中间内容区：头像、名字、日期占满剩余高度并垂直居中 */}
+        <div style={{ flex: 1, minHeight: 0, width: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+          <div className="animate-fade-up inv-cover-avatar-wrap" style={{ marginBottom: "var(--inv-avatar-gap)", position: "relative" }}>
+            <div style={{
+              width: "var(--inv-avatar)", height: "var(--inv-avatar)", borderRadius: "50%",
+              border: `1px solid ${C.rose}`, padding: 6,
+              background: "rgba(255,255,255,0.5)",
+            }}>
+              <div className="inv-cover-avatar" style={{ width: "100%", height: "100%", borderRadius: "50%", overflow: "hidden", background: C.blush, boxShadow: "0 12px 30px rgba(92,46,58,0.18)" }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={wedding.photos.coverAvatar} alt="新人合影" onError={hideBrokenImage} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+              </div>
             </div>
+            <div style={{
+              position: "absolute", bottom: 8, right: -8,
+              width: 36, height: 36, borderRadius: "50%",
+              background: C.roseDark, border: "2px solid #fff8f8",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontFamily: "var(--font-serif)", fontSize: 15, color: "#fff8f8",
+              boxShadow: "0 4px 12px rgba(113,53,69,0.27)",
+            }}>囍</div>
           </div>
-          <div style={{
-            position: "absolute", bottom: 8, right: -8,
-            width: 36, height: 36, borderRadius: "50%",
-            background: C.roseDark, border: "2px solid #fff8f8",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontFamily: "var(--font-serif)", fontSize: 15, color: "#fff8f8",
-            boxShadow: "0 4px 12px rgba(113,53,69,0.27)",
-          }}>囍</div>
-        </div>
 
-        <div className="animate-fade-up delay-200" style={{
-          fontFamily: "var(--font-en)", fontSize: 13, letterSpacing: 5, color: C.rose, marginBottom: 14,
-        }}>{wedding.cover.tagEn}</div>
+          <div className="animate-fade-up delay-200" style={{
+            fontFamily: "var(--font-en)", fontSize: 13, letterSpacing: 5, color: C.rose, marginBottom: 14,
+          }}>{wedding.cover.tagEn}</div>
 
-        <div className="animate-fade-up delay-300" style={{ alignSelf: "stretch", textAlign: "center", marginBottom: 18 }}>
-          <div style={{ fontFamily: "var(--font-en)", fontStyle: "italic", fontSize: 22, color: C.roseDark, marginBottom: 6 }}>Save our date</div>
-          <CoupleNames />
-        </div>
-
-        <div className="animate-fade-up delay-400 inv-cover-date">
-          <div className="inv-cover-year"><i />{wedding.cover.dateZhYear}<i /></div>
-          <div className="inv-cover-day">{wedding.cover.dateZh}</div>
-          <div className="inv-cover-week">{wedding.cover.dateWeekday}</div>
-          <div className="inv-cover-en">{wedding.cover.dateEn}</div>
-          <div className="inv-cover-lunar">{event.lunar}</div>
-        </div>
-
-        <div className="animate-fade-up delay-600" style={{
-          background: "rgba(255,253,251,0.8)", padding: "16px 20px",
-          border: `1px solid ${C.line}`, boxShadow: `6px 6px 0 ${C.blush}`,
-          marginBottom: 26, width: "100%", maxWidth: 340,
-        }}>
-          <div style={{ fontFamily: "var(--font-serif)", fontSize: 12, letterSpacing: 3, color: C.rose, textAlign: "center", marginBottom: 10 }}>
-            距婚礼还有
+          <div className="animate-fade-up delay-300" style={{ alignSelf: "stretch", textAlign: "center", marginBottom: 18 }}>
+            <div style={{ fontFamily: "var(--font-en)", fontStyle: "italic", fontSize: 22, color: C.roseDark, marginBottom: 6 }}>Save our date</div>
+            <CoupleNames />
           </div>
+
+          <div className="animate-fade-up delay-400 inv-cover-date">
+            <div className="inv-cover-year"><i />{wedding.cover.dateZhYear}<i /></div>
+            <div className="inv-cover-day">{wedding.cover.dateZh}</div>
+            <div className="inv-cover-week">{wedding.cover.dateWeekday}</div>
+            <div className="inv-cover-en">{wedding.cover.dateEn}</div>
+            <div className="inv-cover-lunar">{event.lunar}</div>
+          </div>
+        </div>
+
+        {/* 倒计时固定在底部 */}
+        <div className="animate-fade-up delay-600 inv-cover-countdown">
+          <div className="inv-cover-countdown-label">距婚礼还有</div>
           <Countdown />
         </div>
 
-        <div className="animate-fade-up delay-800" style={{
-          fontFamily: "var(--font-serif)", fontSize: 14, letterSpacing: 2,
-          color: C.roseDark, textAlign: "center",
-        }}>
-          {wedding.cover.venueLine}
-        </div>
-
-        <div className="animate-fade-in delay-1000" style={{
-          position: "absolute", bottom: 28, left: "50%", transform: "translateX(-50%)",
-          display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
-        }}>
-          <div style={{ fontSize: 11, letterSpacing: 3, color: C.muted, fontFamily: "var(--font-serif)" }}>{wedding.cover.scrollHint}</div>
-          <div style={{ animation: "float 1.5s ease-in-out infinite", color: C.rose, fontSize: 18 }}>↓</div>
-        </div>
       </section>
 
       {/* ══════════ 见字如面 ══════════ */}

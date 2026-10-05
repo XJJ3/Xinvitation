@@ -304,40 +304,30 @@ html { scroll-snap-type: y mandatory; }
 .inv-letter-sec { padding: 42px 24px 30px; background: linear-gradient(145deg, #f9e8eb 0%, #f4d9df 100%); }
 .inv-letter-sec .inv-title h2 { margin-bottom: 4px; }
 .inv-letter-sec .inv-title i { display: block; margin: 0 auto; }
-.inv-letter { position: relative; margin-top: 18px; padding: 14px 10px 20px; background: linear-gradient(150deg, rgba(255,250,248,.96), rgba(248,229,231,.96)); border: 1px solid rgba(198,111,132,.34); box-shadow: 9px 9px 0 rgba(198,111,132,.2), 0 20px 45px rgba(92,46,58,.1); }
+.inv-letter { position: relative; margin-top: 18px; padding: 14px 10px 20px; overflow: hidden; background: linear-gradient(150deg, rgba(255,250,248,.96), rgba(248,229,231,.96)); border: 1px solid rgba(198,111,132,.34); box-shadow: 9px 9px 0 rgba(198,111,132,.2), 0 20px 45px rgba(92,46,58,.1); }
 .inv-letter::before, .inv-letter::after { content: "❀"; position: absolute; color: var(--line); font-size: 32px; }
 .inv-letter::before { top: 42%; left: -14px; transform: rotate(-22deg); }
 .inv-letter::after { right: -12px; bottom: 38px; transform: rotate(158deg); }
-/* 照片居中、按原图 3:4 完整显示；两侧竖排小字（OUR PROMISE / 日期）托住拱形照片 */
-.inv-letter-top { display: flex; align-items: flex-end; justify-content: center; gap: 14px; }
-.inv-letter-top > span, .inv-letter-top > i { flex: 0 0 auto; padding-bottom: 6px; color: var(--rose); font-family: var(--en); font-size: 10px; font-style: normal; letter-spacing: .22em; writing-mode: vertical-rl; }
-.inv-letter-top > span { transform: rotate(180deg); }
-.inv-letter-photo { position: relative; height: 300px; width: 225px; flex: none; overflow: hidden; border-radius: 999px 999px 4px 4px; background: var(--blush); box-shadow: 0 12px 28px rgba(92,46,58,.14); }
-.inv-letter-photo.image-error::before,
+/* 上半部分照片区：留白展示照片背景，顶部对齐保留人脸 */
+.inv-letter-cover { position: relative; height: clamp(260px, 40svh, 340px); overflow: hidden; background: var(--blush); }
+.inv-letter-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 30%; }
 .inv-venue.image-error::before,
 .inv-fortune-arch.image-error::before,
 .inv-orbit-photos span.image-error::before,
 .inv-quote-sec.image-error::before { content: "婚礼影像"; position: absolute; z-index: 1; inset: 0; display: grid; place-items: center; color: rgba(255,248,248,.78); background: linear-gradient(145deg, #d998aa, #8f4c61); font-family: var(--font-serif); font-size: 14px; letter-spacing: .18em; }
-.inv-letter-photo::after { content: ""; position: absolute; inset: 7px; border: 1px solid rgba(255,255,255,.75); border-radius: 999px 999px 2px 2px; pointer-events: none; }
-/* 进入视口后照片从 1.06 倍缓慢推回原尺寸，最终停在完整画面；
-   悬停放大用独立的 scale 属性，才能和动画的 transform 叠加而不被覆盖 */
-.inv-letter-photo img { display: block; width: 100%; height: 100%; object-fit: cover; transition: scale 1s ease; }
-.inv-letter-box.visible .inv-letter-photo img { animation: inv-photo-zoom 6s ease-out both; }
-.inv-letter:hover .inv-letter-photo img { scale: 1.035; }
-@keyframes inv-photo-zoom { from { transform: scale(1.06); } to { transform: scale(1); } }
-.inv-letter-paper { position: relative; margin: 12px 8px 0; padding: 26px 18px 18px; background: linear-gradient(180deg, rgba(255,249,246,.98), rgba(250,231,232,.94)); border: 1px solid rgba(198,111,132,.28); box-shadow: 0 10px 30px rgba(87,42,53,.08); }
+.inv-letter-paper { position: relative; margin: 12px 8px 0; padding: 26px 18px 18px; background: linear-gradient(180deg, rgba(255,249,246,.98), rgba(250,231,232,.94)); border: 1px solid rgba(198,111,132,.28); box-shadow: 0 10px 30px rgba(87,42,53,.08); font-family: var(--font-brush), "Songti SC", "STSong", serif; }
 .inv-quote { position: absolute; top: 0; left: 14px; color: var(--blush); font-family: var(--en); font-size: 64px; line-height: 1; }
 .inv-letter-to { position: relative; display: block; margin-bottom: 10px; color: var(--rose); font-family: var(--en); font-size: 10px; letter-spacing: .2em; }
-.inv-letter-paper p { position: relative; margin: 0 0 10px; color: #725e63; font-size: clamp(14px, 4vw, 17px); line-height: 2; text-align: justify; }
-.inv-letter-paper blockquote { position: relative; margin: 12px 0 0; padding: 10px 0 0; border-top: 1px solid var(--line); color: var(--rose-dark); font-size: 12px; line-height: 1.9; text-align: center; }
+.inv-letter-paper p { position: relative; margin: 0 0 12px; color: #684f56; font-size: clamp(16px, 4.3vw, 18px); font-weight: 400; line-height: 2.05; letter-spacing: .04em; text-align: justify; }
+.inv-letter-paper blockquote { position: relative; margin: 16px 0 0; padding: 12px 0 0; border-top: 1px solid var(--line); color: var(--rose-dark); font-size: clamp(14px, 3.8vw, 16px); line-height: 1.95; text-align: center; }
 @media (max-height: 620px) {
   .inv-letter-sec { padding-top: 14px; padding-bottom: 10px; }
   .inv-letter-sec .inv-title h2 { font-size: 24px; margin: 2px 0 2px; }
   .inv-letter { padding: 8px 8px 12px; }
   .inv-letter-paper { margin-top: 8px; padding: 16px 12px 10px; }
   .inv-letter-to { margin-bottom: 6px; }
-  .inv-letter-paper p { margin-bottom: 2px; font-size: 12px; line-height: 1.75; }
-  .inv-letter-paper blockquote { margin-top: 6px; padding-top: 6px; font-size: 11px; line-height: 1.6; }
+  .inv-letter-paper p { margin-bottom: 10px; font-size: 16px; line-height: 1.95; }
+  .inv-letter-paper blockquote { margin-top: 12px; padding-top: 10px; font-size: 14px; line-height: 1.8; }
   .inv-sign { margin-top: 6px; }
 }
 .inv-sign { position: relative; margin: 12px 18px 0; padding-right: 54px; text-align: right; }
@@ -416,7 +406,13 @@ html { scroll-snap-type: y mandatory; }
 .inv-venue-btns .ghost { color: #fff; background: transparent; border: 1px solid rgba(255,255,255,.55); }
 .inv-venue-tip { margin-top: 12px; color: #f2c3ce; font-size: 12px; line-height: 1.6; }
 
-/* 首屏与普通卡片的新版婚礼画册层次：照片感、金线和不对称留白比单纯换色更明显。 */
+/* 首屏与普通卡片的新版婚礼画册层次：照片感、金线和不对称留白比单纯换色更明显。
+   头像尺寸与日期字号绑定 svh，让首屏在任意屏幕高度上都刚好占满一屏、元素完整可见 */
+.inv-cover-sec {
+  --inv-avatar: clamp(150px, 24svh, 220px);
+  --inv-avatar-gap: clamp(14px, 2.6svh, 22px);
+  padding: clamp(40px, 8svh, 64px) 24px clamp(14px, 3svh, 24px);
+}
 .inv-cover-sec::before { content: ""; position: absolute; inset: 7% 9% auto; height: 70%; border: 1px solid rgba(198,111,132,.3); border-radius: 48% 48% 18px 18px; background: linear-gradient(135deg, rgba(255,255,255,.22), transparent 60%); pointer-events: none; }
 .inv-cover-sec::after { content: "WEDDING INVITATION"; position: absolute; right: 18px; top: 50%; color: rgba(158,78,99,.26); font-family: var(--font-en); font-size: 10px; letter-spacing: .32em; writing-mode: vertical-rl; pointer-events: none; }
 .inv-cover-sec > * { position: relative; z-index: 1; }
@@ -424,8 +420,16 @@ html { scroll-snap-type: y mandatory; }
 .inv-cover-avatar-wrap { transform: translateY(-2px); }
 .inv-cover-sec .inv-cover-avatar::after { content: ""; position: absolute; inset: -11px; border: 1px solid rgba(202,164,118,.7); border-radius: 50%; transform: rotate(14deg); pointer-events: none; }
 .inv-cover-sec .inv-cover-date { position: relative; padding: 10px 20px 12px; border-top: 1px solid rgba(198,111,132,.28); border-bottom: 1px solid rgba(198,111,132,.28); background: linear-gradient(90deg, transparent, rgba(255,255,255,.16), transparent); }
-.inv-cover-sec .inv-cover-day { font-size: clamp(40px, 11vw, 58px); }
-.inv-cover-sec > div[style*="maxWidth: 340px"] { border-radius: 2px 22px 2px 22px; background: linear-gradient(145deg, rgba(255,253,251,.92), rgba(248,229,231,.9)) !important; box-shadow: 10px 10px 0 rgba(198,111,132,.18), 0 18px 35px rgba(92,46,58,.13) !important; }
+.inv-cover-sec .inv-cover-day { font-size: clamp(34px, 6.5svh, 58px); }
+.inv-cover-countdown { width: 100%; max-width: 340px; padding: 14px 18px; border: 1px solid var(--line); border-radius: 2px 20px 2px 20px; background: linear-gradient(145deg, rgba(255,253,251,.92), rgba(248,229,231,.9)); box-shadow: 8px 8px 0 rgba(198,111,132,.16), 0 14px 30px rgba(92,46,58,.12); }
+.inv-cover-countdown-label { font-family: var(--font-serif); font-size: 12px; letter-spacing: 3px; color: var(--rose); text-align: center; margin-bottom: 10px; }
+
+@media (max-height: 640px) {
+  .inv-cover-sec { --inv-avatar: 138px; --inv-avatar-gap: 10px; padding-top: 24px; padding-bottom: 8px; }
+  .inv-cover-sec .inv-cover-day { font-size: 32px; }
+  .inv-cover-countdown { padding: 9px 14px; }
+  .inv-cover-countdown-label { margin-bottom: 6px; }
+}
 
 .inv-letter-sec .inv-letter { border-radius: 2px 30px 2px 30px; }
 .inv-letter-sec .inv-letter-paper::after { content: "LOVE · ALWAYS"; position: absolute; right: 14px; bottom: 10px; color: rgba(198,111,132,.4); font-family: var(--font-en); font-size: 9px; letter-spacing: .16em; }
@@ -541,8 +545,6 @@ html { scroll-snap-type: y mandatory; }
   .inv { font-size: 16px; }
   .inv-section { padding-left: 18px; padding-right: 18px; }
   .inv-title h2 { font-size: 25px; letter-spacing: .08em; }
-  .inv-letter-top { gap: 6px; }
-  .inv-letter-photo { width: min(62vw, 225px); height: min(82vw, 300px); }
   .inv-venue-card { padding: 24px 16px; }
   .inv-venue-card h2 { font-size: 26px; }
   .inv-venue-btns { flex-direction: column; align-items: stretch; }
@@ -550,7 +552,6 @@ html { scroll-snap-type: y mandatory; }
 
   .inv-venue-video { object-position: 50% 38%; transform: scale(1.03); transform-origin: center 38%; }
 
-  .inv-cover-avatar-wrap > div:first-child { width: 164px !important; height: 164px !important; }
   .inv-cover-avatar-wrap > div:last-child { right: -5px; bottom: 6px; }
 }
 
@@ -732,12 +733,8 @@ html { scroll-snap-type: y mandatory; }
     height: auto;
   }
 
-  .inv-letter-top { align-items: center; }
-  .inv-letter-top > span,
-  .inv-letter-top > i { display: none; }
-  .inv-letter-photo { width: min(72vw, 280px); height: min(96vw, 360px); }
   .inv-letter-paper { margin-left: 0; margin-right: 0; padding-left: clamp(16px, 5vw, 24px); padding-right: clamp(16px, 5vw, 24px); }
-  .inv-letter-paper blockquote { font-size: clamp(13px, 3.8vw, 16px); line-height: 1.8; }
+  .inv-letter-paper blockquote { font-size: clamp(14px, 3.8vw, 16px); line-height: 1.8; }
 
   .inv-venue { min-height: var(--inv-vh, 100dvh); height: auto; align-items: flex-end; padding-bottom: max(28px, env(safe-area-inset-bottom)); }
   .inv-venue-card { padding: 18px clamp(16px, 5vw, 24px); }
