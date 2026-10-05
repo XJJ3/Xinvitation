@@ -205,7 +205,7 @@ export const siteConfig = {
     // 诗句引言区
     quote: {
       bg: "/photos/world/p39.jpg",
-      en: "Together is a beautiful place to be",
+      en: "在一起，便是最美的风景",
       text: "“执子之手，与子偕老”",
       source: "——《诗经·邶风·击鼓》",
     },

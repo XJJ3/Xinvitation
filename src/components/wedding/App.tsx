@@ -941,7 +941,6 @@ function useAutoScroll() {
     window.scrollTo(0, 0)
     const sections = Array.from(document.querySelectorAll<HTMLElement>(".inv > section, .inv > footer"))
     if (sections.length < 2) return
-    const tops = sections.map(s => s.offsetTop)
 
     let raf = 0
     let last = 0
@@ -952,9 +951,8 @@ function useAutoScroll() {
     let wheelTimer = 0
 
     const currentIndex = () => {
-      const y = window.scrollY
       let idx = 0
-      for (let i = 0; i < tops.length; i++) if (tops[i] <= y) idx = i
+      for (let i = 0; i < sections.length; i++) if (sections[i].getBoundingClientRect().top <= 1) idx = i
       return idx
     }
 
