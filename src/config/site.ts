@@ -133,7 +133,6 @@ export const siteConfig = {
         { slot: "右墙2", note: "SWEETEST DAYS" },
         { slot: "右墙3", note: "OUR LITTLE FOREVER" },
         { slot: "右墙4", note: "HAPPILY EVER AFTER" },
-        { slot: "左墙5", note: "YOU ARE MY TODAY" },
       ],
     },
 
