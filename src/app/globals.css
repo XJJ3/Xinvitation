@@ -198,13 +198,13 @@ html { scroll-snap-type: y mandatory; }
 .inv-love-sec {
   display: flex; flex-direction: column; justify-content: center; box-sizing: border-box;
   height: var(--inv-vh, 100dvh);
-  padding-top: 28px; padding-bottom: 16px;
+  padding-top: 28px; padding-bottom: 8px;
 }
 /* Reveal 是唯一子块：铺满剩余高度并垂直居中，把富余空间分给祝福墙列表 */
 .inv-love-sec > .reveal { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; justify-content: flex-end; }
 /* 轨道不参与 flex 收缩（否则被压成椭圆）；上下外边距给溢出轨道的半张照片留位置 */
-.inv-love-sec .inv-orbit { flex: none; width: 230px; height: 230px; margin: auto auto 12px; }
-.inv-love-sec .inv-love-count { flex: none; margin-bottom: 14px; }
+.inv-love-sec .inv-orbit { flex: none; width: 230px; height: 230px; margin: auto auto 6px; }
+.inv-love-sec .inv-love-count { flex: none; margin-bottom: 6px; }
 /* 祝福墙：自身成纵向 flex，列表吃掉富余高度并可滚动，输入框永远贴底可见 */
 .inv-love-sec .inv-wall { flex: 0 0 auto; min-height: 0; display: flex; flex-direction: column; }
 .inv-love-sec .inv-wall-list { height: auto; max-height: 198px; flex: 0 1 auto; min-height: 40px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
@@ -391,7 +391,7 @@ html { scroll-snap-type: y mandatory; }
 .inv-venue-card { position: relative; z-index: 3; width: 100%; padding: 24px; overflow: hidden; text-align: center; border: 1px solid rgba(255,255,255,.28); background: linear-gradient(145deg, rgba(84,45,56,.48), rgba(64,34,42,.38)); box-shadow: 0 14px 34px rgba(44,25,30,.14); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
 .inv-venue-video-caption > span { font-family: var(--en); font-size: 12px; letter-spacing: .25em; }
 .inv-venue-video-caption h2 { margin: 2px 0 0; color: #fff; font-size: 25px; font-weight: 500; letter-spacing: .12em; }
-.inv-venue-card > .inv-venue-address { margin: 16px 0 0; color: #fff4f5; font-size: clamp(16px, 4.5vw, 20px); font-weight: 500; line-height: 1.65; letter-spacing: .04em; }
+.inv-venue-card > .inv-venue-address { margin: 16px 0 0; color: #fff4f5; font-size: clamp(13px, 4vw, 17px); font-weight: 500; line-height: 1.5; letter-spacing: .02em; white-space: nowrap; }
 .inv-venue-info { display: grid; grid-template-columns: 1fr 1fr; margin: 14px 0; border-top: 1px solid rgba(255,255,255,.24); border-bottom: 1px solid rgba(255,255,255,.24); }
 .inv-venue-info div { min-width: 0; padding: 10px 4px; }
 .inv-venue-info div + div { border-left: 1px solid rgba(255,255,255,.24); }
@@ -437,7 +437,7 @@ html { scroll-snap-type: y mandatory; }
 /* 拱形框内衬一张淡化的婚纱照做底；签落下时亮一下再暗回（g0/g1 交替让每次抽签都能重播动画） */
 .inv-fortune-arch { overflow: hidden; }
 .inv-fortune-arch.image-error::before { content: "今日幸福签"; }
-.inv-fortune-arch img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 65%; opacity: .18; -webkit-mask: linear-gradient(180deg, #000 0%, #000 55%, transparent 100%); mask: linear-gradient(180deg, #000 0%, #000 55%, transparent 100%); }
+.inv-fortune-arch img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 65%; opacity: .9; -webkit-mask: linear-gradient(180deg, #000 0%, #000 45%, transparent 80%); mask: linear-gradient(180deg, #000 0%, #000 45%, transparent 80%); }
 .inv-fortune-arch.g0 img { animation: inv-arch-glow0 2.4s ease-out; }
 .inv-fortune-arch.g1 img { animation: inv-arch-glow1 2.4s ease-out; }
 @keyframes inv-arch-glow0 { 0%, 100% { opacity: .18; } 30% { opacity: .38; } }
@@ -467,14 +467,14 @@ html { scroll-snap-type: y mandatory; }
 .inv-halo i:nth-child(3) { bottom: 12px; left: 105px; }
 @keyframes inv-spin { to { transform: rotate(360deg); } }
 
-.inv .inv-tube-btn { position: absolute; z-index: 3; left: 45px; top: 30px; width: 230px; height: 285px; padding: 0; background: transparent; transform-origin: 50% 85%; }
+.inv .inv-tube-btn { position: absolute; z-index: 3; left: 45px; top: 145px; width: 230px; height: 285px; padding: 0; background: transparent; transform-origin: 50% 85%; }
 .inv-stage.shaking .inv-tube-btn { animation: inv-bamboo-shake 1.35s cubic-bezier(.36,.07,.19,.97) both; }
 .inv-sticks { position: absolute; z-index: 1; left: 44px; top: 0; width: 142px; height: 155px; }
 .inv-sticks > i { --angle: calc((var(--stick) - 3.5) * 3deg); position: absolute; left: calc(17px + var(--stick) * 14px); bottom: 0; width: 15px; height: calc(126px + (var(--stick) % 3) * 12px); border: 1px solid #9d643a; border-radius: 5px 5px 2px 2px; background: linear-gradient(90deg,#c78a50,#edc17f 45%,#b97842); box-shadow: inset 2px 0 rgba(255,255,255,.24); transform: rotate(var(--angle)); transform-origin: bottom; }
 .inv-sticks > i::before { content: ""; position: absolute; top: 7px; left: 3px; right: 3px; height: 1px; background: rgba(107,57,29,.45); }
 .inv-sticks > i span { position: absolute; top: 15px; left: 2px; color: #794524; font-size: 9px; font-style: normal; writing-mode: vertical-rl; }
 .inv-stage.shaking .inv-sticks > i { animation: inv-sticks-rattle .18s ease-in-out infinite alternate; animation-delay: calc(var(--stick) * -.03s); }
-.inv-tube { position: absolute; z-index: 2; left: 41px; bottom: 0; width: 148px; height: 190px; filter: drop-shadow(0 18px 18px rgba(86,47,29,.2)); }
+.inv-tube { position: absolute; z-index: 2; left: 41px; bottom: 0; width: 148px; height: 190px; filter: drop-shadow(0 8px 10px rgba(86,47,29,.2)); }
 .inv-tube-rim { position: absolute; z-index: 4; top: 0; left: -5px; width: 158px; height: 35px; box-sizing: border-box; border: 6px solid #9b6138; border-radius: 50%; background: #633b24; box-shadow: inset 0 5px 8px rgba(35,16,8,.45), 0 3px #d7a260; }
 .inv-tube-body { position: absolute; z-index: 3; top: 17px; left: 0; width: 148px; height: 164px; box-sizing: border-box; overflow: hidden; border-left: 4px solid #92572f; border-right: 4px solid #754224; border-radius: 4px 4px 24px 24px; background: linear-gradient(90deg,#a96d3c 0%,#d9a05f 18%,#e8b671 45%,#bd7c43 73%,#8c512e 100%); }
 .inv-tube-body > i { position: absolute; top: 0; bottom: 0; width: 1px; background: rgba(99,53,27,.25); box-shadow: 1px 0 rgba(255,255,255,.18); }
@@ -513,7 +513,7 @@ html { scroll-snap-type: y mandatory; }
 .inv-slip p { margin: 0; color: #83583c; font-size: 12px; line-height: 1.6; }
 .inv-stage.dropped .inv-slip { animation: inv-slip-unfold .75s 1s cubic-bezier(.22,1,.36,1) both; }
 
-.inv-collect { position: relative; z-index: 1; width: min(320px, 100%); margin: 18px auto 0; }
+.inv-collect { position: relative; z-index: 1; width: min(320px, 100%); margin: 2px auto 0; }
 .inv-collect-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px dashed var(--line); }
 .inv-collect-head span { color: var(--rose); font-family: var(--en); font-size: 11px; letter-spacing: .2em; }
 .inv-collect-head em { color: var(--muted); font-size: 12px; font-style: normal; }
@@ -613,7 +613,7 @@ html { scroll-snap-type: y mandatory; }
 .inv-quote-text { margin-top: 18px; font-family: var(--font-serif); font-size: 26px; font-weight: 500; line-height: 1.8; letter-spacing: 3px; text-shadow: 0 2px 14px rgba(0,0,0,.35); }
 .inv-quote-src { margin-top: 10px; font-family: var(--font-serif); font-size: 12px; letter-spacing: 3px; color: #f2c3ce; }
 .inv-quote-en { margin-top: 22px; font-family: var(--font-en); font-style: italic; font-size: 18px; color: #fbe3e8; }
-.inv-love-btn { position: relative; z-index: 4; width: var(--love-btn, 172px); height: var(--love-btn, 172px); min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 9px; overflow: hidden; border: 5px solid rgba(255,248,248,.72); border-radius: 50%; color: #fff; background: rgba(158,78,99,.78); box-shadow: 0 16px 40px rgba(42,17,27,.3), 0 0 0 9px rgba(255,255,255,.25); transition: transform .3s, background-color .3s; }
+.inv-love-btn { position: relative; z-index: 4; width: var(--love-btn, 150px); height: var(--love-btn, 150px); min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 9px; overflow: hidden; border: 5px solid rgba(255,248,248,.72); border-radius: 50%; color: #fff; background: rgba(158,78,99,.78); box-shadow: 0 16px 40px rgba(42,17,27,.3), 0 0 0 9px rgba(255,255,255,.25); transition: transform .3s, background-color .3s; }
 .inv-love-btn::before { content: ""; position: absolute; inset: 10px; border: 1px solid rgba(255,255,255,.62); border-radius: 50%; pointer-events: none; }
 .inv-love-btn > * { position: relative; z-index: 1; }
 .inv-love-btn:active { transform: scale(.92); }
@@ -631,7 +631,7 @@ html { scroll-snap-type: y mandatory; }
   20% { opacity: 1; }
   100% { transform: translate(calc(-50% + var(--dx)), calc(-50% - 110px)) scale(1.1); opacity: 0; }
 }
-.inv-love-count { margin: 0 0 35px; color: var(--rose-dark); font-size: 13px; }
+.inv-love-count { margin: 0 0 35px; color: #fbe3e8; font-size: 13px; }
 .inv-love-count strong { font-family: var(--en); font-size: 22px; font-weight: 500; }
 .inv-wall { padding: 24px 20px; text-align: left; background: linear-gradient(145deg, rgba(255,248,248,.84), rgba(246,218,223,.72)); border: 1px solid rgba(198,111,132,.2); border-radius: 18px; box-shadow: 0 16px 36px rgba(158,78,99,.1); }
 .inv-wall-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 12px; }
@@ -663,7 +663,7 @@ html { scroll-snap-type: y mandatory; }
   .inv-wish .dice { padding: 0 9px; }
   .inv-wish .send { padding: 0 12px 0 14px; }
 }
-.inv-wish .dice, .inv-wish .send { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 5px; height: 32px; border-radius: 999px; font-size: 12px; letter-spacing: .08em; transition: transform .2s, box-shadow .2s, opacity .2s; }
+.inv-wish .dice, .inv-wish .send { flex: 1 1 0; display: inline-flex; align-items: center; justify-content: center; gap: 5px; height: 32px; border-radius: 999px; font-size: 12px; letter-spacing: .08em; transition: transform .2s, box-shadow .2s, opacity .2s; }
 .inv-wish .dice { padding: 0 11px; color: var(--rose-dark); background: #fff; border: 1px solid rgba(198,111,132,.35); }
 .inv-wish .dice svg.ico { width: 13px; height: 13px; transition: transform .4s; }
 .inv-wish .dice.roll svg.ico { transform: rotate(360deg); }
@@ -739,7 +739,7 @@ html { scroll-snap-type: y mandatory; }
   }
   .inv-love-sec > .reveal { margin-bottom: 24px; }
   .inv-love-sec .inv-orbit { width: 210px; height: 210px; margin: auto auto 6px; }
-  .inv-love-sec .inv-love-btn { --love-btn: 164px; }
+  .inv-love-sec .inv-love-btn { --love-btn: 146px; }
   .inv-love-sec .inv-love-count { margin-bottom: 8px; }
   .inv-love-sec .inv-wall { padding: 8px 14px 6px; border-radius: 16px; }
   .inv-love-sec .inv-wall-head { margin-bottom: 6px; }

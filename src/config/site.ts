@@ -146,7 +146,7 @@ export const siteConfig = {
 
     // 今日幸福签
     fortune: {
-      en: "A LITTLE SURPRISE",
+      en: "今日小惊喜",
       title: "摇一支今日幸福签",
       bg: "/photos/world/p37.jpg",
       lead: "轻触竹筒，摇一支属于你的幸福签",
@@ -164,7 +164,7 @@ export const siteConfig = {
 
     // 点亮一颗祝福 + 祝福留言墙（替换原红包）
     love: {
-      en: "SEND YOUR LOVE",
+      en: "送上祝福",
       title: "点亮一颗祝福",
       orbitPhotos: ["/photos/world/s/p35.jpg", "/photos/world/s/p36.jpg", "/photos/world/s/p37.jpg"],
       baseCount: 388,

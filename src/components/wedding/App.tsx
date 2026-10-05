@@ -569,7 +569,7 @@ function FortuneSection() {
     }, SHAKE_MS)
   }
 
-  const [name, text, en] = f.signs[idx]
+  const [name, text] = f.signs[idx]
   const no = String(idx + 1).padStart(2, "0")
   const status = phase === "shaking" ? "正在为你摇出好运…" : phase === "dropped" ? `第 ${draws} 份好运已掉落` : "轻触竹筒开始求签"
   return (
@@ -596,7 +596,6 @@ function FortuneSection() {
                 <div className="inv-tube-body">
                   <i /><i /><i /><i />
                   <span>喜<br />签</span>
-                  <small>HAPPINESS</small>
                 </div>
                 <div className="inv-tube-base" />
               </div>
@@ -609,7 +608,7 @@ function FortuneSection() {
             <div className="inv-shake-fx" aria-hidden><i>✦</i><i>♡</i><i>✧</i><i>✦</i></div>
             <p className="inv-tube-status">{status}</p>
             <div className="inv-slip" aria-live="polite">
-              <div><small>{en}</small><span>第 {no} 签</span></div>
+              <div><span>第 {no} 签</span></div>
               <strong>{name}</strong>
               <p>{text}</p>
             </div>
@@ -617,7 +616,7 @@ function FortuneSection() {
         </div>
         <div className="inv-collect">
           <div className="inv-collect-head">
-            <span>MY LUCKY SIGNS</span>
+            <span>我的幸运签</span>
             <em>已集 {got.length} / {f.signs.length}</em>
           </div>
           <div className="inv-collect-grid">
@@ -651,6 +650,7 @@ function LoveSection() {
   const l = wedding.love
   const presets = l.presets
   const [lit, setLit] = useState(false)
+  const [pressed, setPressed] = useState(false)
   const [count, setCount] = useState<number | null>(null)
   const [mine, setMine] = useState<string[]>([])
   const [remote, setRemote] = useState<Blessing[]>([])
@@ -679,6 +679,7 @@ function LoveSection() {
   const [bump, setBump] = useState(0)
   const [pops, setPops] = useState<number[]>([])
   const light = () => {
+    setPressed(true)
     setBackgroundPhoto(i => (i + 1) % backgroundPhotos.length)
     setBump(b => b + 1)
     const id = Date.now() + Math.random()
@@ -780,7 +781,7 @@ function LoveSection() {
             onClick={light}
           >
             <Icon name="heart" filled />
-            <span>{lit ? "已收到你的爱" : "轻触送出祝福"}</span>
+            <span>{pressed ? "已收到你的爱" : "轻触送出祝福"}</span>
           </button>
         </div>
         <p className="inv-love-count"><strong>{shownCount}</strong> 份爱意已抵达</p>
@@ -788,10 +789,10 @@ function LoveSection() {
         <div className="inv-wall">
           <div className="inv-wall-head">
             <h3>{l.wallTitle}</h3>
-            <small>最新 {Math.min(list.length, 6)} 条</small>
+            <small>共 {shownCount} 条 · 最新 {Math.min(list.length, 10)} 条</small>
           </div>
           <div className="inv-wall-list" ref={listRef}>
-            {list.map((w, i) => (
+            {list.slice(0, 10).map((w, i) => (
               <p key={w.key} className={`${w.me ? "mine" : ""} ${fresh && i === 0 ? "fresh" : ""}`}><Icon name="heart" filled />{w.t}</p>
             ))}
           </div>
@@ -803,7 +804,7 @@ function LoveSection() {
                 <span key={wish}>{wish}</span>
               </button>
               <div className="inv-wish-bar">
-                <span className={`inv-wish-tag ${hint ? "err" : ""}`} role={hint ? "alert" : undefined}>{hint || "✦ 我的祝福"}</span>
+                {hint ? <span className="inv-wish-tag err" role="alert">{hint}</span> : null}
                 <button type="button" className={`dice ${rolling ? "roll" : ""}`} onClick={() => { shuffle(); if (hint) setHint("") }} aria-label="换一句">
                   <Icon name="shuffle" />换一句
                 </button>
