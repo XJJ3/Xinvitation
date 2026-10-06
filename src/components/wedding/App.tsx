@@ -931,9 +931,11 @@ function useViewportHeight() {
 }
 
 /* ── 自动持续下滑：requestAnimationFrame 每帧按时间差滚动（约每秒 60px）；
-   每到一个模块顶部停留 5 秒后继续；触控按下时暂停，释放后继续 ── */
+   每到一个模块顶部停留 5 秒后继续；触控按下时暂停，释放后等 1.5 秒再继续，
+   给浏览器原生惯性滚动留出时间，避免自动下滑打断手指滑动 ── */
 const AUTO_SCROLL_SPEED = 60
 const AUTO_SCROLL_DWELL_MS = 5000
+const AUTO_SCROLL_TOUCH_RESUME_MS = 1500
 
 function useAutoScroll() {
   useEffect(() => {
@@ -950,6 +952,7 @@ function useAutoScroll() {
     let lastIdx = -1
     let dwellTimer = 0
     let wheelTimer = 0
+    let touchTimer = 0
     let stopped = false
 
     const currentIndex = () => {
@@ -988,6 +991,7 @@ function useAutoScroll() {
       dwelling = false
       last = 0
       window.clearTimeout(dwellTimer)
+      window.clearTimeout(touchTimer)
     }
     const resume = () => {
       paused = false
@@ -999,9 +1003,14 @@ function useAutoScroll() {
       window.clearTimeout(wheelTimer)
       wheelTimer = window.setTimeout(resume, 300)
     }
+    const onTouchEnd = () => {
+      window.clearTimeout(touchTimer)
+      touchTimer = window.setTimeout(resume, AUTO_SCROLL_TOUCH_RESUME_MS)
+    }
 
     window.addEventListener("touchstart", pause, { passive: true })
-    window.addEventListener("touchend", resume)
+    window.addEventListener("touchend", onTouchEnd)
+    window.addEventListener("touchcancel", onTouchEnd)
     window.addEventListener("wheel", onWheel, { passive: true })
 
     raf = requestAnimationFrame(step)
@@ -1010,8 +1019,10 @@ function useAutoScroll() {
       cancelAnimationFrame(raf)
       window.clearTimeout(dwellTimer)
       window.clearTimeout(wheelTimer)
+      window.clearTimeout(touchTimer)
       window.removeEventListener("touchstart", pause)
-      window.removeEventListener("touchend", resume)
+      window.removeEventListener("touchend", onTouchEnd)
+      window.removeEventListener("touchcancel", onTouchEnd)
       window.removeEventListener("wheel", onWheel)
     }
   }, [])
