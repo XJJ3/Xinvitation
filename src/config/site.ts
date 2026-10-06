@@ -26,7 +26,7 @@ export const siteConfig = {
       name: "裕锦大酒店",
       hall: "百合厅",
       city: "温州",
-      address: "温州市永嘉县上塘镇 裕锦大酒店百合厅",
+      address: "温州市永嘉县上塘裕锦酒店",
       mapName: "裕锦大酒店", // 地图气泡显示名
       lat: 28.142787, // 裕锦大酒店真实纬度（GCJ-02）
       lng: 120.677977, // 裕锦大酒店真实经度（GCJ-02）
