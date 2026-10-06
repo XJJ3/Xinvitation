@@ -1,4 +1,5 @@
 import WeddingApp from "@/components/wedding/App";
+import Preloader from "@/components/wedding/Preloader";
 import { WxShare } from "@/components/WxShare";
 import { SiteFooter } from "@/components/SiteFooter";
 import { BgMusic } from "@/components/BgMusic";
@@ -6,6 +7,8 @@ import { BgMusic } from "@/components/BgMusic";
 export default function Home() {
   return (
     <main>
+      {/* 前置加载页：资源加载期间展示，结束后淡出 */}
+      <Preloader />
       {/* 婚礼请帖新 UI（封面 / 3D 画廊 / 翻转相册 / 红包 / 详情 / RSVP） */}
       <WeddingApp />
       {/* 页脚：ICP 备案号悬挂（工信部合规） */}
