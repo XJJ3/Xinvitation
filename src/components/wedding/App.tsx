@@ -210,7 +210,7 @@ const InvTitle = ({ en, children }: { en: string; children: React.ReactNode }) =
 /* ── 深色区块用的标题（玫瑰色） ── */
 const DarkHead = ({ script, zh }: { script: string; zh: string }) => (
   <div style={{ textAlign: "center", marginBottom: 32 }}>
-    <div style={{ fontFamily: "var(--font-serif)", fontSize: 28, fontWeight: 500, letterSpacing: 4, color: "#fff8f8", marginBottom: 8 }}>{script}</div>
+    <div style={{ fontFamily: "var(--font-brush)", fontSize: 28, fontWeight: 400, letterSpacing: 4, color: "#fff8f8", marginBottom: 8 }}>{script}</div>
     <div style={{ display: "flex", alignItems: "center", gap: 10, justifyContent: "center" }}>
       <div style={{ flex: 1, height: 1, background: "linear-gradient(to right, transparent, rgba(242,195,206,0.6))", maxWidth: 80 }} />
       <span style={{ fontFamily: "var(--font-en)", fontSize: 13, letterSpacing: 3, color: C.roseLight }}>{zh}</span>
@@ -704,6 +704,8 @@ function LoveSection() {
   const [bump, setBump] = useState(0)
   const [pops, setPops] = useState<number[]>([])
   const light = () => {
+    pauseAutoScroll()
+    resumeAutoScrollSoon()
     setPressed(true)
     setBackgroundPhoto(i => (i + 1) % backgroundPhotos.length)
     setBump(b => b + 1)
@@ -719,6 +721,8 @@ function LoveSection() {
   }
 
   const shuffle = () => {
+    pauseAutoScroll()
+    resumeAutoScrollSoon()
     let next = wish
     while (presets.length > 1 && next === wish) next = presets[Math.floor(Math.random() * presets.length)]
     setWish(next)
@@ -739,6 +743,8 @@ function LoveSection() {
   }
 
   const send = async () => {
+    pauseAutoScroll()
+    resumeAutoScrollSoon()
     const text = wish.trim()
     if (!text || sending) {
       if (!text) setShake(n => n + 1)
@@ -854,6 +860,8 @@ function RSVP() {
   const handleYes = () => {
     const n = name.trim()
     if (!n) return
+    pauseAutoScroll()
+    resumeAutoScrollSoon()
     void sendRsvp(n, true, guests) // 后台落库（姓名绑定 vid），失败静默，不阻塞成功页与彩带
     setStep("yes")
     fireworksConfetti()
@@ -861,6 +869,8 @@ function RSVP() {
   const handleNo = () => {
     const n = name.trim()
     if (n) void sendRsvp(n, false, 1) // 未填姓名时跳过上报，保留原可缺席流程
+    pauseAutoScroll()
+    resumeAutoScrollSoon()
     setStep("no")
   }
   if (step === "yes") return (
@@ -886,6 +896,8 @@ function RSVP() {
       <input
         type="text" placeholder="您的尊姓大名"
         value={name} onChange={e => setName(e.target.value)}
+        onFocus={pauseAutoScroll}
+        onBlur={resumeAutoScrollSoon}
         style={{
           padding: "13px 16px",
           border: "1px solid rgba(242,195,206,0.45)",
@@ -964,6 +976,15 @@ const AUTO_SCROLL_SPEED = 60
 const AUTO_SCROLL_DWELL_MS = 5000
 const AUTO_SCROLL_FIRST_DWELL_MS = 8000
 const AUTO_SCROLL_TOUCH_RESUME_MS = 1500
+const AUTO_SCROLL_INTERACT_RESUME_MS = 5000
+
+/* 交互时暂停自动下滑（RSVP 输入/点击、点亮祝福等），供各模块调用 */
+function pauseAutoScroll() {
+  window.dispatchEvent(new Event("inv:scroll-pause"))
+}
+function resumeAutoScrollSoon() {
+  window.dispatchEvent(new Event("inv:scroll-resume"))
+}
 
 function useAutoScroll() {
   useEffect(() => {
@@ -981,6 +1002,7 @@ function useAutoScroll() {
     let dwellTimer = 0
     let wheelTimer = 0
     let touchTimer = 0
+    let interactTimer = 0
     let stopped = false
 
     let sectionTops: number[] = []
@@ -1043,6 +1065,11 @@ function useAutoScroll() {
       window.clearTimeout(touchTimer)
       touchTimer = window.setTimeout(resume, AUTO_SCROLL_TOUCH_RESUME_MS)
     }
+    const onScrollPause = () => pause()
+    const onScrollResume = () => {
+      window.clearTimeout(interactTimer)
+      interactTimer = window.setTimeout(resume, AUTO_SCROLL_INTERACT_RESUME_MS)
+    }
 
     const ro = new ResizeObserver(() => measure())
     if (page) ro.observe(page)
@@ -1055,6 +1082,8 @@ function useAutoScroll() {
     window.addEventListener("touchend", onTouchEnd)
     window.addEventListener("touchcancel", onTouchEnd)
     window.addEventListener("wheel", onWheel, { passive: true })
+    window.addEventListener("inv:scroll-pause", onScrollPause)
+    window.addEventListener("inv:scroll-resume", onScrollResume)
 
     raf = requestAnimationFrame(step)
 
@@ -1063,6 +1092,7 @@ function useAutoScroll() {
       window.clearTimeout(dwellTimer)
       window.clearTimeout(wheelTimer)
       window.clearTimeout(touchTimer)
+      window.clearTimeout(interactTimer)
       ro.disconnect()
       window.removeEventListener("load", onRelayout)
       window.removeEventListener("resize", onRelayout)
@@ -1070,6 +1100,8 @@ function useAutoScroll() {
       window.removeEventListener("touchend", onTouchEnd)
       window.removeEventListener("touchcancel", onTouchEnd)
       window.removeEventListener("wheel", onWheel)
+      window.removeEventListener("inv:scroll-pause", onScrollPause)
+      window.removeEventListener("inv:scroll-resume", onScrollResume)
     }
   }, [])
 }
