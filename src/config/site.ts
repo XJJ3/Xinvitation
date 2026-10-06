@@ -96,7 +96,7 @@ export const siteConfig = {
     gallery: {
       script: "画廊婚殿",
       zh: "漫步 · 光影长廊",
-      loading: "画廊加载中…",
+      loading: "正在加载 3D 世界…",
     },
 
     // 信件区（参考第 6 版「见字如面」）
