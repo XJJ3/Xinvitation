@@ -187,6 +187,9 @@ body {
   height: var(--inv-vh, 100dvh);
   padding-top: 28px; padding-bottom: 8px;
 }
+/* 点亮祝福标题压在照片背景上，深酒红文字需浅色阴影避免与背景重合 */
+.inv-love-sec .inv-title h2 { text-shadow: 0 1px 3px rgba(255,255,255,.9), 0 2px 12px rgba(255,255,255,.65); }
+.inv-love-sec .inv-title > span { text-shadow: 0 1px 3px rgba(255,255,255,.85), 0 1px 6px rgba(255,255,255,.6); }
 /* Reveal 是唯一子块：铺满剩余高度并垂直居中，把富余空间分给祝福墙列表 */
 .inv-love-sec > .reveal { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; justify-content: flex-end; }
 /* 轨道不参与 flex 收缩（否则被压成椭圆）；上下外边距给溢出轨道的半张照片留位置 */
@@ -268,7 +271,6 @@ body {
 .inv-title { text-align: center; }
 .inv-title > span { color: var(--rose); font-family: var(--en); font-size: 13px; letter-spacing: .28em; }
 .inv-title h2 { margin: 6px 0 12px; color: var(--wine); font-size: 28px; font-weight: 400; letter-spacing: .12em; font-family: var(--font-brush), "Songti SC", "STSong", serif; }
-.inv-love-sec .inv-title h2 { text-shadow: 0 1px 3px rgba(255,255,255,.9), 0 2px 10px rgba(255,255,255,.7); }
 .inv-title i { position: relative; display: inline-block; width: 34px; height: 1px; background: var(--rose); }
 .inv-title i::after { content: "◆"; position: absolute; top: -8px; left: 12px; padding: 2px; color: var(--rose); font-size: 8px; font-style: normal; background: var(--title-bg, var(--blush-soft)); }
 .inv-lead { margin: 18px 0 0; color: var(--muted); font-size: clamp(13px, 3.8vw, 16px); line-height: 1.8; text-align: center; }
@@ -378,7 +380,7 @@ body {
 .inv-venue-shade { position: absolute; z-index: 2; inset: 0; background: linear-gradient(180deg, rgba(44,25,30,.08) 0%, rgba(44,25,30,.18) 42%, rgba(44,25,30,.82) 100%); }
 .inv-venue-card { position: relative; z-index: 3; width: 100%; padding: 24px; overflow: hidden; text-align: center; border: 1px solid rgba(255,255,255,.28); background: linear-gradient(145deg, rgba(84,45,56,.48), rgba(64,34,42,.38)); box-shadow: 0 14px 34px rgba(44,25,30,.14); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
 .inv-venue-video-caption > span { font-family: var(--en); font-size: 12px; letter-spacing: .25em; }
-.inv-venue-video-caption h2 { margin: 2px 0 0; color: #fff; font-size: 25px; font-weight: 500; letter-spacing: .12em; }
+.inv-venue-video-caption h2 { margin: 2px 0 0; color: #fff; font-size: 25px; font-weight: 400; letter-spacing: .12em; font-family: var(--font-brush), "Songti SC", "STSong", serif; }
 .inv-venue-card > .inv-venue-address { margin: 16px 0 0; color: #fff4f5; font-size: clamp(13px, 4vw, 17px); font-weight: 500; line-height: 1.5; letter-spacing: .02em; white-space: nowrap; }
 .inv-venue-info { display: grid; grid-template-columns: 1fr 1fr; margin: 14px 0; border-top: 1px solid rgba(255,255,255,.24); border-bottom: 1px solid rgba(255,255,255,.24); }
 .inv-venue-info div { min-width: 0; padding: 10px 4px; }
@@ -602,7 +604,7 @@ body {
 .inv-quote-rule { display: flex; align-items: center; justify-content: center; gap: 12px; color: #f2c3ce; }
 .inv-quote-rule i { width: 40px; height: 1px; background: #f2c3ce; }
 .inv-quote-rule span { font-size: 12px; }
-.inv-quote-text { margin-top: 18px; font-family: var(--font-serif); font-size: 26px; font-weight: 500; line-height: 1.8; letter-spacing: 3px; text-shadow: 0 2px 14px rgba(0,0,0,.35); }
+.inv-quote-text { margin-top: 18px; font-family: var(--font-brush), "Songti SC", "STSong", serif; font-size: 30px; font-weight: 400; line-height: 1.8; letter-spacing: 3px; text-shadow: 0 2px 14px rgba(0,0,0,.35); }
 .inv-quote-src { margin-top: 10px; font-family: var(--font-serif); font-size: 12px; letter-spacing: 3px; color: #f2c3ce; }
 .inv-quote-en { margin-top: 22px; font-family: var(--font-serif); font-size: 18px; color: #fbe3e8; }
 .inv-love-btn { position: relative; z-index: 4; width: var(--love-btn, 88px); height: var(--love-btn, 88px); min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; overflow: hidden; border: 4px solid rgba(255,248,248,.72); border-radius: 50%; color: #fff; background: rgba(158,78,99,.78); box-shadow: 0 10px 24px rgba(42,17,27,.3), 0 0 0 6px rgba(255,255,255,.25); transition: transform .3s, background-color .3s; }

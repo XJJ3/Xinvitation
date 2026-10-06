@@ -359,8 +359,8 @@ export default function Gallery3D({ buildNow = false }: { buildNow?: boolean }) 
           <h1
             style={{
               margin: 0,
-              fontFamily: 'var(--font-serif, Georgia, "Songti SC", serif)',
-              fontWeight: 300,
+              fontFamily: 'var(--font-brush, "Songti SC", "STSong", serif)',
+              fontWeight: 400,
               fontSize: "clamp(40px, 12vw, 62px)",
               letterSpacing: 10,
               color: "#fce8ed",
