@@ -503,7 +503,7 @@ function VenueSection({ toast }: { toast: (m: string) => void }) {
       <Reveal className="inv-venue-card">
         <div className="inv-venue-video-frame">
           <video className="inv-venue-video" autoPlay muted loop playsInline preload="metadata" poster={wedding.venue.bg} aria-label="酒店现场视频" onError={event => { event.currentTarget.hidden = true }}>
-            <source src="/videos/venue-bg.m4v" type="video/mp4" />
+            <source src="/videos/venue-bg.mp4" type="video/mp4" />
           </video>
           <div className="inv-venue-video-caption">
             <span>{wedding.venue.en}</span>
