@@ -956,12 +956,13 @@ function useViewportHeight() {
 }
 
 /* ── 自动持续下滑：requestAnimationFrame 每帧按时间差滚动（约每秒 60px）；
-   每到一个模块顶部停留 5 秒后继续；触控按下时暂停，释放后等 1.5 秒再继续，
+   每到一个模块顶部停留 5 秒后继续（首屏封面停留 8 秒）；触控按下时暂停，释放后等 1.5 秒再继续，
    给浏览器原生惯性滚动留出时间，避免自动下滑打断手指滑动。
    性能：模块位置与最大滚动距离只在布局变化时测量一次并缓存，
    滚动帧内只用 window.scrollY 做纯比较，不触发 getBoundingClientRect / scrollHeight 的强制布局 ── */
 const AUTO_SCROLL_SPEED = 60
 const AUTO_SCROLL_DWELL_MS = 5000
+const AUTO_SCROLL_FIRST_DWELL_MS = 8000
 const AUTO_SCROLL_TOUCH_RESUME_MS = 1500
 
 function useAutoScroll() {
@@ -1012,7 +1013,8 @@ function useAutoScroll() {
       if (idx !== lastIdx) {
         lastIdx = idx
         dwelling = true
-        dwellTimer = window.setTimeout(() => { dwelling = false; last = 0 }, AUTO_SCROLL_DWELL_MS)
+        const dwellMs = idx === 0 ? AUTO_SCROLL_FIRST_DWELL_MS : AUTO_SCROLL_DWELL_MS
+        dwellTimer = window.setTimeout(() => { dwelling = false; last = 0 }, dwellMs)
         raf = requestAnimationFrame(step)
         return
       }
