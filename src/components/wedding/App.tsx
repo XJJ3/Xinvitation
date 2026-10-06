@@ -414,7 +414,7 @@ function MomentsSection() {
       <Reveal>
         <InvTitle en={m.en}>{m.title}</InvTitle>
       </Reveal>
-      <Reveal className="inv-moments-book">
+      <Reveal fadeOnly className="inv-moments-book">
         <div className="inv-moments-intro">
           <span className="inv-moments-rule" />
           <span>翻开我们的每一帧</span>
@@ -425,7 +425,7 @@ function MomentsSection() {
             <figure key={p.src} className={`inv-moment-card ${i === 0 ? "is-lead" : i % 3 === 0 ? "is-tall" : ""}`}>
               <button type="button" className="inv-moment-open" aria-label={`展开第 ${i + 1} 张照片`} onClick={e => openPhoto(i, e.currentTarget)}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={p.src} alt={p.note || `婚礼照片 ${i + 1}`} loading="lazy" decoding="async" onError={hideBrokenImage} />
+                <img src={p.small} alt={p.note || `婚礼照片 ${i + 1}`} loading="lazy" decoding="async" onError={hideBrokenImage} />
                 <span className="inv-moment-zoom" aria-hidden="true"><i>✦</i></span>
                 <span className="inv-moment-caption"><span>{String(i + 1).padStart(2, "0")}</span>{p.note}</span>
               </button>
