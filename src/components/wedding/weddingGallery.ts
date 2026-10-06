@@ -8043,7 +8043,7 @@ export class WeddingGallery {
     signs.forEach(([sx, sz], si) => {
       const out = si === 0 ? -1 : 1;
       for (let k = 0; k < 3; k++) {
-        const tilt = 0.55 + k * 0.08;
+        const tilt = 0.12 + k * 0.05;
         const yaw = Math.PI / 2 + out * (0.15 + (k - 1) * 0.42);
         const dir = new THREE.Vector3(
           Math.sin(tilt) * Math.cos(yaw),

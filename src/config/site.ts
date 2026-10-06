@@ -94,7 +94,7 @@ export const siteConfig = {
 
     // 画廊区（第一人称「红金长廊」）
     gallery: {
-      script: "婚礼画廊",
+      script: "画廊婚殿",
       zh: "漫步 · 光影长廊",
       loading: "画廊加载中…",
     },

@@ -7,7 +7,7 @@ import GalleryFallback from "./GalleryFallback";
 import { WeddingGallery } from "./weddingGallery";
 
 const PHOTOS = siteConfig.wedding.photos.gallery;
-const TITLE = "婚礼画廊";
+const TITLE = "画廊婚殿";
 const NAMES = siteConfig.wedding.footer.namesLine;
 const DATE = "2026.11.10";
 const WALL_PHOTOS = siteConfig.wedding.photos.wallPhotos;
@@ -380,7 +380,7 @@ export default function Gallery3D({ buildNow = false }: { buildNow?: boolean }) 
                 fontFamily: 'var(--font-sans, sans-serif)',
               }}
             >
-              婚礼影像展览
+              婚纱照展览
             </span>
             <div style={{ width: 64, height: 1, background: "rgba(201,132,154,0.5)" }} />
           </div>
