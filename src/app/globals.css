@@ -729,7 +729,7 @@ body {
     padding-bottom: 16px;
   }
   .inv-love-sec > .reveal { margin-bottom: 24px; }
-  .inv-love-sec .inv-orbit { width: 128px; height: 128px; margin: auto auto 14px; }
+  .inv-love-sec .inv-orbit { width: 128px; height: 128px; margin: auto auto 14px; transform: translateY(24px); }
   .inv-love-sec .inv-love-btn { --love-btn: 80px; }
   .inv-love-sec .inv-love-count { margin-bottom: 8px; }
   .inv-love-sec .inv-wall { padding: 8px 14px 6px; border-radius: 16px; }
