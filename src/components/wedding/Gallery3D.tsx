@@ -103,6 +103,7 @@ export default function Gallery3D({ buildNow = false }: { buildNow?: boolean }) 
   const [near, setNear] = useState(false);
   // 画廊当前是否在视口内：IO 回调可能早于场景构建触发，必须记下来，构建完成与切回前台时按它决定是否暂停
   const onScreenRef = useRef(false);
+  const enteredRef = useRef(false);
 
   const rootRef = useRef<HTMLDivElement>(null);
 
@@ -129,16 +130,16 @@ export default function Gallery3D({ buildNow = false }: { buildNow?: boolean }) 
       { rootMargin: "150% 0px" },
     );
     nearIO.observe(el);
-    // 画廊进入视口后才恢复渲染，避免在 RSVP 自动下滑期间抢占绘制帧
+    // 画廊顶到达视口顶（自动下滑停止点）才恢复渲染，避免 RSVP 滚动期间抢占绘制帧
     const pauseIO = new IntersectionObserver(
       (es) => {
         onScreenRef.current = es[0].isIntersecting;
-        galleryRef.current?.setRenderPaused(document.hidden || !onScreenRef.current);
+        galleryRef.current?.setRenderPaused(document.hidden || (!onScreenRef.current && !enteredRef.current));
       },
-      { rootMargin: "0px" },
+      { rootMargin: "0px 0px -98% 0px" },
     );
     pauseIO.observe(el);
-    const onVis = () => galleryRef.current?.setRenderPaused(document.hidden || !onScreenRef.current);
+    const onVis = () => galleryRef.current?.setRenderPaused(document.hidden || (!onScreenRef.current && !enteredRef.current));
     document.addEventListener("visibilitychange", onVis);
     return () => {
       nearIO.disconnect();
@@ -178,7 +179,7 @@ export default function Gallery3D({ buildNow = false }: { buildNow?: boolean }) 
         },
       });
       galleryRef.current = gallery;
-      gallery.setRenderPaused(document.hidden || !onScreenRef.current);
+      gallery.setRenderPaused(document.hidden || (!onScreenRef.current && !enteredRef.current));
     } catch {
       if (!cancelled) setMode("css");
       return;
@@ -192,6 +193,7 @@ export default function Gallery3D({ buildNow = false }: { buildNow?: boolean }) 
   }, [mode, near]);
 
   const enter = useCallback(() => {
+    enteredRef.current = true;
     setPhase("entered");
     galleryRef.current?.setIdleMode(false);
     galleryRef.current?.enter();
@@ -206,6 +208,7 @@ export default function Gallery3D({ buildNow = false }: { buildNow?: boolean }) 
   const openGuide = useCallback(() => setGuideOpen(true), []);
 
   const exit = useCallback(() => {
+    enteredRef.current = false;
     galleryRef.current?.exit();
     galleryRef.current?.setIdleMode(true);
     setGuideOpen(false);
