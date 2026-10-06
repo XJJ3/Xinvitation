@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import { Ma_Shan_Zheng, Noto_Serif_SC, Lato, Cormorant_Garamond } from "next/font/google";
+import { Long_Cang, Noto_Serif_SC, Lato, Cormorant_Garamond } from "next/font/google";
 import { siteConfig } from "@/config/site";
 import "./globals.css";
 
-// 中文书法标题字：马善政毛笔楷书（Google Fonts，构建时自托管）
-const brush = Ma_Shan_Zheng({
+// 中文书法标题字：龙藏行书（Google Fonts，构建时自托管）
+const brush = Long_Cang({
   weight: "400",
   variable: "--font-brush",
   display: "swap",
