@@ -327,7 +327,7 @@ function LetterSection() {
         <div className="inv-letter">
           <div className="inv-letter-cover">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img className="inv-letter-bg" src={photo} alt="" loading="lazy" onError={hideBrokenImage} />
+            <img className="inv-letter-bg" src={photo} alt="" loading="lazy" decoding="async" onError={hideBrokenImage} />
           </div>
           <div className="inv-letter-paper">
             <span className="inv-quote">“</span>
@@ -468,7 +468,32 @@ function MomentsSection() {
 function VenueSection({ toast }: { toast: (m: string) => void }) {
   const v = event.venue
   const [tip, setTip] = useState<string | null>(null)
+  const videoRef = useRef<HTMLVideoElement>(null)
   const point: MapPoint = { lat: v.lat, lng: v.lng, name: v.mapName, address: v.address }
+
+  useEffect(() => {
+    const video = videoRef.current
+    if (!video) return
+    let cancelled = false
+    const tryPlay = () => {
+      if (cancelled) return
+      video.muted = true
+      video.play().catch(() => {})
+    }
+    tryPlay()
+    const onInteract = () => {
+      tryPlay()
+      window.removeEventListener("touchstart", onInteract)
+      window.removeEventListener("click", onInteract)
+    }
+    window.addEventListener("touchstart", onInteract, { passive: true })
+    window.addEventListener("click", onInteract)
+    return () => {
+      cancelled = true
+      window.removeEventListener("touchstart", onInteract)
+      window.removeEventListener("click", onInteract)
+    }
+  }, [])
 
   const navigate = () => {
     setTip(null)
@@ -502,7 +527,7 @@ function VenueSection({ toast }: { toast: (m: string) => void }) {
       <div className="inv-venue-shade" />
       <Reveal className="inv-venue-card">
         <div className="inv-venue-video-frame">
-          <video className="inv-venue-video" autoPlay muted loop playsInline preload="metadata" poster={wedding.venue.bg} aria-label="酒店现场视频" onError={event => { event.currentTarget.hidden = true }}>
+          <video ref={videoRef} className="inv-venue-video" autoPlay muted loop playsInline webkit-playsinline="" x5-playsinline="" preload="metadata" poster={wedding.venue.bg} aria-label="酒店现场视频" onError={event => { event.currentTarget.hidden = true }}>
             <source src="/videos/venue-bg.mp4" type="video/mp4" />
           </video>
           <div className="inv-venue-video-caption">
@@ -932,7 +957,9 @@ function useViewportHeight() {
 
 /* ── 自动持续下滑：requestAnimationFrame 每帧按时间差滚动（约每秒 60px）；
    每到一个模块顶部停留 5 秒后继续；触控按下时暂停，释放后等 1.5 秒再继续，
-   给浏览器原生惯性滚动留出时间，避免自动下滑打断手指滑动 ── */
+   给浏览器原生惯性滚动留出时间，避免自动下滑打断手指滑动。
+   性能：模块位置与最大滚动距离只在布局变化时测量一次并缓存，
+   滚动帧内只用 window.scrollY 做纯比较，不触发 getBoundingClientRect / scrollHeight 的强制布局 ── */
 const AUTO_SCROLL_SPEED = 60
 const AUTO_SCROLL_DWELL_MS = 5000
 const AUTO_SCROLL_TOUCH_RESUME_MS = 1500
@@ -955,9 +982,17 @@ function useAutoScroll() {
     let touchTimer = 0
     let stopped = false
 
+    let sectionTops: number[] = []
+    let max = 0
+    const measure = () => {
+      sectionTops = sections.map((s) => s.getBoundingClientRect().top + window.scrollY)
+      max = document.documentElement.scrollHeight - window.innerHeight
+    }
+    measure()
+
     const currentIndex = () => {
       let idx = 0
-      for (let i = 0; i < sections.length; i++) if (sections[i].getBoundingClientRect().top <= 1) idx = i
+      for (let i = 0; i < sectionTops.length; i++) if (window.scrollY + 1 >= sectionTops[i]) idx = i
       return idx
     }
 
@@ -981,7 +1016,6 @@ function useAutoScroll() {
         raf = requestAnimationFrame(step)
         return
       }
-      const max = document.documentElement.scrollHeight - window.innerHeight
       if (window.scrollY < max && dt > 0) window.scrollBy(0, AUTO_SCROLL_SPEED * dt)
       raf = requestAnimationFrame(step)
     }
@@ -1008,6 +1042,13 @@ function useAutoScroll() {
       touchTimer = window.setTimeout(resume, AUTO_SCROLL_TOUCH_RESUME_MS)
     }
 
+    const ro = new ResizeObserver(() => measure())
+    if (page) ro.observe(page)
+    const onRelayout = () => measure()
+    window.addEventListener("load", onRelayout)
+    window.addEventListener("resize", onRelayout)
+    document.fonts?.ready.then(onRelayout).catch(() => {})
+
     window.addEventListener("touchstart", pause, { passive: true })
     window.addEventListener("touchend", onTouchEnd)
     window.addEventListener("touchcancel", onTouchEnd)
@@ -1020,6 +1061,9 @@ function useAutoScroll() {
       window.clearTimeout(dwellTimer)
       window.clearTimeout(wheelTimer)
       window.clearTimeout(touchTimer)
+      ro.disconnect()
+      window.removeEventListener("load", onRelayout)
+      window.removeEventListener("resize", onRelayout)
       window.removeEventListener("touchstart", pause)
       window.removeEventListener("touchend", onTouchEnd)
       window.removeEventListener("touchcancel", onTouchEnd)
