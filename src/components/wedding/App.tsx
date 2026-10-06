@@ -19,10 +19,10 @@ const Gallery3D = dynamic(() => import("./Gallery3D"), {
   ),
 });
 
-/* three.js 代码块（约 450KB）+ 画廊模型贴图（约 8MB）不参与首屏：
- * 首屏加载完成 4s 后、浏览器空闲时预下载代码块与 GLB 模型，并挂载画廊封面；
- * 场景构建推迟到用户点击「步入画廊」后才执行，避免自动下滑经过 RSVP 时卡顿。
- * 省流量模式 / 2G 网络下不预下载模型，滚动接近时才挂载封面。 */
+/* three.js 代码块（约 450KB）+ 画廊全部模型贴图（约 8MB）不参与首屏：
+ * 首屏加载完成 4s 后、浏览器空闲时才在后台挂载并构建画廊（宾客通常还在看封面/信件），
+ * 滚到画廊时基本已就绪；若宾客滑得更快，接近视口前 2 屏也会立即开始。
+ * 省流量模式 / 2G 网络下不提前构建，只按滚动位置加载。 */
 function GalleryLazy() {
   const [near, setNear] = useState(false);
   const [warm, setWarm] = useState(false);
@@ -51,25 +51,8 @@ function GalleryLazy() {
       if (idleApi.requestIdleCallback) idleId = idleApi.requestIdleCallback(cb, { timeout: 3000 });
       else timer = window.setTimeout(cb, 300);
     };
-    const preloadModels = () => {
-      const models = [
-        "/models/rose-bouquet.glb",
-        "/models/stem-rose.glb",
-        "/models/stem-rose-lo.glb",
-        "/models/rose-parts.glb",
-        "/models/palm_coconut.glb",
-        "/models/palm_slim.glb",
-        "/models/crystal-chandelier.glb",
-      ];
-      for (const url of models) fetch(url, { mode: "cors" }).catch(() => {});
-    };
     const start = () => {
-      timer = window.setTimeout(() => whenIdle(() => {
-        void import("./Gallery3D");
-        if (lowData) return;
-        preloadModels();
-        setWarm(true);
-      }), 4000);
+      timer = window.setTimeout(() => whenIdle(() => (lowData ? void import("./Gallery3D") : setWarm(true))), 4000);
     };
     if (document.readyState === "complete") start();
     else window.addEventListener("load", start, { once: true });
@@ -82,7 +65,7 @@ function GalleryLazy() {
   }, []);
   return (
     <section ref={ref} className="inv-gallery-sec">
-      {near || warm ? <Gallery3D /> : <div className="inv-fullh" style={{ background: "#2a1520" }} />}
+      {near || warm ? <Gallery3D buildNow={warm} /> : <div className="inv-fullh" style={{ background: "#2a1520" }} />}
     </section>
   );
 }
