@@ -101,7 +101,7 @@ export default function Gallery3D({ buildNow = false }: { buildNow?: boolean }) 
   const [guideOpen, setGuideOpen] = useState(false);
   // 画廊接近视口（约 1.5 屏内）才开始构建场景；离屏/后台则暂停渲染循环
   const [near, setNear] = useState(false);
-  // 画廊当前是否在视口（含 20% 余量）内：IO 回调可能早于场景构建触发，必须记下来，构建完成与切回前台时按它决定是否暂停
+  // 画廊当前是否在视口内：IO 回调可能早于场景构建触发，必须记下来，构建完成与切回前台时按它决定是否暂停
   const onScreenRef = useRef(false);
 
   const rootRef = useRef<HTMLDivElement>(null);
@@ -129,13 +129,13 @@ export default function Gallery3D({ buildNow = false }: { buildNow?: boolean }) 
       { rootMargin: "150% 0px" },
     );
     nearIO.observe(el);
-    // 真正滚出视口才暂停渲染，避免上下滚动经过时的抖动
+    // 画廊进入视口后才恢复渲染，避免在 RSVP 自动下滑期间抢占绘制帧
     const pauseIO = new IntersectionObserver(
       (es) => {
         onScreenRef.current = es[0].isIntersecting;
         galleryRef.current?.setRenderPaused(document.hidden || !onScreenRef.current);
       },
-      { rootMargin: "20% 0px" },
+      { rootMargin: "0px" },
     );
     pauseIO.observe(el);
     const onVis = () => galleryRef.current?.setRenderPaused(document.hidden || !onScreenRef.current);
