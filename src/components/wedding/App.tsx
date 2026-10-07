@@ -22,7 +22,7 @@ const Gallery3D = dynamic(() => import("./Gallery3D"), {
 /* three.js 代码块（约 450KB）+ 画廊模型贴图（约 8MB）不参与首屏：
  * 首屏加载完成后只在浏览器空闲时预取代码和模型，不创建 WebGL 场景；
  * 场景构建严格推迟到宾客点击「步入画廊」，避免自动下滑经过 RSVP 时抢占主线程。
- * 省流量模式 / 2G 网络下不提前预取，接近画廊时才加载代码。 */
+ * 省流量模式 / 2G 网络下不提前预取，到达画廊时才加载代码。 */
 function GalleryLazy() {
   const [near, setNear] = useState(false);
   const ref = useRef<HTMLElement | null>(null);
@@ -36,7 +36,7 @@ function GalleryLazy() {
           io.disconnect();
         }
       },
-      { rootMargin: "100% 0px" },
+      { rootMargin: "0px 0px -98% 0px" },
     );
     io.observe(el);
 

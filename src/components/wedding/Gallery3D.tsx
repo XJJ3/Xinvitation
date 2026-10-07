@@ -105,6 +105,8 @@ export default function Gallery3D() {
   // 画廊当前是否在视口内：IO 回调可能早于场景构建触发，必须记下来，构建完成与切回前台时按它决定是否暂停
   const onScreenRef = useRef(false);
   const enteredRef = useRef(false);
+  const readyRef = useRef(false);
+  const firstFrameRef = useRef(false);
 
   const rootRef = useRef<HTMLDivElement>(null);
 
@@ -140,6 +142,20 @@ export default function Gallery3D() {
 
     let cancelled = false;
     let gallery: WeddingGallery | null = null;
+    let revealScheduled = false;
+    const revealWhenPainted = () => {
+      if (cancelled || revealScheduled || !gallery || !readyRef.current || !firstFrameRef.current) return;
+      revealScheduled = true;
+      window.requestAnimationFrame(() => {
+        if (cancelled || !gallery) return;
+        enteredRef.current = true;
+        gallery.setRenderPaused(document.hidden);
+        gallery.setIdleMode(false);
+        gallery.enter();
+        setPhase("entered");
+        if (!hasSeenGuide()) setGuideOpen(true);
+      });
+    };
     try {
       gallery = new WeddingGallery(canvas, {
         photos: PHOTOS,
@@ -151,17 +167,12 @@ export default function Gallery3D() {
         photoLayout: PHOTO_LAYOUT,
         touch: isTouchDevice(),
         onReady: () => {
-          if (!cancelled) {
-            // 先让引擎完成至少一帧绘制，再移除遮罩，避免空 canvas 短暂露出黑帧。
-            window.requestAnimationFrame(() => {
-              if (cancelled) return;
-              enteredRef.current = true;
-              setPhase("entered");
-              gallery?.setIdleMode(false);
-              gallery?.enter();
-              if (!hasSeenGuide()) setGuideOpen(true);
-            });
-          }
+          readyRef.current = true;
+          revealWhenPainted();
+        },
+        onFirstFrame: () => {
+          firstFrameRef.current = true;
+          revealWhenPainted();
         },
         onActiveChange: (active) => {
           if (!cancelled) setLocked(active);
@@ -189,6 +200,8 @@ export default function Gallery3D() {
 
   const enter = useCallback(() => {
     if (!galleryRef.current) {
+      readyRef.current = false;
+      firstFrameRef.current = false;
       setPhase("loading");
       setEnterRequested(true);
       return;

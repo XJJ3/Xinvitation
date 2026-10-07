@@ -80,6 +80,8 @@ export type WeddingGalleryOptions = {
   outdoor?: "lawn" | "beach";
   /** 所有照片纹理加载完成（或失败）后触发一次 */
   onReady: () => void;
+  /** 画布真正完成第一帧绘制后触发一次，用于安全移除入场遮罩 */
+  onFirstFrame?: () => void;
   /** 「是否已进入画廊」状态变化：桌面 = pointer lock 状态，触屏 = 进入/退出 */
   onActiveChange: (active: boolean) => void;
   /** 户外主题切换时通知（含键盘 T 触发），用于同步 React 层按钮文案 */
@@ -312,6 +314,7 @@ export class WeddingGallery {
   private perfSlowest = { frame: 0, marker: "-" };
   private perfContextLost = false;
   private perfFrameNote = "";
+  private firstFrameFired = false;
 
   private notePerfEvent(label: string) {
     if (!this.perfEnabled) return;
@@ -14240,6 +14243,10 @@ export class WeddingGallery {
       this.applyPortalCull();
       const renderStart = this.perfEnabled ? performance.now() : 0;
       this.renderer.render(this.scene, this.camera);
+      if (!this.firstFrameFired) {
+        this.firstFrameFired = true;
+        this.opts.onFirstFrame?.();
+      }
       const renderMs = this.perfEnabled ? performance.now() - renderStart : 0;
       this.restorePortalCull();
       this.framesRendered++;
