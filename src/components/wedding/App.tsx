@@ -197,13 +197,14 @@ function Petals() {
   )
 }
 
-type IconName = "heart" | "pin" | "send" | "copy" | "shuffle"
+type IconName = "heart" | "pin" | "send" | "copy" | "shuffle" | "play"
 const ICON_PATHS: Record<IconName, string> = {
   heart: "M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l8.9 8.8 8.8-8.8a5.5 5.5 0 0 0 0-7.8Z",
   pin: "M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0ZM12 7a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z",
   send: "m22 2-7 20-4-9-9-4 20-7ZM11 13l11-11",
   copy: "M9 9h11v11H9zM5 15H4V4h11v1",
   shuffle: "M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5",
+  play: "M8 5v14l11-7z",
 }
 const Icon = ({ name, filled = false }: { name: IconName; filled?: boolean }) => (
   <svg className="ico" viewBox="0 0 24 24" aria-hidden="true">
@@ -483,6 +484,7 @@ function VenueSection({ toast }: { toast: (m: string) => void }) {
   const v = event.venue
   const [tip, setTip] = useState<string | null>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
+  const [playing, setPlaying] = useState(false)
   const point: MapPoint = { lat: v.lat, lng: v.lng, name: v.mapName, address: v.address }
 
   useEffect(() => {
@@ -534,6 +536,13 @@ function VenueSection({ toast }: { toast: (m: string) => void }) {
     }
   }
 
+  const playVideo = () => {
+    const video = videoRef.current
+    if (!video) return
+    video.muted = true
+    video.play().catch(() => {})
+  }
+
   return (
     <section className="inv-venue inv-fullh">
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -541,9 +550,15 @@ function VenueSection({ toast }: { toast: (m: string) => void }) {
       <div className="inv-venue-shade" />
       <Reveal className="inv-venue-card">
         <div className="inv-venue-video-frame">
-          <video ref={videoRef} className="inv-venue-video" autoPlay muted loop playsInline webkit-playsinline="" x5-playsinline="" preload="metadata" poster={wedding.venue.bg} aria-label="酒店现场视频" onError={event => { event.currentTarget.hidden = true }}>
+          <video ref={videoRef} className="inv-venue-video" autoPlay muted loop playsInline webkit-playsinline="" x5-playsinline="" preload="metadata" poster={wedding.venue.bg} aria-label="酒店现场视频" onPlaying={() => setPlaying(true)} onError={event => { event.currentTarget.hidden = true }}>
             <source src="/videos/venue-bg.mp4" type="video/mp4" />
           </video>
+          {!playing && (
+            <button type="button" className="inv-venue-play" onClick={playVideo} aria-label="播放酒店现场视频">
+              <span className="inv-venue-play-ring"><Icon name="play" filled /></span>
+              <span className="inv-venue-play-text">点我播放</span>
+            </button>
+          )}
           <div className="inv-venue-video-caption">
             <span>{wedding.venue.en}</span>
             <h2>{v.name}</h2>
