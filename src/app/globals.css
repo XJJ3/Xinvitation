@@ -52,7 +52,12 @@
   --color-dark: #4f3b40;
 }
 
-/* ══════════ 全局基础 ══════════ */
+/* ══════════ 全局基础 ══════════
+   系统字体放大对抗（三层，见 src/lib/fontScale.ts）：
+   1. iOS 微信/浏览器：微信通过给 body 注入 -webkit-text-size-adjust 百分比来放大文字，
+      这里用 100% !important 覆盖，文字保持设计稿字号。
+   2. Android 微信 XWeb：缩放发生在原生 TextZoom 层，CSS 管不住，由 fontScale.ts 探针
+      检测实际渲染字号比例后对 html 施加整体 zoom 反向补偿。 */
 html {
   background: #542d38;
   overflow-x: clip;
@@ -65,6 +70,8 @@ body {
   background: var(--color-ivory);
   color: var(--color-dark);
   overflow-x: clip;
+  -webkit-text-size-adjust: 100% !important;
+  text-size-adjust: 100% !important;
 }
 
 /* 隐藏滚动条（设计稿惯例，移动端沉浸式） */
@@ -702,57 +709,9 @@ body {
 .inv-toast { position: fixed; z-index: 100; top: 72px; left: 50%; padding: 10px 17px; border-radius: 999px; color: #fff; background: rgba(84,45,56,.88); font-size: 13px; opacity: 0; pointer-events: none; transform: translate(-50%, -12px); transition: opacity .3s, transform .3s; backdrop-filter: blur(12px); }
 .inv-toast.show { opacity: 1; transform: translate(-50%, 0); }
 
-/* ══════════ 长辈大字号安全布局 ══════════
-   重要信息区允许随文字自然增高，不让系统字体放大后被一屏高度裁切。 */
+/* ══════════ 移动端固定视觉稿 ══════════
+   系统字体缩放由 html 的 text-size-adjust 统一关闭，所有手机使用同一套布局。 */
 @media (max-width: 540px) {
-  .inv-letter-sec,
-  .inv-rsvp-sec {
-    min-height: auto;
-    height: auto;
-  }
-
-  .inv-rsvp-sec {
-    min-height: var(--inv-vh, 100dvh);
-  }
-
-  .inv-letter-sec .inv-screen,
-  .inv-rsvp-sec .inv-screen {
-    min-height: auto;
-    height: auto;
-  }
-
-  .inv-letter-paper { margin-left: 0; margin-right: 0; padding-left: clamp(16px, 5vw, 24px); padding-right: clamp(16px, 5vw, 24px); }
-  .inv-letter-paper blockquote { font-size: clamp(14px, 3.8vw, 16px); line-height: 1.8; }
-
-  .inv-venue { min-height: var(--inv-vh, 100dvh); height: auto; align-items: flex-end; padding-bottom: max(28px, env(safe-area-inset-bottom)); }
-  .inv-venue-card { padding: 18px clamp(16px, 5vw, 24px); }
-  .inv-venue-video-frame { width: calc(100% + 2 * clamp(16px, 5vw, 24px)); margin: -18px calc(-1 * clamp(16px, 5vw, 24px)) 0; }
-  .inv-venue-info { grid-template-columns: 1fr 1fr; }
-  .inv-venue-info div + div { border-top: 0; border-left: 1px solid rgba(255,255,255,.24); }
-  .inv-venue-info div { padding: 10px 4px; }
-  .inv-venue-btns { flex-direction: column; align-items: stretch; }
-  .inv-venue-btns button { width: 100%; }
-
-  .inv-love-sec {
-    height: var(--inv-vh, 100dvh);
-    min-height: 100dvh;
-    overflow: hidden;
-    padding-bottom: 16px;
-  }
-  .inv-love-sec > .reveal { margin-bottom: 24px; }
-  .inv-love-sec .inv-orbit { width: 128px; height: 128px; margin: auto auto 14px; transform: translateY(24px); }
-  .inv-love-sec .inv-love-btn { --love-btn: 80px; }
-  .inv-love-sec .inv-love-count { margin-bottom: 8px; }
-  .inv-love-sec .inv-wall { padding: 8px 14px 6px; border-radius: 16px; }
-  .inv-love-sec .inv-wall-head { margin-bottom: 6px; }
-  .inv-love-sec .inv-wall-list { height: auto; max-height: 112px; flex-basis: auto; }
-  .inv-love-sec .inv-wall-send { margin-top: 4px; }
-  .inv-love-sec .inv-wish { padding: 9px 10px 8px 14px; }
-  .inv-love-sec .inv-wish-bar { margin-top: 6px; padding-top: 7px; }
-  .inv-wish-bar { flex-wrap: wrap; }
-  .inv-wish-tag { flex-basis: 100%; order: 3; white-space: normal; }
-  .inv-wish .dice,
-  .inv-wish .send { min-height: 40px; }
 }
 
 @keyframes love-pop {

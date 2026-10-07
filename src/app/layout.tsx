@@ -1,6 +1,7 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Ma_Shan_Zheng, Noto_Serif_SC, Lato, Cormorant_Garamond } from "next/font/google";
 import { siteConfig } from "@/config/site";
+import { FONT_SCALE_SCRIPT } from "@/lib/fontScale";
 import "./globals.css";
 
 // 中文书法标题字：马善政毛笔楷书（Google Fonts，构建时自托管）
@@ -51,6 +52,12 @@ export const metadata: Metadata = {
   },
 };
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -61,6 +68,12 @@ export default function RootLayout({
       lang="zh-CN"
       className={`${brush.variable} ${serif.variable} ${sans.variable} ${en.variable} h-full antialiased`}
     >
+      <head>
+        <script
+          id="font-scale-guard"
+          dangerouslySetInnerHTML={{ __html: FONT_SCALE_SCRIPT }}
+        />
+      </head>
       <body className="min-h-full">{children}</body>
     </html>
   );
