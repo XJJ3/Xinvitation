@@ -8,6 +8,7 @@ const brush = Ma_Shan_Zheng({
   weight: "400",
   variable: "--font-brush",
   display: "swap",
+  // 该字体在 next/font 元数据中仅声明 latin，可用中文字符不能安全预加载
   preload: false,
 });
 

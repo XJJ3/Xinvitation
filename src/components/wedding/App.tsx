@@ -225,7 +225,7 @@ const InvTitle = ({ en, children }: { en: string; children: React.ReactNode }) =
 /* ── 深色区块用的标题（玫瑰色） ── */
 const DarkHead = ({ script, zh }: { script: string; zh: string }) => (
   <div style={{ textAlign: "center", marginBottom: 32 }}>
-    <div style={{ fontFamily: "var(--font-brush)", fontSize: 28, fontWeight: 400, letterSpacing: 4, color: "#fff8f8", marginBottom: 8 }}>{script}</div>
+    <div className="inv-dark-head-title" style={{ fontFamily: "var(--font-brush)", fontSize: 28, fontWeight: 400, letterSpacing: 4, color: "#fff8f8", marginBottom: 8 }}>{script}</div>
     <div style={{ display: "flex", alignItems: "center", gap: 10, justifyContent: "center" }}>
       <div style={{ flex: 1, height: 1, background: "linear-gradient(to right, transparent, rgba(242,195,206,0.6))", maxWidth: 80 }} />
       <span style={{ fontFamily: "var(--font-en)", fontSize: 13, letterSpacing: 3, color: C.roseLight }}>{zh}</span>
@@ -1239,7 +1239,7 @@ export default function WeddingApp() {
           display: "flex", alignItems: "center", justifyContent: "center",
           fontFamily: "var(--font-serif)", fontSize: 24, color: C.roseLight,
         }}>囍</div>
-        <div style={{ fontFamily: "var(--font-serif)", fontSize: 26, letterSpacing: 4, color: "#fff8f8", marginBottom: 8 }}>
+        <div className="inv-footer-title" style={{ fontFamily: "var(--font-brush)", fontSize: 26, letterSpacing: 4, color: "#fff8f8", marginBottom: 8 }}>
           {wedding.footer.namesLine}
         </div>
         <div style={{ fontFamily: "var(--font-en)", fontSize: 13, letterSpacing: 3, color: "#bd9da5" }}>
