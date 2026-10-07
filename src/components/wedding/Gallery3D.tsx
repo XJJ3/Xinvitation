@@ -88,28 +88,25 @@ function markGuideSeen(): void {
 
 type GuideStep = { title: string; desc: string };
 
-/** buildNow：首屏空闲后由外层置 true，不等滚到附近就提前在后台构建场景 */
-export default function Gallery3D({ buildNow = false }: { buildNow?: boolean }) {
+/** 画廊外壳可提前挂载，但 WebGL 场景只在用户点击「步入画廊」后构建。 */
+export default function Gallery3D() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const galleryRef = useRef<WeddingGallery | null>(null);
   const [mode, setMode] = useState<Mode>("pending");
-  const [phase, setPhase] = useState<Phase>("loading");
+  // 外壳挂载后即可点击进入；只有用户点击后才进入 loading 构建态
+  const [phase, setPhase] = useState<Phase>("ready");
   const [locked, setLocked] = useState(false);
   const [isTouch, setIsTouch] = useState(false);
   const [outdoor, setOutdoor] = useState<"lawn" | "beach">("lawn");
   // 首次进入后弹出的操作引导卡片；关闭后写入存储，不再自动重复弹出
   const [guideOpen, setGuideOpen] = useState(false);
-  // 画廊接近视口（约 1.5 屏内）才开始构建场景；离屏/后台则暂停渲染循环
-  const [near, setNear] = useState(false);
+  // 用户点击「步入画廊」后才真正创建 WebGL 场景
+  const [enterRequested, setEnterRequested] = useState(false);
   // 画廊当前是否在视口内：IO 回调可能早于场景构建触发，必须记下来，构建完成与切回前台时按它决定是否暂停
   const onScreenRef = useRef(false);
   const enteredRef = useRef(false);
 
   const rootRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (buildNow) setNear(true);
-  }, [buildNow]);
 
   useEffect(() => {
     setIsTouch(isTouchDevice());
@@ -119,17 +116,6 @@ export default function Gallery3D({ buildNow = false }: { buildNow?: boolean }) 
   useEffect(() => {
     const el = rootRef.current;
     if (!el) return;
-    // 提前 1.5 屏开始构建，滚动到达时加载已完成；一旦开始就不再拆掉（重建代价高）
-    const nearIO = new IntersectionObserver(
-      (es) => {
-        if (es[0].isIntersecting) {
-          setNear(true);
-          nearIO.disconnect();
-        }
-      },
-      { rootMargin: "150% 0px" },
-    );
-    nearIO.observe(el);
     // 画廊顶到达视口顶（自动下滑停止点）才恢复渲染，避免 RSVP 滚动期间抢占绘制帧
     const pauseIO = new IntersectionObserver(
       (es) => {
@@ -142,14 +128,13 @@ export default function Gallery3D({ buildNow = false }: { buildNow?: boolean }) 
     const onVis = () => galleryRef.current?.setRenderPaused(document.hidden || (!onScreenRef.current && !enteredRef.current));
     document.addEventListener("visibilitychange", onVis);
     return () => {
-      nearIO.disconnect();
       pauseIO.disconnect();
       document.removeEventListener("visibilitychange", onVis);
     };
   }, []);
 
   useEffect(() => {
-    if (mode !== "3d" || !near) return;
+    if (mode !== "3d" || !enterRequested) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -166,7 +151,17 @@ export default function Gallery3D({ buildNow = false }: { buildNow?: boolean }) 
         photoLayout: PHOTO_LAYOUT,
         touch: isTouchDevice(),
         onReady: () => {
-          if (!cancelled) setPhase((p) => (p === "loading" ? "ready" : p));
+          if (!cancelled) {
+            // 先让引擎完成至少一帧绘制，再移除遮罩，避免空 canvas 短暂露出黑帧。
+            window.requestAnimationFrame(() => {
+              if (cancelled) return;
+              enteredRef.current = true;
+              setPhase("entered");
+              gallery?.setIdleMode(false);
+              gallery?.enter();
+              if (!hasSeenGuide()) setGuideOpen(true);
+            });
+          }
         },
         onActiveChange: (active) => {
           if (!cancelled) setLocked(active);
@@ -190,9 +185,14 @@ export default function Gallery3D({ buildNow = false }: { buildNow?: boolean }) 
       gallery?.dispose();
       galleryRef.current = null;
     };
-  }, [mode, near]);
+  }, [mode, enterRequested]);
 
   const enter = useCallback(() => {
+    if (!galleryRef.current) {
+      setPhase("loading");
+      setEnterRequested(true);
+      return;
+    }
     enteredRef.current = true;
     setPhase("entered");
     galleryRef.current?.setIdleMode(false);

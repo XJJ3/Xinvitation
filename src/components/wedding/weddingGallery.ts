@@ -14572,10 +14572,6 @@ export class WeddingGallery {
   setRenderPaused(paused: boolean) {
     if (this.renderPaused === paused || this.disposed) return;
     this.renderPaused = paused;
-    if (!paused && this.framesRendered > 0) {
-      this.clock.getDelta();
-      this.renderer.render(this.scene, this.camera);
-    }
   }
 
   setIdleMode(idle: boolean) {

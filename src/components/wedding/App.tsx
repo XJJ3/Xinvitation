@@ -13,19 +13,18 @@ import { track, fetchLove, sendLove, fetchBlessings, sendBlessing, sendRsvp, typ
 const Gallery3D = dynamic(() => import("./Gallery3D"), {
   ssr: false,
   loading: () => (
-    <div className="inv-fullh" style={{ background: "#542d38", display: "flex", alignItems: "center", justifyContent: "center" }}>
+    <div className="inv-fullh" style={{ background: "#2a1520", display: "flex", alignItems: "center", justifyContent: "center" }}>
       <div style={{ color: "#f2c3ce", fontFamily: "var(--font-serif)", fontSize: 16, letterSpacing: 4 }}>{siteConfig.wedding.gallery.loading}</div>
     </div>
   ),
 });
 
-/* three.js 代码块（约 450KB）+ 画廊全部模型贴图（约 8MB）不参与首屏：
- * 首屏加载完成 4s 后、浏览器空闲时才在后台挂载并构建画廊（宾客通常还在看封面/信件），
- * 滚到画廊时基本已就绪；若宾客滑得更快，接近视口前 2 屏也会立即开始。
- * 省流量模式 / 2G 网络下不提前构建，只按滚动位置加载。 */
+/* three.js 代码块（约 450KB）+ 画廊模型贴图（约 8MB）不参与首屏：
+ * 首屏加载完成后只在浏览器空闲时预取代码和模型，不创建 WebGL 场景；
+ * 场景构建严格推迟到宾客点击「步入画廊」，避免自动下滑经过 RSVP 时抢占主线程。
+ * 省流量模式 / 2G 网络下不提前预取，接近画廊时才加载代码。 */
 function GalleryLazy() {
   const [near, setNear] = useState(false);
-  const [warm, setWarm] = useState(false);
   const ref = useRef<HTMLElement | null>(null);
   useEffect(() => {
     const el = ref.current;
@@ -37,7 +36,7 @@ function GalleryLazy() {
           io.disconnect();
         }
       },
-      { rootMargin: "200% 0px" },
+      { rootMargin: "100% 0px" },
     );
     io.observe(el);
 
@@ -51,8 +50,23 @@ function GalleryLazy() {
       if (idleApi.requestIdleCallback) idleId = idleApi.requestIdleCallback(cb, { timeout: 3000 });
       else timer = window.setTimeout(cb, 300);
     };
+    const preloadModels = () => {
+      const models = [
+        "/models/rose-bouquet.glb",
+        "/models/stem-rose.glb",
+        "/models/stem-rose-lo.glb",
+        "/models/rose-parts.glb",
+        "/models/palm_coconut.glb",
+        "/models/palm_slim.glb",
+        "/models/crystal-chandelier.glb",
+      ];
+      for (const url of models) fetch(url, { mode: "cors" }).catch(() => {});
+    };
     const start = () => {
-      timer = window.setTimeout(() => whenIdle(() => (lowData ? void import("./Gallery3D") : setWarm(true))), 4000);
+      timer = window.setTimeout(() => whenIdle(() => {
+        void import("./Gallery3D");
+        if (!lowData) preloadModels();
+      }), 4000);
     };
     if (document.readyState === "complete") start();
     else window.addEventListener("load", start, { once: true });
@@ -65,7 +79,7 @@ function GalleryLazy() {
   }, []);
   return (
     <section ref={ref} className="inv-gallery-sec">
-      {near || warm ? <Gallery3D buildNow={warm} /> : <div className="inv-fullh" style={{ background: "#2a1520" }} />}
+      {near ? <Gallery3D /> : <div className="inv-fullh" style={{ background: "#2a1520" }} />}
     </section>
   );
 }
