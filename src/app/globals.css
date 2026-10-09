@@ -53,11 +53,11 @@
 }
 
 /* ══════════ 全局基础 ══════════
-   系统字体放大对抗（三层，见 src/lib/fontScale.ts）：
+   系统字体放大对抗（两层，配合 src/lib/fontScale.ts）：
    1. iOS 微信/浏览器：微信通过给 body 注入 -webkit-text-size-adjust 百分比来放大文字，
       这里用 100% !important 覆盖，文字保持设计稿字号。
-   2. Android 微信 XWeb：缩放发生在原生 TextZoom 层，CSS 管不住，由 fontScale.ts 探针
-      检测实际渲染字号比例后对 html 施加整体 zoom 反向补偿。 */
+   2. Android 微信 XWeb：Blink TextZoom 在计算样式层放大 font-size，CSS 无法关闭，
+      由 fontScale.ts 调用官方 JSAPI 把字体档位锁回标准（'2'）处理。 */
 html {
   background: #542d38;
   overflow-x: clip;
