@@ -149,7 +149,7 @@ export const siteConfig = {
       en: "今日小惊喜",
       title: "今日幸福签",
       bg: "/photos/world/p37.jpg",
-      lead: "轻触竹筒，摇一支属于你的幸福签",
+      lead: "轻触竹筒，摇支好运签",
       signs: [
         ["上上签", "今天的你，会被双倍的幸福拥抱", "LUCKY IN LOVE"],
         ["桃花签", "你会遇见许多温柔，也会成为别人的温柔", "LOVE FINDS YOU"],
