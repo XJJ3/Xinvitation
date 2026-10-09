@@ -147,7 +147,7 @@ export const siteConfig = {
     // 今日幸福签
     fortune: {
       en: "今日小惊喜",
-      title: "摇一支今日幸福签",
+      title: "今日幸福签",
       bg: "/photos/world/p37.jpg",
       lead: "轻触竹筒，摇一支属于你的幸福签",
       signs: [
