@@ -188,6 +188,13 @@ body {
   opacity: 1;
 }
 
+/* 无 JS 降级：脚本解析失败时 Reveal 内容直接可见，宾客仍能看到全部照片与文案 */
+.no-js .reveal,
+.no-js .reveal-fade {
+  opacity: 1;
+  transform: none;
+}
+
 /* ── 点亮祝福区：内容压进一屏，矮视口时祝福墙列表自动变矮（flex 收缩），输入框始终可见 */
 .inv-love-sec {
   display: flex; flex-direction: column; justify-content: center; box-sizing: border-box;
@@ -749,6 +756,9 @@ body {
     radial-gradient(circle at 50% 34%, rgba(255, 255, 255, 0.55), transparent 46%),
     linear-gradient(160deg, #fdf1f3 0%, #f8e4e8 45%, #efd0d7 100%);
   transition: opacity 0.7s ease, visibility 0.7s ease;
+  /* 纯 CSS 兜底：9 秒后自动淡出。JS 正常时组件会更早卸载、不受影响；
+     若旧内核 JS 解析失败，加载页也会自动消失，露出 SSR 渲染的完整内容 */
+  animation: preloader-auto-hide 0.8s ease 9s forwards;
 }
 .inv-preloader-done {
   opacity: 0;
@@ -864,6 +874,9 @@ body {
   to { opacity: 1; transform: translateY(0); }
 }
 @keyframes preloader-fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes preloader-auto-hide {
+  to { opacity: 0; visibility: hidden; pointer-events: none; }
+}
 
 /* ══════════ 保留：全局降级（无障碍）══════════ */
 @media (prefers-reduced-motion: reduce) {

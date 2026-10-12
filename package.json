@@ -16,6 +16,20 @@
     "react-dom": "19.2.4",
     "three": "^0.186.0"
   },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "iOS >= 12",
+      "Chrome >= 64",
+      "Android >= 4.4"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/canvas-confetti": "^1.9.0",

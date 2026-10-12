@@ -66,9 +66,16 @@ export default function RootLayout({
   return (
     <html
       lang="zh-CN"
-      className={`${brush.variable} ${serif.variable} ${sans.variable} ${en.variable} h-full antialiased`}
+      suppressHydrationWarning
+      className={`no-js ${brush.variable} ${serif.variable} ${sans.variable} ${en.variable} h-full antialiased`}
     >
       <head>
+        {/* 无 JS 降级标记：脚本一旦执行立即移除 no-js 类；
+            若旧手机内核解析 JS 失败，no-js 会保留，CSS 据此让 Reveal 内容与加载页兜底直接可见 */}
+        <script
+          id="no-js-remover"
+          dangerouslySetInnerHTML={{ __html: `document.documentElement.classList.remove("no-js")` }}
+        />
         <script
           id="font-scale-guard"
           dangerouslySetInnerHTML={{ __html: FONT_SCALE_SCRIPT }}
