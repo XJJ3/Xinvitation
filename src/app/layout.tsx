@@ -71,10 +71,12 @@ export default function RootLayout({
     >
       <head>
         {/* 无 JS 降级标记：脚本一旦执行立即移除 no-js 类；
-            若旧手机内核解析 JS 失败，no-js 会保留，CSS 据此让 Reveal 内容与加载页兜底直接可见 */}
+            若旧手机内核解析 JS 失败，no-js 会保留，CSS 据此让 Reveal 内容与加载页兜底直接可见。
+            同时检测 IntersectionObserver：极老内核（iOS 12.0~12.1 Safari）没有该 API，
+            加 no-io 类让 CSS 直接显示 Reveal 内容，避免 JS 抛错 */}
         <script
           id="no-js-remover"
-          dangerouslySetInnerHTML={{ __html: `document.documentElement.classList.remove("no-js")` }}
+          dangerouslySetInnerHTML={{ __html: `document.documentElement.classList.remove("no-js");if(!("IntersectionObserver"in window))document.documentElement.classList.add("no-io")` }}
         />
         <script
           id="font-scale-guard"

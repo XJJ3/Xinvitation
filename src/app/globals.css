@@ -188,9 +188,12 @@ body {
   opacity: 1;
 }
 
-/* 无 JS 降级：脚本解析失败时 Reveal 内容直接可见，宾客仍能看到全部照片与文案 */
+/* 无 JS 降级：脚本解析失败时 Reveal 内容直接可见，宾客仍能看到全部照片与文案。
+   无 IO 降级：极老内核缺 IntersectionObserver 时同样直接可见 */
 .no-js .reveal,
-.no-js .reveal-fade {
+.no-js .reveal-fade,
+.no-io .reveal,
+.no-io .reveal-fade {
   opacity: 1;
   transform: none;
 }

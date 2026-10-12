@@ -118,19 +118,23 @@ export default function Gallery3D() {
   useEffect(() => {
     const el = rootRef.current;
     if (!el) return;
-    // 画廊顶到达视口顶（自动下滑停止点）才恢复渲染，避免 RSVP 滚动期间抢占绘制帧
-    const pauseIO = new IntersectionObserver(
-      (es) => {
-        onScreenRef.current = es[0].isIntersecting;
-        galleryRef.current?.setRenderPaused(document.hidden || (!onScreenRef.current && !enteredRef.current));
-      },
-      { rootMargin: "0px 0px -98% 0px" },
-    );
-    pauseIO.observe(el);
     const onVis = () => galleryRef.current?.setRenderPaused(document.hidden || (!onScreenRef.current && !enteredRef.current));
     document.addEventListener("visibilitychange", onVis);
+    // 画廊顶到达视口顶（自动下滑停止点）才恢复渲染，避免 RSVP 滚动期间抢占绘制帧。
+    // 极老内核无 IntersectionObserver 时跳过该优化，仅保留 visibilitychange 暂停。
+    let pauseIO: IntersectionObserver | null = null;
+    if ("IntersectionObserver" in window) {
+      pauseIO = new IntersectionObserver(
+        (es) => {
+          onScreenRef.current = es[0].isIntersecting;
+          galleryRef.current?.setRenderPaused(document.hidden || (!onScreenRef.current && !enteredRef.current));
+        },
+        { rootMargin: "0px 0px -98% 0px" },
+      );
+      pauseIO.observe(el);
+    }
     return () => {
-      pauseIO.disconnect();
+      pauseIO?.disconnect();
       document.removeEventListener("visibilitychange", onVis);
     };
   }, []);

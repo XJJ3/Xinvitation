@@ -29,16 +29,22 @@ function GalleryLazy() {
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const io = new IntersectionObserver(
-      (es) => {
-        if (es[0].isIntersecting) {
-          setNear(true);
-          io.disconnect();
-        }
-      },
-      { rootMargin: "0px 0px -98% 0px" },
-    );
-    io.observe(el);
+    let io: IntersectionObserver | null = null;
+    if (!("IntersectionObserver" in window)) {
+      // 极老内核无 IO：跳过"接近画廊才加载"，直接进入画廊加载流程
+      setNear(true);
+    } else {
+      io = new IntersectionObserver(
+        (es) => {
+          if (es[0].isIntersecting) {
+            setNear(true);
+            io?.disconnect();
+          }
+        },
+        { rootMargin: "0px 0px -98% 0px" },
+      );
+      io.observe(el);
+    }
 
     const conn = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection;
     const lowData = !!conn?.saveData || /(^|-)2g$/.test(conn?.effectiveType ?? "");
@@ -71,7 +77,7 @@ function GalleryLazy() {
     if (document.readyState === "complete") start();
     else window.addEventListener("load", start, { once: true });
     return () => {
-      io.disconnect();
+      io?.disconnect();
       window.removeEventListener("load", start);
       window.clearTimeout(timer);
       if (idleId) window.cancelIdleCallback?.(idleId);
@@ -156,6 +162,9 @@ function Reveal({ children, className = "", delay = 0, fadeOnly = false }: {
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
     const el = ref.current; if (!el) return
+    // 极老内核（iOS 12.0~12.1 Safari）无 IntersectionObserver：
+    // 不 observe，交给 CSS 的 .no-io 规则直接显示，避免构造时抛错
+    if (!("IntersectionObserver" in window)) return
     const obs = new IntersectionObserver(([e]) => {
       if (e.isIntersecting) { el.classList.add("visible"); obs.disconnect() }
     }, { threshold: 0.1 })
